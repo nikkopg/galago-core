@@ -1,18 +1,24 @@
 #Production docker-compose file
 services:
   galago-web:
-    image: ghcr.io/sciencecorp/galago-web:latest
-    # build:
-    #   context: .
-    #   dockerfile: controller/Dockerfile
+    # image: ghcr.io/sciencecorp/galago-web:latest
+    build:
+      context: .
+      dockerfile: controller/Dockerfile
     container_name: galago-web
     ports:
       - "3010:3010"
+    volumes:
+      - sqlite_data:/app/data
     restart: always
     environment:
       - NODE_ENV=production
       - PORT=3010
+      - TOOLBOX_PORT=${TOOLBOX_PORT:-1010}
       - GRPC_SERVER_IP=localhost
+      - GRPC_HOST=host.docker.internal
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     networks:
       - app-network
 

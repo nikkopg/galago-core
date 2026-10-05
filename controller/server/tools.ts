@@ -680,7 +680,7 @@ export default class Tool {
       description: "General Tools",
       image_url: "/tool_icons/toolbox.png",
       ip: "localhost",
-      port: 1010,
+      port: Number(process.env.TOOLBOX_PORT) || 1010,
       config: {
         toolId: "Tool Box",
         simulated: false,
