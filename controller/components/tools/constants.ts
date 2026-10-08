@@ -311,4 +311,33 @@ export const commandFields: CommandFields = {
       { name: "experiment_name", type: "text" },
     ],
   },
+  fast: {
+    transfer: [
+      { name: "source_deck", type: "number" },
+      { name: "dest_deck", type: "number" },
+      { name: "source_plate_id", type: "number" },
+      { name: "dest_plate_id", type: "number" },
+      { name: "source_start_row", type: "text" },
+      { name: "source_start_col", type: "number" },
+      { name: "dest_start_row", type: "text" },
+      { name: "dest_start_col", type: "number" },
+      { name: "num_rows", type: "number" },
+      { name: "num_cols", type: "number" },
+      { name: "volume", type: "number" },
+      // "fresh" or "reuse"; Field has no select type
+      { name: "tip_reuse", type: "text" },
+      // optional: overrides the tool Config expected_tray_id (D-14)
+      { name: "expected_tray_id", type: "number" },
+    ],
+    run_protocol: [
+      { name: "csv", type: "text" },
+      // optional seconds; 0/blank uses the tool Config
+      { name: "timeout_s", type: "number" },
+    ],
+    validate_protocol: [{ name: "csv", type: "text" }],
+    get_status: [],
+    get_tip_status: [],
+    scan_tips: [{ name: "is_tip_broken", type: "boolean", defaultValue: false }],
+    eject_tray: [],
+  },
 };

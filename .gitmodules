@@ -1,3 +1,4 @@
 [submodule "vendor/galago-tools"]
 	path = vendor/galago-tools
-	url = https://github.com/sciencecorp/galago-tools
+	url = https://github.com/nikkopg/galago-tools.git
+	branch = feat/fast-tool
