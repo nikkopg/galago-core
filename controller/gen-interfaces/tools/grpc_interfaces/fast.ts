@@ -11,6 +11,8 @@ export interface Command {
   get_tip_status?: Command_GetTipStatus | undefined;
   scan_tips?: Command_ScanTips | undefined;
   eject_tray?: Command_EjectTray | undefined;
+  abort?: Command_Abort | undefined;
+  resume?: Command_Resume | undefined;
 }
 
 export interface Command_Transfer {
@@ -51,6 +53,20 @@ export interface Command_ScanTips {
 export interface Command_EjectTray {
 }
 
+/**
+ * Operator recovery from an instrument pause. The physical decision is a
+ * required "yes"/"no" string, not a bool: galago-core's command form turns
+ * an untouched boolean into false, so a bool could not tell "no" from
+ * "never chosen". Unset or any other value is rejected as INVALID_ARGUMENTS.
+ */
+export interface Command_Abort {
+  return_liquid?: string | undefined;
+}
+
+export interface Command_Resume {
+  is_tip_broken?: string | undefined;
+}
+
 export interface Config {
   host: string;
   port: number;
@@ -67,6 +83,8 @@ function createBaseCommand(): Command {
     get_tip_status: undefined,
     scan_tips: undefined,
     eject_tray: undefined,
+    abort: undefined,
+    resume: undefined,
   };
 }
 
@@ -92,6 +110,12 @@ export const Command = {
     }
     if (message.eject_tray !== undefined) {
       Command_EjectTray.encode(message.eject_tray, writer.uint32(58).fork()).ldelim();
+    }
+    if (message.abort !== undefined) {
+      Command_Abort.encode(message.abort, writer.uint32(66).fork()).ldelim();
+    }
+    if (message.resume !== undefined) {
+      Command_Resume.encode(message.resume, writer.uint32(74).fork()).ldelim();
     }
     return writer;
   },
@@ -152,6 +176,20 @@ export const Command = {
 
           message.eject_tray = Command_EjectTray.decode(reader, reader.uint32());
           continue;
+        case 8:
+          if (tag !== 66) {
+            break;
+          }
+
+          message.abort = Command_Abort.decode(reader, reader.uint32());
+          continue;
+        case 9:
+          if (tag !== 74) {
+            break;
+          }
+
+          message.resume = Command_Resume.decode(reader, reader.uint32());
+          continue;
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -172,6 +210,8 @@ export const Command = {
       get_tip_status: isSet(object.get_tip_status) ? Command_GetTipStatus.fromJSON(object.get_tip_status) : undefined,
       scan_tips: isSet(object.scan_tips) ? Command_ScanTips.fromJSON(object.scan_tips) : undefined,
       eject_tray: isSet(object.eject_tray) ? Command_EjectTray.fromJSON(object.eject_tray) : undefined,
+      abort: isSet(object.abort) ? Command_Abort.fromJSON(object.abort) : undefined,
+      resume: isSet(object.resume) ? Command_Resume.fromJSON(object.resume) : undefined,
     };
   },
 
@@ -192,6 +232,8 @@ export const Command = {
       (obj.scan_tips = message.scan_tips ? Command_ScanTips.toJSON(message.scan_tips) : undefined);
     message.eject_tray !== undefined &&
       (obj.eject_tray = message.eject_tray ? Command_EjectTray.toJSON(message.eject_tray) : undefined);
+    message.abort !== undefined && (obj.abort = message.abort ? Command_Abort.toJSON(message.abort) : undefined);
+    message.resume !== undefined && (obj.resume = message.resume ? Command_Resume.toJSON(message.resume) : undefined);
     return obj;
   },
 
@@ -221,6 +263,12 @@ export const Command = {
       : undefined;
     message.eject_tray = (object.eject_tray !== undefined && object.eject_tray !== null)
       ? Command_EjectTray.fromPartial(object.eject_tray)
+      : undefined;
+    message.abort = (object.abort !== undefined && object.abort !== null)
+      ? Command_Abort.fromPartial(object.abort)
+      : undefined;
+    message.resume = (object.resume !== undefined && object.resume !== null)
+      ? Command_Resume.fromPartial(object.resume)
       : undefined;
     return message;
   },
@@ -765,6 +813,118 @@ export const Command_EjectTray = {
 
   fromPartial<I extends Exact<DeepPartial<Command_EjectTray>, I>>(_: I): Command_EjectTray {
     const message = createBaseCommand_EjectTray();
+    return message;
+  },
+};
+
+function createBaseCommand_Abort(): Command_Abort {
+  return { return_liquid: undefined };
+}
+
+export const Command_Abort = {
+  encode(message: Command_Abort, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+    if (message.return_liquid !== undefined) {
+      writer.uint32(10).string(message.return_liquid);
+    }
+    return writer;
+  },
+
+  decode(input: _m0.Reader | Uint8Array, length?: number): Command_Abort {
+    const reader = input instanceof _m0.Reader ? input : _m0.Reader.create(input);
+    let end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseCommand_Abort();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1:
+          if (tag !== 10) {
+            break;
+          }
+
+          message.return_liquid = reader.string();
+          continue;
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skipType(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): Command_Abort {
+    return { return_liquid: isSet(object.return_liquid) ? String(object.return_liquid) : undefined };
+  },
+
+  toJSON(message: Command_Abort): unknown {
+    const obj: any = {};
+    message.return_liquid !== undefined && (obj.return_liquid = message.return_liquid);
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<Command_Abort>, I>>(base?: I): Command_Abort {
+    return Command_Abort.fromPartial(base ?? {});
+  },
+
+  fromPartial<I extends Exact<DeepPartial<Command_Abort>, I>>(object: I): Command_Abort {
+    const message = createBaseCommand_Abort();
+    message.return_liquid = object.return_liquid ?? undefined;
+    return message;
+  },
+};
+
+function createBaseCommand_Resume(): Command_Resume {
+  return { is_tip_broken: undefined };
+}
+
+export const Command_Resume = {
+  encode(message: Command_Resume, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+    if (message.is_tip_broken !== undefined) {
+      writer.uint32(10).string(message.is_tip_broken);
+    }
+    return writer;
+  },
+
+  decode(input: _m0.Reader | Uint8Array, length?: number): Command_Resume {
+    const reader = input instanceof _m0.Reader ? input : _m0.Reader.create(input);
+    let end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseCommand_Resume();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1:
+          if (tag !== 10) {
+            break;
+          }
+
+          message.is_tip_broken = reader.string();
+          continue;
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skipType(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): Command_Resume {
+    return { is_tip_broken: isSet(object.is_tip_broken) ? String(object.is_tip_broken) : undefined };
+  },
+
+  toJSON(message: Command_Resume): unknown {
+    const obj: any = {};
+    message.is_tip_broken !== undefined && (obj.is_tip_broken = message.is_tip_broken);
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<Command_Resume>, I>>(base?: I): Command_Resume {
+    return Command_Resume.fromPartial(base ?? {});
+  },
+
+  fromPartial<I extends Exact<DeepPartial<Command_Resume>, I>>(object: I): Command_Resume {
+    const message = createBaseCommand_Resume();
+    message.is_tip_broken = object.is_tip_broken ?? undefined;
     return message;
   },
 };
