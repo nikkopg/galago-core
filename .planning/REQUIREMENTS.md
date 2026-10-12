@@ -11,9 +11,9 @@ the 25 requirements approved on 2026-10-12; each requirement below names the ori
 
 ### Queue control path and run state (QUE)
 
-- [ ] **QUE-01**: A `commandQueue.toolControl({action, params})` tRPC call sends Pause/Resume/Abort straight to the tool of the currently running step (not enqueued, not stored as a step, never awaited by the busy loop) and logs the action with the operator's choices — *RCTL-01, RCTL-02, RCTL-03*
-- [ ] **QUE-02**: `toolControl` refuses when no step is running, when the running step's tool type has no `runControl` entry, or when a decision value is blank or unclear; the queue gains an accessor for the running (`STARTED`) step — *RCTL-08, RSAFE-02*
-- [ ] **QUE-03**: Each tool type declares live run control in a `runControl` entry, separate from `commandFields`; the F.A.S.T. declares pause, resume (`is_tip_broken` yes/no) and abort (`return_liquid` yes/no) — *RCTL-08*
+- [x] **QUE-01**: A `commandQueue.toolControl({action, params})` tRPC call sends Pause/Resume/Abort straight to the tool of the currently running step (not enqueued, not stored as a step, never awaited by the busy loop) and logs the action with the operator's choices — *RCTL-01, RCTL-02, RCTL-03*
+- [x] **QUE-02**: `toolControl` refuses when no step is running, when the running step's tool type has no `runControl` entry, or when a decision value is blank or unclear; the queue gains an accessor for the running (`STARTED`) step — *RCTL-08, RSAFE-02*
+- [x] **QUE-03**: Each tool type declares live run control in a `runControl` entry, separate from `commandFields`; the F.A.S.T. declares pause, resume (`is_tip_broken` yes/no) and abort (`return_liquid` yes/no) — *RCTL-08*
 - [ ] **QUE-04**: A `commandQueue.runState` query returns the running step's tool `run_state` (state, percent, pause info), independent of `modalState` and the queue's `UIMessage` modals — *RSTATE-01, PAUSE-03*
 - [ ] **QUE-05**: A failed status poll reports "run state unknown" and keeps retrying; `Tool.fetchStatus` no longer stops the heartbeat after a single failure — *RSTATE-03*
 - [ ] **QUE-06**: Generated interfaces include `StatusReply.run_state` and the F.A.S.T. `Pause` command (submodule bumped to the galago-tools commit, regenerated with ts-proto 1.151.1), and `tsc` stays at 0 errors — *RSTATE-01*
@@ -49,9 +49,9 @@ the 25 requirements approved on 2026-10-12; each requirement below names the ori
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| QUE-01 | Phase 1 | Pending |
-| QUE-02 | Phase 1 | Pending |
-| QUE-03 | Phase 1 | Pending |
+| QUE-01 | Phase 1 | Complete |
+| QUE-02 | Phase 1 | Complete |
+| QUE-03 | Phase 1 | Complete |
 | QUE-04 | Phase 1 | Pending |
 | QUE-05 | Phase 1 | Pending |
 | QUE-06 | Phase 1 | Pending |
