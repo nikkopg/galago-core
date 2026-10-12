@@ -44,13 +44,15 @@ export type ExtractRunStateResult =
   | { ok: true; runState: RunState | null }
   | { ok: false; error: string };
 
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 // The single reader of run_state (D-13). Before QUE-06 regenerates the
 // interfaces, the generated StatusReply has no run_state field, so it is read
 // through exactly one narrow cast, kept inside this function only. Plan
-// 01-05 swaps this for the typed field.
-//
-// Happy-path mapping only in this task: shape validation and malformed-input
-// rejection are added next.
+// 01-05 swaps this for the typed field. Never throws: any unexpected shape
+// is reported as { ok: false }.
 export function extractRunState(statusReply: tool_base.StatusReply): ExtractRunStateResult {
   try {
     const runStateRaw = (statusReply as tool_base.StatusReply & { run_state?: unknown })
@@ -60,20 +62,28 @@ export function extractRunState(statusReply: tool_base.StatusReply): ExtractRunS
       return { ok: true, runState: null };
     }
 
-    const obj = runStateRaw as Record<string, unknown>;
-    const stateValue = obj["state"] as string;
+    if (!isPlainObject(runStateRaw)) {
+      return { ok: false, error: "run_state is not an object" };
+    }
 
-    const percentValue = obj["percent"];
+    const stateValue = runStateRaw["state"];
+    if (typeof stateValue !== "string") {
+      return { ok: false, error: "run_state.state is missing or not a string" };
+    }
+
+    const percentValue = runStateRaw["percent"];
     const percent = Number.isFinite(percentValue) ? (percentValue as number) : null;
 
-    const pauseRaw = obj["pause"];
+    const pauseRaw = runStateRaw["pause"];
     let pause: PauseState | null = null;
     if (pauseRaw !== undefined && pauseRaw !== null) {
-      const pauseObj = pauseRaw as Record<string, unknown>;
-      const nameValue = pauseObj["errorName"];
-      const codeValue = pauseObj["errorCode"];
-      const sinceValue = pauseObj["since"];
-      const detailValue = pauseObj["eventPayload"];
+      if (!isPlainObject(pauseRaw)) {
+        return { ok: false, error: "run_state.pause is not an object" };
+      }
+      const nameValue = pauseRaw["errorName"];
+      const codeValue = pauseRaw["errorCode"];
+      const sinceValue = pauseRaw["since"];
+      const detailValue = pauseRaw["eventPayload"];
       pause = {
         name: typeof nameValue === "string" ? nameValue : null,
         code: Number.isFinite(codeValue) ? (codeValue as number) : null,
@@ -101,15 +111,13 @@ export interface RunStateMonitorOptions {
 // Ties a 2 s poller (D-11) to the lifetime of one controllable tool step.
 // start()/stop() are called from the busy loop's tool-step bracket;
 // snapshot() backs commandQueue.runState and triggers no RPC of its own.
-//
-// Failure handling, the in-flight guard and malformed-payload handling are
-// added next; this task covers the happy path only.
 export class RunStateMonitor {
   private readonly intervalMs: number;
   private readonly lookupTool: LookupToolFn;
   private envelope: RunStateEnvelope = { running: false };
   private intervalHandle: ReturnType<typeof setInterval> | undefined;
   private generation = 0;
+  private inFlight = false;
 
   constructor(opts: RunStateMonitorOptions = {}) {
     this.intervalMs = opts.intervalMs ?? RUN_STATE_POLL_INTERVAL_MS;
@@ -153,6 +161,7 @@ export class RunStateMonitor {
       this.intervalHandle = undefined;
     }
     this.generation += 1;
+    this.inFlight = false;
     this.envelope = { running: false };
   }
 
@@ -161,17 +170,42 @@ export class RunStateMonitor {
   }
 
   private async _poll(step: Readonly<RunningStep>, generation: number): Promise<void> {
-    const tool = this.lookupTool(step.toolId);
-    if (!tool) {
+    if (this.inFlight) {
+      // A poll is already outstanding: skip this tick so there is at most
+      // one call in flight at a time (D-11).
       return;
     }
-    // The only RPC this class ever makes (D-14): observation never commands.
-    const statusReply = await tool.grpc.getStatus({});
+    this.inFlight = true;
+    try {
+      const tool = this.lookupTool(step.toolId);
+      if (!tool) {
+        throw new Error(`tool ${step.toolId} is not connected`);
+      }
+      // The only RPC this class ever makes (D-14): observation never commands.
+      const statusReply = await tool.grpc.getStatus({});
+      const result = extractRunState(statusReply);
+      if (!result.ok) {
+        this._applyUnknown(generation, step, result.error);
+        return;
+      }
+      this._applySuccess(generation, step, result.runState);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this._applyUnknown(generation, step, message);
+    } finally {
+      this.inFlight = false;
+    }
+  }
+
+  private _applySuccess(
+    generation: number,
+    step: Readonly<RunningStep>,
+    runState: RunState | null,
+  ): void {
     if (generation !== this.generation) {
       // A later start()/stop() superseded this poll: discard the stale result.
       return;
     }
-    const result = extractRunState(statusReply);
     this.envelope = {
       running: true,
       queueId: step.queueId,
@@ -179,8 +213,31 @@ export class RunStateMonitor {
       toolId: step.toolId,
       toolType: step.toolType,
       status: "ok",
-      runState: result.ok ? result.runState : null,
+      runState,
       updatedAt: Date.now(),
+    };
+  }
+
+  private _applyUnknown(
+    generation: number,
+    step: Readonly<RunningStep>,
+    errorMessage: string,
+  ): void {
+    if (generation !== this.generation) {
+      return;
+    }
+    const current = this.envelope;
+    const previousRunState = current.running ? current.runState : null;
+    this.envelope = {
+      running: true,
+      queueId: step.queueId,
+      runId: step.runId,
+      toolId: step.toolId,
+      toolType: step.toolType,
+      status: "unknown",
+      runState: previousRunState,
+      updatedAt: Date.now(),
+      lastError: errorMessage,
     };
   }
 }
