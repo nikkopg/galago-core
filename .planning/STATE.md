@@ -1,8 +1,15 @@
 ---
-gsd_state_version: '1.0'
+gsd_state_version: "1.0"
 milestone: v1
 milestone_name: Live Run Control (queue & run page)
+current_phase: 1
+current_phase_name: Queue Control Path & Run State
 status: planning
+stopped_at: Phase 1 context gathered
+last_updated: "2026-10-12T11:50:43.496Z"
+last_activity: 2026-10-12
+last_activity_desc: Project initialized (Galago planning moved here from fast-mcp)
+state_head: 808442ebcb5abd76d9a5e9265f6511f02c6bd0c7
 progress:
   total_phases: 2
   completed_phases: 0
@@ -80,6 +87,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-12
-Stopped at: Project initialized
-Resume file: None
+Last session: 2026-10-12T11:50:42.987Z
+Stopped at: Phase 1 context gathered
+Resume file: .planning/phases/01-queue-control-path-run-state/01-CONTEXT.md
