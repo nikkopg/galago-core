@@ -115,7 +115,20 @@ export function validateControlRequest(
     decisions[decisionName] = value;
   }
 
-  // Undeclared-parameter refusal (check e) is added in Task 2.
+  // (e) Reject any parameter that is not a declared decision of this action.
+  // This is the fail-closed reading of "validate decision values against
+  // runControl": it guarantees a hard/soft pause flag can never be forwarded
+  // (design D5). Checked in params' own-key order, after all declared
+  // decisions have passed (d before e).
+  for (const key of Object.keys(params)) {
+    if (!Object.prototype.hasOwnProperty.call(actionSpec, key)) {
+      return {
+        ok: false,
+        code: "BAD_REQUEST",
+        message: `Parameter "${key}" is not a decision of action "${action}".`,
+      };
+    }
+  }
 
   return { ok: true, decisions };
 }
