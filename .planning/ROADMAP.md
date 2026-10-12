@@ -22,6 +22,7 @@ leaves an instrument run untracked. Governing design: galago-tools
 ## Phase Details
 
 ### Phase 1: Queue Control Path & Run State
+
 **Goal**: The server side can send an operator's Pause/Resume/Abort to the running step's tool and
 report that tool's live run state, without touching the queue's busy loop.
 **Depends on**: Nothing to start (mock the tool); QUE-06 needs galago-tools Phase 1's proto commit
@@ -33,11 +34,19 @@ report that tool's live run state, without touching the queue's busy loop.
   2. `runState` returns the running tool's `run_state` and is independent of `modalState`.
   3. A failed status poll shows "run state unknown" and the heartbeat keeps retrying.
   4. Generated interfaces include `run_state` and `Pause` (ts-proto 1.151.1), and `tsc` reports 0 errors.
+
 **Plans**: TBD
+- [x] 01-01-PLAN.md
+- [ ] 01-02-PLAN.md
+- [ ] 01-03-PLAN.md
+- [ ] 01-04-PLAN.md
+- [ ] 01-05-PLAN.md
+
 **Research flags**: whether `runState` polling races the existing `modalState`/queue queries
 (research Pitfall 9) is worth a short design spike at plan time.
 
 ### Phase 2: Run Page Live Controls
+
 **Goal**: The operator controls a running instrument step from the run page, with explicit,
 confirmed decisions, and is prompted when the instrument pauses itself.
 **Depends on**: Phase 1

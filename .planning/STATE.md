@@ -5,16 +5,16 @@ milestone_name: Live Run Control (queue & run page)
 current_phase: 1
 current_phase_name: Queue Control Path & Run State
 status: executing
-stopped_at: Phase 1 context gathered
-last_updated: "2026-10-12T21:33:01.821Z"
-last_activity: 2026-10-12
-last_activity_desc: Project initialized (Galago planning moved here from fast-mcp)
-state_head: 196680d705fd23bd346c9d6295f438f317828a59
+stopped_at: Completed 01-01-PLAN.md
+last_updated: "2026-10-12T22:09:27.942Z"
+last_activity: 2026-10-13
+last_activity_desc: Phase 1 execution started
+state_head: 1dea05ee9abca69c8c6545d89c1e6a90ccd420e0
 progress:
   total_phases: 2
   completed_phases: 0
   total_plans: 5
-  completed_plans: 0
+  completed_plans: 1
   percent: 0
 ---
 
@@ -30,10 +30,10 @@ decides every recovery action; the web app never acts on its own or pre-selects 
 
 ## Current Position
 
-Phase: 1 (Queue Control Path & Run State) — READY TO EXECUTE
-Plan: 0 of 0 in current phase
+Phase: 1 (Queue Control Path & Run State) — EXECUTING
+Plan: 2 of 5
 Status: Ready to execute
-Last activity: 2026-10-12 — Project initialized (Galago planning moved here from fast-mcp)
+Last activity: 2026-10-13 — Phase 1 execution started
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -55,6 +55,11 @@ Progress: [░░░░░░░░░░] 0%
 - Trend: -
 
 *Updated after each plan completion*
+**Per-Plan Metrics:**
+
+| Plan | Duration | Tasks | Files |
+|------|----------|-------|-------|
+| Phase 01 P01 | 20 min | 3 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -65,6 +70,7 @@ Recent decisions affecting current work:
 
 - [Init]: Galago-side planning split per repo on 2026-10-12: this repo owns the queue, tRPC and run
   page; galago-tools owns the adapter, re-pin, deploy and live acceptance.
+- [Phase 01]: Approved vitest@2.1.9 + vite-tsconfig-paths@5.1.4 (Set A) as controller's test runner, sidestepping the package-legitimacy 'too-new' flag on vitest's latest release cadence — Older, long-proven minor compatible with both node v24.14.1 (dev) and node 22.11 (Docker builder); tsc --noEmit stays the gate per D-20
 
 ### Pending Todos
 
@@ -87,6 +93,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-12T11:50:42.987Z
-Stopped at: Phase 1 context gathered
-Resume file: .planning/phases/01-queue-control-path-run-state/01-CONTEXT.md
+Last session: 2026-10-12T22:09:20.961Z
+Stopped at: Completed 01-01-PLAN.md
+Resume file: None
