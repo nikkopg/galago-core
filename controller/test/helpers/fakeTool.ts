@@ -14,11 +14,29 @@ export function installFakeTool(
   toolId: string,
   toolType: ToolType,
 ): { tool: Tool; grpc: FakeGrpc } {
-  throw new Error("installFakeTool not implemented");
+  const tool = Tool.forId(toolId, "127.0.0.1", 1, toolType);
+  tool.stopHeartbeat();
+
+  const originalGrpc = tool.grpc as unknown as { close?: () => unknown };
+  if (typeof originalGrpc?.close === "function") {
+    originalGrpc.close();
+  }
+
+  const fake: FakeGrpc = {
+    executeCommand: vi.fn(),
+    getStatus: vi.fn(),
+    configure: vi.fn(),
+    estimateDuration: vi.fn(),
+    close: vi.fn(),
+  };
+
+  tool.grpc = fake as unknown as Tool["grpc"];
+
+  return { tool, grpc: fake };
 }
 
-export async function removeFakeTool(toolId: string): Promise<void> {
-  throw new Error("removeFakeTool not implemented");
+export function removeFakeTool(toolId: string): Promise<void> {
+  return Tool.removeTool(toolId);
 }
 
 export function deferred<T = void>(): {
@@ -27,5 +45,25 @@ export function deferred<T = void>(): {
   reject: (reason?: unknown) => void;
   isSettled: () => boolean;
 } {
-  throw new Error("deferred not implemented");
+  let settled = false;
+  let resolveFn!: (value: T) => void;
+  let rejectFn!: (reason?: unknown) => void;
+
+  const promise = new Promise<T>((resolve, reject) => {
+    resolveFn = (value: T) => {
+      settled = true;
+      resolve(value);
+    };
+    rejectFn = (reason?: unknown) => {
+      settled = true;
+      reject(reason);
+    };
+  });
+
+  return {
+    promise,
+    resolve: resolveFn,
+    reject: rejectFn,
+    isSettled: () => settled,
+  };
 }
