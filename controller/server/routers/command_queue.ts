@@ -137,4 +137,20 @@ export const commandQueueRouter = router({
       },
     };
   }),
+
+  // Sends an operator's Pause/Resume/Abort to the running step's tool.
+  // No tool id field: the target is always CommandQueue.runningStep's tool,
+  // never a caller-chosen one. params are deliberately unknown at the schema
+  // level so a non-string decision reaches validateControlRequest and is
+  // refused and logged (D-07) instead of being rejected unlogged by zod.
+  toolControl: procedure
+    .input(
+      z.object({
+        action: z.string(),
+        params: z.record(z.unknown()).optional(),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      return CommandQueue.global.toolControl(input.action, input.params ?? {});
+    }),
 });

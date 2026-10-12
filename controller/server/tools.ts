@@ -25,6 +25,12 @@ import { getSelectedWorkcellId } from "@/db/helpers";
 
 type ToolDriverClient = PromisifiedGrpcClient<tool_driver.ToolDriverClient>;
 
+export interface ToolControlResult {
+  ok: boolean;
+  response: tool_base.ResponseCode;
+  message?: string;
+}
+
 // Helper function to get global tool store
 function getGlobalStore(): Map<string, Tool> {
   const global_key = "__global_tool_store";
@@ -327,6 +333,33 @@ export default class Tool {
       [this.toolType]: {
         [command.command]: command.params,
       },
+    };
+  }
+
+  // Own-property-safe lookup, same semantics as getToolFromStore (D-04/D-09 style).
+  static lookup(toolId: string): Tool | undefined {
+    return getToolFromStore(getGlobalStore(), toolId);
+  }
+
+  // Direct gRPC send for an operator control action (Pause/Resume/Abort). This
+  // does NOT reuse executeCommand: no variable substitution, no step plumbing,
+  // not enqueued, never stored as a step (D-05). No try/catch here — a transport
+  // error propagates to the caller (CommandQueue.toolControl) uncaught (D-06).
+  async controlCommand(
+    action: string,
+    params: Record<string, string>,
+  ): Promise<ToolControlResult> {
+    const payload = this._payloadForCommand({
+      toolId: this.toolId,
+      toolType: this.toolType,
+      command: action,
+      params,
+    });
+    const reply = await this.grpc.executeCommand(payload);
+    return {
+      ok: reply.response === tool_base.ResponseCode.SUCCESS,
+      response: reply.response,
+      message: reply.error_message,
     };
   }
 

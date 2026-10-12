@@ -1,7 +1,7 @@
 import { Run, RunQueue } from "@/types";
 import { ToolStatus } from "gen-interfaces/tools/grpc_interfaces/tool_base";
 import RunStore from "./runs";
-import Tool from "./tools";
+import Tool, { ToolControlResult } from "./tools";
 import SqliteQueue, { StoredRunCommand } from "./utils/SqliteQueue";
 import path from "path";
 import fs from "fs";
@@ -12,6 +12,8 @@ import { db } from "@/db/client";
 import { appSettings, variables, workcells } from "@/db/schema";
 import { and, eq } from "drizzle-orm";
 import { sendEmailMessage, sendSlackMessage } from "@/server/utils/integrationsLocal";
+import { TRPCError } from "@trpc/server";
+import { validateControlRequest } from "./runControl";
 
 export type CommandQueueState = ToolStatus;
 
@@ -32,12 +34,25 @@ export interface UIMessage {
   formName?: string; // Add this for user_form
 }
 
+// A snapshot of the single tool step the busy loop is currently awaiting.
+// Set immediately before that step's executeCommand and cleared in a finally
+// (D-01, D-02). In-memory only: a restart means no running step, by design.
+export interface RunningStep {
+  queueId: number;
+  runId: string;
+  toolId: string;
+  toolType: ToolType;
+  command: string;
+  startedAt: number;
+}
+
 export class CommandQueue {
   private _state: CommandQueueState = ToolStatus.OFFLINE;
   private _runningPromise?: Promise<any>;
   error?: Error;
   private _lastAlertKey?: string;
   private _lastAlertAtMs?: number;
+  private _runningStep?: Readonly<RunningStep>;
 
   // Message handling state variables
   private _isWaitingForInput: boolean = false;
@@ -185,6 +200,11 @@ export class CommandQueue {
 
   get state(): CommandQueueState {
     return this._state;
+  }
+
+  // Read-only accessor for the in-memory running-step record (D-01).
+  get runningStep(): Readonly<RunningStep> | undefined {
+    return this._runningStep;
   }
 
   // Check if queue is waiting for user input (either pause or message)
@@ -387,6 +407,80 @@ export class CommandQueue {
   async executeCommand(command: StoredRunCommand) {
     await Tool.executeCommand(command.commandInfo);
     await this.commands.complete(command.queueId);
+  }
+
+  // Sends an operator's Pause/Resume/Abort straight to the running step's
+  // tool. Reached only through the commandQueue.toolControl tRPC mutation.
+  // Decides whether to send using only the running-step snapshot and the
+  // runControl capability map (D-04) — never a run-state read, a tool poll
+  // result or a reply field. Touches nothing belonging to the queue's own
+  // busy-loop or modal bookkeeping.
+  async toolControl(
+    action: string,
+    params: Record<string, unknown> = {},
+  ): Promise<ToolControlResult> {
+    const step = this._runningStep;
+    const verdict = validateControlRequest(step?.toolType, action, params);
+
+    const paramsJson = (() => {
+      try {
+        return JSON.stringify(params);
+      } catch {
+        return String(params);
+      }
+    })();
+    const baseDetails =
+      `action=${action} toolId=${step?.toolId ?? "none"} toolType=${step?.toolType ?? "none"} ` +
+      `queueId=${step?.queueId ?? "none"} runId=${step?.runId ?? "none"} decisions=${paramsJson}`;
+
+    if (!verdict.ok) {
+      await logAction({
+        level: "warning",
+        action: "Tool Control Refused",
+        details: `${baseDetails} outcome=refused: ${verdict.code} ${verdict.message}`,
+      });
+      throw new TRPCError({ code: verdict.code, message: verdict.message });
+    }
+
+    const tool = Tool.lookup(step!.toolId);
+    if (!tool) {
+      const message = `Tool "${step!.toolId}" of the running step is not connected.`;
+      await logAction({
+        level: "warning",
+        action: "Tool Control Refused",
+        details: `${baseDetails} outcome=refused: PRECONDITION_FAILED ${message}`,
+      });
+      throw new TRPCError({ code: "PRECONDITION_FAILED", message });
+    }
+
+    let result: ToolControlResult;
+    try {
+      result = await tool.controlCommand(action, verdict.decisions);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      await logAction({
+        level: "warning",
+        action: "Tool Control Failed",
+        details: `${baseDetails} outcome=transport error: ${errorMessage}`,
+      });
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: `Could not reach tool "${step!.toolId}": ${errorMessage}`,
+        cause: error instanceof Error ? error : undefined,
+      });
+    }
+
+    const details = result.ok
+      ? `${baseDetails} outcome=${result.response}`
+      : `${baseDetails} outcome=${result.response} message=${result.message}`;
+
+    await logAction({
+      level: result.ok ? "info" : "warning",
+      action: "Tool Control",
+      details,
+    });
+
+    return result;
   }
 
   async skipCommand(commandId: number) {
@@ -1012,7 +1106,19 @@ export class CommandQueue {
         }
 
         // Regular command, send to Tool
-        await this.executeCommand(nextCommand);
+        this._runningStep = Object.freeze({
+          queueId: nextCommand.queueId,
+          runId: nextCommand.runId,
+          toolId: nextCommand.commandInfo.toolId,
+          toolType: nextCommand.commandInfo.toolType,
+          command: nextCommand.commandInfo.command,
+          startedAt: Date.now(),
+        });
+        try {
+          await this.executeCommand(nextCommand);
+        } finally {
+          this._runningStep = undefined;
+        }
 
         logAction({
           level: "info",
