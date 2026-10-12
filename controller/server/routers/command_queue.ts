@@ -138,6 +138,12 @@ export const commandQueueRouter = router({
     };
   }),
 
+  // Reports the running controllable step's live run_state (D-11, D-12).
+  // Reads the server-side poller's cache only; never triggers a tool call.
+  runState: procedure.query(() => {
+    return CommandQueue.global.runState;
+  }),
+
   // Sends an operator's Pause/Resume/Abort to the running step's tool.
   // No tool id field: the target is always CommandQueue.runningStep's tool,
   // never a caller-chosen one. params are deliberately unknown at the schema

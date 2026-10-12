@@ -14,6 +14,7 @@ import { and, eq } from "drizzle-orm";
 import { sendEmailMessage, sendSlackMessage } from "@/server/utils/integrationsLocal";
 import { TRPCError } from "@trpc/server";
 import { validateControlRequest } from "./runControl";
+import { RunStateMonitor, type RunStateEnvelope } from "./runState";
 
 export type CommandQueueState = ToolStatus;
 
@@ -53,6 +54,9 @@ export class CommandQueue {
   private _lastAlertKey?: string;
   private _lastAlertAtMs?: number;
   private _runningStep?: Readonly<RunningStep>;
+  // The run-state poller tied to the current tool-step bracket (D-11). Its
+  // lifecycle is start()ed/stop()ed right alongside _runningStep below.
+  private readonly _runStateMonitor = new RunStateMonitor();
 
   // Message handling state variables
   private _isWaitingForInput: boolean = false;
@@ -205,6 +209,13 @@ export class CommandQueue {
   // Read-only accessor for the in-memory running-step record (D-01).
   get runningStep(): Readonly<RunningStep> | undefined {
     return this._runningStep;
+  }
+
+  // Read-only accessor for the run-state poller's cached snapshot (D-11,
+  // D-12). It reads the cache only and triggers no RPC call of its own, and
+  // it is independent of the queue's own modal-message state.
+  get runState(): RunStateEnvelope {
+    return this._runStateMonitor.snapshot();
   }
 
   // Check if queue is waiting for user input (either pause or message)
@@ -1114,9 +1125,11 @@ export class CommandQueue {
           command: nextCommand.commandInfo.command,
           startedAt: Date.now(),
         });
+        this._runStateMonitor.start(this._runningStep);
         try {
           await this.executeCommand(nextCommand);
         } finally {
+          this._runStateMonitor.stop();
           this._runningStep = undefined;
         }
 
