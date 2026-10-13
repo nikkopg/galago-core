@@ -32,6 +32,8 @@ import {
 import { DeleteWithConfirmation } from "../ui/Delete";
 import { PlusSquareIcon, ChevronUpIcon, TimeIcon } from "@chakra-ui/icons";
 import { QueueStatusComponent } from "./status/QueueStatuscomponent";
+import { ControlBar } from "./ControlBar";
+import { useRunControlState } from "@/hooks/useRunControl";
 import { getRunAttributes, groupCommandsByRun } from "./utils";
 import { ChartGantt } from "lucide-react";
 import { ToolStatus } from "gen-interfaces/tools/grpc_interfaces/tool_base";
@@ -109,6 +111,8 @@ export const RunsComponent: React.FC = () => {
   const resumeMutation = trpc.commandQueue.resume.useMutation();
 
   const commandsAll = trpc.commandQueue.getAll.useQuery(undefined, { refetchInterval: 2000 });
+  // Single reader of commandQueue.runState for the control bar (D-01).
+  const runControlQuery = useRunControlState();
   // Combined modal state query — atomic to prevent race conditions
   const modalStateQuery = trpc.commandQueue.modalState.useQuery(undefined, {
     refetchInterval: 1000,
@@ -562,6 +566,8 @@ export const RunsComponent: React.FC = () => {
             </VStack>
           </CardBody>
         </Card>
+
+        <ControlBar envelope={runControlQuery.data} />
 
         <Card bg={cardBg} shadow="md">
           <CardBody>

@@ -343,3 +343,17 @@ export const infoToast = (title: string, description: string) => {
     isClosable: defaultToastOptions.isClosable,
   });
 };
+
+// D-09: unlike errorToast (duration 10000), a refused or failed control
+// action must stay visible until the operator dismisses it.
+export const persistentErrorToast = (title: string, description: string) => {
+  toast({
+    title,
+    description,
+    status: "error",
+    duration: null,
+    variant: "left-accent",
+    position: "bottom-right",
+    isClosable: true,
+  });
+};
