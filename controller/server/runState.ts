@@ -48,15 +48,13 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-// The single reader of run_state (D-13). Before QUE-06 regenerates the
-// interfaces, the generated StatusReply has no run_state field, so it is read
-// through exactly one narrow cast, kept inside this function only. Plan
-// 01-05 swaps this for the typed field. Never throws: any unexpected shape
-// is reported as { ok: false }.
+// The single reader of run_state (D-13). After QUE-06's regeneration the
+// generated StatusReply carries the typed run_state field directly (a Struct
+// unwrapped to a plain object by the generated decoder), so no cast is
+// needed here. Never throws: any unexpected shape is reported as { ok: false }.
 export function extractRunState(statusReply: tool_base.StatusReply): ExtractRunStateResult {
   try {
-    const runStateRaw = (statusReply as tool_base.StatusReply & { run_state?: unknown })
-      .run_state;
+    const runStateRaw = statusReply.run_state;
 
     if (runStateRaw === undefined || runStateRaw === null) {
       return { ok: true, runState: null };
