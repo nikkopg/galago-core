@@ -86,6 +86,52 @@ describe("toolControl", () => {
     expect(queue.runningStep).toBeUndefined();
   });
 
+  it("refuses when the running step moves on before dispatch (WR-01 race guard)", async () => {
+    await queue.commands.push({
+      runId: "run-1",
+      status: "CREATED",
+      commandInfo: {
+        toolId: "fast-1",
+        toolType: ToolType.fast,
+        command: "transfer",
+        params: {},
+      },
+    } as any);
+    loop = queue._start();
+
+    await vi.waitFor(
+      () => {
+        expect(queue.runningStep).toBeDefined();
+      },
+      { timeout: 5000 },
+    );
+
+    // Simulate the busy loop moving on to a different step on the same tool
+    // between validation and the identity re-check (WR-01): Tool.lookup is
+    // the last synchronous call toolControl makes before that re-check, so
+    // mutate the private running-step record as a side effect of the lookup
+    // to reproduce "the step changed while the control request was being
+    // dispatched" without relying on a real timing race.
+    const originalLookup = Tool.lookup.bind(Tool);
+    const lookupSpy = vi.spyOn(Tool, "lookup").mockImplementationOnce((toolId) => {
+      (queue as any)._runningStep = Object.freeze({
+        ...queue.runningStep!,
+        startedAt: Date.now() + 1,
+      });
+      return originalLookup(toolId);
+    });
+
+    const caller = commandQueueRouter.createCaller({});
+    await expect(caller.toolControl({ action: "pause" })).rejects.toMatchObject({
+      code: "PRECONDITION_FAILED",
+    });
+    expect(grpc.executeCommand).not.toHaveBeenCalled();
+
+    lookupSpy.mockRestore();
+    step.resolve(undefined);
+    await loop;
+  });
+
   it("runningStep mirrors the running step", async () => {
     await queue.commands.push({
       runId: "run-1",

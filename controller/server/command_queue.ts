@@ -464,6 +464,16 @@ export class CommandQueue {
       throw new TRPCError({ code: "PRECONDITION_FAILED", message });
     }
 
+    if (this._runningStep !== step) {
+      const message = "The targeted step is no longer running.";
+      await logAction({
+        level: "warning",
+        action: "Tool Control Refused",
+        details: `${baseDetails} outcome=refused: PRECONDITION_FAILED ${message}`,
+      });
+      throw new TRPCError({ code: "PRECONDITION_FAILED", message });
+    }
+
     let result: ToolControlResult;
     try {
       result = await tool.controlCommand(action, verdict.decisions);
