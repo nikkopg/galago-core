@@ -13,6 +13,7 @@ export interface Command {
   eject_tray?: Command_EjectTray | undefined;
   abort?: Command_Abort | undefined;
   resume?: Command_Resume | undefined;
+  pause?: Command_Pause | undefined;
 }
 
 export interface Command_Transfer {
@@ -67,6 +68,14 @@ export interface Command_Resume {
   is_tip_broken?: string | undefined;
 }
 
+/**
+ * The operator's pause of the running run. It is always a soft pause
+ * (design D5), so it carries no hard/soft choice; the core refuses it
+ * unless the instrument is running.
+ */
+export interface Command_Pause {
+}
+
 export interface Config {
   host: string;
   port: number;
@@ -85,6 +94,7 @@ function createBaseCommand(): Command {
     eject_tray: undefined,
     abort: undefined,
     resume: undefined,
+    pause: undefined,
   };
 }
 
@@ -116,6 +126,9 @@ export const Command = {
     }
     if (message.resume !== undefined) {
       Command_Resume.encode(message.resume, writer.uint32(74).fork()).ldelim();
+    }
+    if (message.pause !== undefined) {
+      Command_Pause.encode(message.pause, writer.uint32(82).fork()).ldelim();
     }
     return writer;
   },
@@ -190,6 +203,13 @@ export const Command = {
 
           message.resume = Command_Resume.decode(reader, reader.uint32());
           continue;
+        case 10:
+          if (tag !== 82) {
+            break;
+          }
+
+          message.pause = Command_Pause.decode(reader, reader.uint32());
+          continue;
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -212,6 +232,7 @@ export const Command = {
       eject_tray: isSet(object.eject_tray) ? Command_EjectTray.fromJSON(object.eject_tray) : undefined,
       abort: isSet(object.abort) ? Command_Abort.fromJSON(object.abort) : undefined,
       resume: isSet(object.resume) ? Command_Resume.fromJSON(object.resume) : undefined,
+      pause: isSet(object.pause) ? Command_Pause.fromJSON(object.pause) : undefined,
     };
   },
 
@@ -234,6 +255,7 @@ export const Command = {
       (obj.eject_tray = message.eject_tray ? Command_EjectTray.toJSON(message.eject_tray) : undefined);
     message.abort !== undefined && (obj.abort = message.abort ? Command_Abort.toJSON(message.abort) : undefined);
     message.resume !== undefined && (obj.resume = message.resume ? Command_Resume.toJSON(message.resume) : undefined);
+    message.pause !== undefined && (obj.pause = message.pause ? Command_Pause.toJSON(message.pause) : undefined);
     return obj;
   },
 
@@ -269,6 +291,9 @@ export const Command = {
       : undefined;
     message.resume = (object.resume !== undefined && object.resume !== null)
       ? Command_Resume.fromPartial(object.resume)
+      : undefined;
+    message.pause = (object.pause !== undefined && object.pause !== null)
+      ? Command_Pause.fromPartial(object.pause)
       : undefined;
     return message;
   },
@@ -925,6 +950,50 @@ export const Command_Resume = {
   fromPartial<I extends Exact<DeepPartial<Command_Resume>, I>>(object: I): Command_Resume {
     const message = createBaseCommand_Resume();
     message.is_tip_broken = object.is_tip_broken ?? undefined;
+    return message;
+  },
+};
+
+function createBaseCommand_Pause(): Command_Pause {
+  return {};
+}
+
+export const Command_Pause = {
+  encode(_: Command_Pause, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+    return writer;
+  },
+
+  decode(input: _m0.Reader | Uint8Array, length?: number): Command_Pause {
+    const reader = input instanceof _m0.Reader ? input : _m0.Reader.create(input);
+    let end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseCommand_Pause();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skipType(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(_: any): Command_Pause {
+    return {};
+  },
+
+  toJSON(_: Command_Pause): unknown {
+    const obj: any = {};
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<Command_Pause>, I>>(base?: I): Command_Pause {
+    return Command_Pause.fromPartial(base ?? {});
+  },
+
+  fromPartial<I extends Exact<DeepPartial<Command_Pause>, I>>(_: I): Command_Pause {
+    const message = createBaseCommand_Pause();
     return message;
   },
 };

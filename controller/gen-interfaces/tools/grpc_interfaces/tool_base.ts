@@ -288,7 +288,15 @@ export interface ConfigureReply {
 export interface StatusReply {
   uptime: number;
   status: ToolStatus;
-  error_message?: string | undefined;
+  error_message?:
+    | string
+    | undefined;
+  /**
+   * Live run state of a tool that supports run control (the F.A.S.T.: state,
+   * percent, pause). Every other tool leaves it unset. Reading it never
+   * commands the instrument.
+   */
+  run_state?: { [key: string]: any } | undefined;
 }
 
 function createBaseCommand(): Command {
@@ -1416,7 +1424,7 @@ export const ConfigureReply = {
 };
 
 function createBaseStatusReply(): StatusReply {
-  return { uptime: 0, status: ToolStatus.UNKNOWN_STATUS, error_message: undefined };
+  return { uptime: 0, status: ToolStatus.UNKNOWN_STATUS, error_message: undefined, run_state: undefined };
 }
 
 export const StatusReply = {
@@ -1429,6 +1437,9 @@ export const StatusReply = {
     }
     if (message.error_message !== undefined) {
       writer.uint32(26).string(message.error_message);
+    }
+    if (message.run_state !== undefined) {
+      Struct.encode(Struct.wrap(message.run_state), writer.uint32(34).fork()).ldelim();
     }
     return writer;
   },
@@ -1461,6 +1472,13 @@ export const StatusReply = {
 
           message.error_message = reader.string();
           continue;
+        case 4:
+          if (tag !== 34) {
+            break;
+          }
+
+          message.run_state = Struct.unwrap(Struct.decode(reader, reader.uint32()));
+          continue;
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -1475,6 +1493,7 @@ export const StatusReply = {
       uptime: isSet(object.uptime) ? Number(object.uptime) : 0,
       status: isSet(object.status) ? toolStatusFromJSON(object.status) : ToolStatus.UNKNOWN_STATUS,
       error_message: isSet(object.error_message) ? String(object.error_message) : undefined,
+      run_state: isObject(object.run_state) ? object.run_state : undefined,
     };
   },
 
@@ -1483,6 +1502,7 @@ export const StatusReply = {
     message.uptime !== undefined && (obj.uptime = Math.round(message.uptime));
     message.status !== undefined && (obj.status = toolStatusToJSON(message.status));
     message.error_message !== undefined && (obj.error_message = message.error_message);
+    message.run_state !== undefined && (obj.run_state = message.run_state);
     return obj;
   },
 
@@ -1495,6 +1515,7 @@ export const StatusReply = {
     message.uptime = object.uptime ?? 0;
     message.status = object.status ?? ToolStatus.UNKNOWN_STATUS;
     message.error_message = object.error_message ?? undefined;
+    message.run_state = object.run_state ?? undefined;
     return message;
   },
 };
