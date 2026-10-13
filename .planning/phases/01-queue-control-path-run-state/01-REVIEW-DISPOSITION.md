@@ -5,32 +5,32 @@ titles: json
 findings:
   - id: WR-01
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "`toolControl` never re-validates that the captured running step is still current"
   - id: WR-02
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "`RunStateMonitor`'s in-flight guard can be cleared by a stale poll from a previous generation"
   - id: WR-03
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "The new vitest suite is not wired into the CI test gate"
   - id: IN-01
     severity: info
     disposition: open
     title: "`RunStateMonitor.snapshot()` returns a shallow copy"
-open: 4
+open: 1
 total: 4
-recorded: 2026-10-13T03:09:35.530Z
+recorded: 2026-10-13T03:32:41.691Z
 ---
 
 # Phase 01: Code Review Disposition
 
 | Finding | Severity | Disposition | Source |
 |---------|----------|-------------|--------|
-| WR-01 | warning | open | - |
-| WR-02 | warning | open | - |
-| WR-03 | warning | open | - |
+| WR-01 | warning | fixed | 01-REVIEW-FIX.md |
+| WR-02 | warning | fixed | 01-REVIEW-FIX.md |
+| WR-03 | warning | fixed | 01-REVIEW-FIX.md |
 | IN-01 | info | open | - |
 
 Dispositions: `open` (recorded, not yet triaged), `fixed`, `skipped`, `deferred`.
