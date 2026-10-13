@@ -6,7 +6,13 @@ import Tool from "@/server/tools";
 import { commandQueueRouter } from "@/server/routers/command_queue";
 import { installFakeTool, removeFakeTool, deferred, FakeGrpc } from "./helpers/fakeTool";
 import { createConfirmedSender, runAfterAccepted } from "@/components/runs/controlDecision";
-import { shouldInterceptQueueStop } from "@/components/runs/stopInterception";
+import type { RunningEnvelope } from "@/components/runs/controlDecision";
+import {
+  shouldInterceptQueueStop,
+  shouldInterceptRunDelete,
+  stopModalBody,
+  STOP_MODAL_COPY,
+} from "@/components/runs/stopInterception";
 import type { RunStateEnvelope } from "@/server/runState";
 
 function statusReplyWith(run_state: unknown): any {
@@ -193,5 +199,120 @@ describe("pause queue during a controllable step", () => {
       delete (globalThis as any)["__global_command_queue_key"];
       vi.restoreAllMocks();
     }
+  });
+});
+
+function makeRunningEnvelope(overrides: Partial<RunningEnvelope> = {}): RunningEnvelope {
+  return {
+    running: true,
+    queueId: 1,
+    runId: "run-1",
+    toolId: "tool-1",
+    toolType: "fast" as any,
+    command: "transfer",
+    status: "ok",
+    runState: null,
+    updatedAt: Date.now(),
+    ...overrides,
+  };
+}
+
+describe("queue stop interception", () => {
+  it("is false for undefined", () => {
+    expect(shouldInterceptQueueStop(undefined)).toBe(false);
+  });
+
+  it("is false when not running", () => {
+    expect(shouldInterceptQueueStop({ running: false })).toBe(false);
+  });
+
+  it("is false for a running tool type with no runControl entry (pf400)", () => {
+    expect(shouldInterceptQueueStop(makeRunningEnvelope({ toolType: "pf400" as any }))).toBe(false);
+  });
+
+  it("is true for a running fast envelope with status ok", () => {
+    expect(shouldInterceptQueueStop(makeRunningEnvelope({ status: "ok" }))).toBe(true);
+  });
+
+  it("is true for a running fast envelope with status unknown", () => {
+    expect(shouldInterceptQueueStop(makeRunningEnvelope({ status: "unknown" }))).toBe(true);
+  });
+});
+
+describe("run delete interception", () => {
+  it("is true for the run that contains the running step", () => {
+    expect(shouldInterceptRunDelete(makeRunningEnvelope({ runId: "run-1" }), "run-1")).toBe(true);
+  });
+
+  it("is false for a different run", () => {
+    expect(shouldInterceptRunDelete(makeRunningEnvelope({ runId: "run-1" }), "run-2")).toBe(false);
+  });
+
+  it("is false when undefined", () => {
+    expect(shouldInterceptRunDelete(undefined, "run-1")).toBe(false);
+  });
+
+  it("is false when not running", () => {
+    expect(shouldInterceptRunDelete({ running: false }, "run-1")).toBe(false);
+  });
+});
+
+describe("stop modal copy", () => {
+  it("restates return liquid: yes", () => {
+    expect(stopModalBody({ return_liquid: "yes" })).toBe(
+      "Abort the instrument run (return liquid? Yes)",
+    );
+  });
+
+  it("restates return liquid: no", () => {
+    expect(stopModalBody({ return_liquid: "no" })).toBe(
+      "Abort the instrument run (return liquid? No)",
+    );
+  });
+
+  it("restates not chosen when undefined", () => {
+    expect(stopModalBody({})).toBe("Abort the instrument run (return liquid? not chosen)");
+  });
+
+  it("confirm label is Abort", () => {
+    expect(STOP_MODAL_COPY.confirmLabel).toBe("Abort");
+  });
+});
+
+describe("clear follow-ups", () => {
+  it("calls clearAll once after an accepted send", async () => {
+    const clearAll = vi.fn().mockResolvedValue(undefined);
+    const send = vi.fn().mockResolvedValue({ status: "accepted" });
+    const result = await runAfterAccepted(send, clearAll);
+    expect(clearAll).toHaveBeenCalledTimes(1);
+    expect(result.followUp).toBe("done");
+  });
+
+  it("never calls clearAll on a refused send", async () => {
+    const clearAll = vi.fn();
+    const send = vi.fn().mockResolvedValue({ status: "refused", message: "nope" });
+    await runAfterAccepted(send, clearAll);
+    expect(clearAll).not.toHaveBeenCalled();
+  });
+
+  it("never calls clearAll on a failed send", async () => {
+    const clearAll = vi.fn();
+    const send = vi.fn().mockResolvedValue({ status: "failed", message: "boom" });
+    await runAfterAccepted(send, clearAll);
+    expect(clearAll).not.toHaveBeenCalled();
+  });
+
+  it("a clearByRunId follow-up receives the run id", async () => {
+    const clearByRunId = vi.fn().mockResolvedValue(undefined);
+    const send = vi.fn().mockResolvedValue({ status: "accepted" });
+    await runAfterAccepted(send, () => clearByRunId("run-1"));
+    expect(clearByRunId).toHaveBeenCalledWith("run-1");
+  });
+
+  it("reports a rejecting follow-up as failed", async () => {
+    const send = vi.fn().mockResolvedValue({ status: "accepted" });
+    const result = await runAfterAccepted(send, () => Promise.reject(new Error("db locked")));
+    expect(result.followUp).toBe("failed");
+    expect(result.followUpMessage).toBe("db locked");
   });
 });
