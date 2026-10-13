@@ -66,7 +66,14 @@ export const QueueStatusComponent: React.FC<QueueStatusComponent> = ({
     stopMutation.mutate();
   };
 
+  // D-19: a running controllable step opens the same Stop modal before
+  // Clear All runs; otherwise behaves exactly as today (no confirmation,
+  // unchanged scope).
   const clear = async () => {
+    if (shouldInterceptQueueStop(runControlState)) {
+      setStopRequest(buildStopRequest(runControlState, () => clearAllMutation.mutateAsync()));
+      return;
+    }
     clearAllMutation.mutate();
   };
 

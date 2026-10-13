@@ -28,14 +28,19 @@ import {
   CloseButton,
   Spacer,
   Switch,
+  IconButton,
 } from "@chakra-ui/react";
 import { DeleteWithConfirmation } from "../ui/Delete";
 import { PlusSquareIcon, ChevronUpIcon, TimeIcon } from "@chakra-ui/icons";
 import { QueueStatusComponent } from "./status/QueueStatuscomponent";
 import { ControlBar } from "./ControlBar";
+import { InstrumentStopModal } from "./InstrumentStopModal";
+import { shouldInterceptRunDelete, buildStopRequest } from "./stopInterception";
+import type { InstrumentStopRequest } from "./stopInterception";
+import type { RunningEnvelope } from "./controlDecision";
 import { useRunControlState } from "@/hooks/useRunControl";
 import { getRunAttributes, groupCommandsByRun } from "./utils";
-import { ChartGantt } from "lucide-react";
+import { ChartGantt, Trash2 } from "lucide-react";
 import { ToolStatus } from "gen-interfaces/tools/grpc_interfaces/tool_base";
 import { Inbox } from "lucide-react";
 import { MessageModal } from "./MessageModal";
@@ -106,6 +111,11 @@ export const RunsComponent: React.FC = () => {
   const stopQueueMutation = trpc.commandQueue.stop.useMutation();
   const clearAllMutation = trpc.commandQueue.clearAll.useMutation();
   const skipRunMutation = trpc.commandQueue.clearByRunId.useMutation();
+
+  // D-19: deleting the run that contains the running controllable step
+  // routes through the same InstrumentStopModal; any other run keeps
+  // DeleteWithConfirmation unchanged.
+  const [runStopRequest, setRunStopRequest] = useState<InstrumentStopRequest | null>(null);
 
   // Resume mutation
   const resumeMutation = trpc.commandQueue.resume.useMutation();
@@ -429,10 +439,33 @@ export const RunsComponent: React.FC = () => {
                       </Text>
                     </HStack>
                   </Button>
-                  <DeleteWithConfirmation
-                    onDelete={() => handleConfirmDelete(run.Id)}
-                    label="Run"
-                  />
+                  {shouldInterceptRunDelete(runControlQuery.data, run.Id) ? (
+                    <IconButton
+                      aria-label="Delete Run"
+                      icon={<Trash2 size={14} />}
+                      size="md"
+                      padding="2"
+                      margin="0"
+                      minWidth="0"
+                      borderRadius="0"
+                      bg="transparent"
+                      _hover={{ bg: "transparent" }}
+                      _focus={{ boxShadow: "none" }}
+                      _active={{ bg: "transparent" }}
+                      onClick={() =>
+                        setRunStopRequest(
+                          buildStopRequest(runControlQuery.data as RunningEnvelope, () =>
+                            skipRunMutation.mutateAsync(run.Id),
+                          ),
+                        )
+                      }
+                    />
+                  ) : (
+                    <DeleteWithConfirmation
+                      onDelete={() => handleConfirmDelete(run.Id)}
+                      label="Run"
+                    />
+                  )}
                 </HStack>
               </VStack>
             </Box>
@@ -490,6 +523,11 @@ export const RunsComponent: React.FC = () => {
         messageData={messageData}
         onClose={handleResume}
         onConfirm={handleRunStop}
+      />
+      <InstrumentStopModal
+        request={runStopRequest}
+        envelope={runControlQuery.data}
+        onClose={() => setRunStopRequest(null)}
       />
 
       <ErrorBanner />
