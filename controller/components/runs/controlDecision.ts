@@ -230,9 +230,12 @@ export function restateChoice(toolType: string, action: string, values: Decision
   return sentence;
 }
 
-// Plan 02-05 adds the recovery (non-running) target; only "running" exists
-// today.
-export type ControlTarget = { kind: "running" };
+// Plan 02-05 adds the recovery (non-running) target: a crash-recovery call
+// goes straight to a tool by id/name, with no running queue step involved.
+export type ControlTarget = { kind: "running" } | { kind: "recovery"; toolId: string };
+
+// D-21: crash recovery only ever offers Resume/Abort — never Pause.
+export const RECOVERY_UI_ACTIONS = ["resume", "abort"] as const;
 
 // The confirmed-send path only ever accepts a COMPLETED decision object
 // (D-24) — callers must run completeDecisions() themselves before building
@@ -261,6 +264,14 @@ export interface ConfirmedSendDeps {
     action: string;
     params: Record<string, ControlDecisionValue>;
   }): Promise<ToolControlResultLike>;
+  // Optional (D-24): only the tool page's recovery entry point supplies
+  // this. Absent, a recovery request is refused rather than silently
+  // falling back to sendRunning.
+  sendRecovery?(input: {
+    toolId: string;
+    action: string;
+    params: Record<string, ControlDecisionValue>;
+  }): Promise<ToolControlResultLike>;
   notify: {
     accepted(title: string, description?: string): void;
     refused(message: string): void;
@@ -269,30 +280,24 @@ export interface ConfirmedSendDeps {
 
 // The single, shared confirmed-send gate (D-06, D-09): every control entry
 // point in this app funnels through one instance of this. In flight, refused
-// decisions, refusals and transport errors are all handled here once.
+// decisions, refusals and transport errors are all handled here once —
+// identically for the running-step target and the recovery target.
 export function createConfirmedSender(deps: ConfirmedSendDeps): {
   send(request: ConfirmedControlRequest): Promise<ConfirmedSendOutcome>;
   isInFlight(): boolean;
 } {
   let inFlight = false;
 
-  async function send(request: ConfirmedControlRequest): Promise<ConfirmedSendOutcome> {
-    if (inFlight) {
-      return { status: "ignored", reason: "in-flight" };
-    }
-
-    const spec = getActionSpec(request.toolType, request.action);
-    const completed = spec ? completeDecisions(spec, request.decisions) : null;
-    if (!spec || completed === null) {
-      return { status: "ignored", reason: "incomplete" };
-    }
-
+  async function dispatch(
+    action: string,
+    call: () => Promise<ToolControlResultLike>,
+  ): Promise<ConfirmedSendOutcome> {
     inFlight = true;
     try {
-      const result = await deps.sendRunning({ action: request.action, params: completed });
+      const result = await call();
 
       if (result.ok) {
-        deps.notify.accepted(successTitle(request.action), result.message);
+        deps.notify.accepted(successTitle(action), result.message);
         return result.message !== undefined
           ? { status: "accepted", message: result.message }
           : { status: "accepted" };
@@ -313,10 +318,74 @@ export function createConfirmedSender(deps: ConfirmedSendDeps): {
     }
   }
 
+  async function send(request: ConfirmedControlRequest): Promise<ConfirmedSendOutcome> {
+    if (inFlight) {
+      return { status: "ignored", reason: "in-flight" };
+    }
+
+    if (request.target.kind === "recovery") {
+      // D-21: only resume/abort are ever offered for crash recovery; a
+      // pause (or anything else) is ignored before any decision lookup.
+      if (!(RECOVERY_UI_ACTIONS as readonly string[]).includes(request.action)) {
+        return { status: "ignored", reason: "incomplete" };
+      }
+
+      const spec = getActionSpec(request.toolType, request.action);
+      const completed = spec ? completeDecisions(spec, request.decisions) : null;
+      if (!spec || completed === null) {
+        return { status: "ignored", reason: "incomplete" };
+      }
+
+      if (!deps.sendRecovery) {
+        const message = "Crash-recovery control is not available here.";
+        deps.notify.refused(message);
+        return { status: "failed", message };
+      }
+
+      const toolId = request.target.toolId;
+      return dispatch(request.action, () =>
+        deps.sendRecovery!({ toolId, action: request.action, params: completed }),
+      );
+    }
+
+    const spec = getActionSpec(request.toolType, request.action);
+    const completed = spec ? completeDecisions(spec, request.decisions) : null;
+    if (!spec || completed === null) {
+      return { status: "ignored", reason: "incomplete" };
+    }
+
+    return dispatch(request.action, () =>
+      deps.sendRunning({ action: request.action, params: completed }),
+    );
+  }
+
   return {
     send,
     isInFlight: () => inFlight,
   };
+}
+
+// D-21: visibility of the tool page's "Run Recovery" card depends ONLY on
+// whether the tool type declares a runControl entry — never on whether a
+// step is currently running (Pitfall 10).
+export function shouldShowRecoverySection(toolType: string): boolean {
+  return getRunControl(toolType) !== undefined;
+}
+
+function normalizeForTracking(s: string | undefined): string {
+  return (s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+// A queue-state read, not an instrument-state check (D-21, D-22): true only
+// while a running step is tracking THIS tool by normalized name.
+export function isToolTrackedByRunningStep(
+  envelope: RunStateEnvelope | undefined,
+  toolName: string,
+): boolean {
+  if (envelope === undefined || !envelope.running) {
+    return false;
+  }
+  return normalizeForTracking(envelope.toolId) === normalizeForTracking(toolName);
 }
 
 // D-18 sequencing primitive (used by plan 02-03): runs an optional follow-up

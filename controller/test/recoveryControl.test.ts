@@ -17,6 +17,7 @@ import { toolRouter } from "@/server/routers/tool";
 import CommandQueue from "@/server/command_queue";
 import { logAction } from "@/server/logger";
 import { installFakeTool, removeFakeTool, deferred, FakeGrpc } from "./helpers/fakeTool";
+import { createConfirmedSender } from "@/components/runs/controlDecision";
 
 const FAST_TOOL_ROW = {
   id: 1,
@@ -296,5 +297,64 @@ describe("recoveryControl", () => {
     expect(logAction).toHaveBeenCalledWith(
       expect.objectContaining({ action: "Tool Recovery Control Failed", level: "warning" }),
     );
+  });
+
+  describe("tool-page recovery send reaches the tool", () => {
+    it("sends a confirmed recovery resume through the real router to the tool", async () => {
+      const notify = { accepted: vi.fn(), refused: vi.fn() };
+      const sender = createConfirmedSender({
+        sendRunning: vi.fn(),
+        sendRecovery: (input) => toolRouter.createCaller({}).recoveryControl(input) as any,
+        notify,
+      });
+
+      const outcome = await sender.send({
+        target: { kind: "recovery", toolId: "fast-1" },
+        toolType: "fast",
+        action: "resume",
+        decisions: { is_tip_broken: "yes" },
+      });
+
+      expect(outcome).toMatchObject({ status: "accepted" });
+      expect(fastGrpc.executeCommand).toHaveBeenCalledTimes(1);
+      expect(fastGrpc.executeCommand).toHaveBeenCalledWith({
+        fast: { resume: { is_tip_broken: "yes" } },
+      });
+      expect(notify.refused).not.toHaveBeenCalled();
+    });
+
+    it("surfaces the tracked-tool refusal verbatim when the send fails", async () => {
+      vi.spyOn(CommandQueue.prototype, "runningStep", "get").mockReturnValue({
+        queueId: 1,
+        runId: "run-1",
+        toolId: "FAST 1",
+        toolType: ToolType.fast,
+        command: "transfer",
+        startedAt: 0,
+      });
+
+      const notify = { accepted: vi.fn(), refused: vi.fn() };
+      const sender = createConfirmedSender({
+        sendRunning: vi.fn(),
+        sendRecovery: (input) => toolRouter.createCaller({}).recoveryControl(input) as any,
+        notify,
+      });
+
+      const outcome = await sender.send({
+        target: { kind: "recovery", toolId: "fast-1" },
+        toolType: "fast",
+        action: "resume",
+        decisions: { is_tip_broken: "yes" },
+      });
+
+      expect(outcome).toMatchObject({
+        status: "failed",
+        message: "A run step is tracking this tool; use the run page.",
+      });
+      expect(notify.refused).toHaveBeenCalledWith(
+        "A run step is tracking this tool; use the run page.",
+      );
+      expect(fastGrpc.executeCommand).not.toHaveBeenCalled();
+    });
   });
 });

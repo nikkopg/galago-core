@@ -22,6 +22,8 @@ export function useConfirmedControlSend(): {
   isSending: boolean;
 } {
   const mutation = trpc.commandQueue.toolControl.useMutation();
+  // D-24: this stays the only client module referencing recoveryControl.
+  const recoveryMutation = trpc.tool.recoveryControl.useMutation();
 
   // Keep the latest mutateAsync behind a ref: the sender below is created
   // once (lazy useRef init) and must always call the current mutation
@@ -29,10 +31,14 @@ export function useConfirmedControlSend(): {
   const mutateAsyncRef = useRef(mutation.mutateAsync);
   mutateAsyncRef.current = mutation.mutateAsync;
 
+  const recoveryMutateAsyncRef = useRef(recoveryMutation.mutateAsync);
+  recoveryMutateAsyncRef.current = recoveryMutation.mutateAsync;
+
   const senderRef = useRef<ReturnType<typeof createConfirmedSender> | null>(null);
   if (senderRef.current === null) {
     senderRef.current = createConfirmedSender({
       sendRunning: (input) => mutateAsyncRef.current(input),
+      sendRecovery: (input) => recoveryMutateAsyncRef.current(input),
       notify: {
         accepted: (title, description) => successToast(title, description ?? ""),
         refused: (message) => persistentErrorToast("Action refused", message),
@@ -42,6 +48,6 @@ export function useConfirmedControlSend(): {
 
   return {
     send: (request) => senderRef.current!.send(request),
-    isSending: mutation.isLoading,
+    isSending: mutation.isLoading || recoveryMutation.isLoading,
   };
 }

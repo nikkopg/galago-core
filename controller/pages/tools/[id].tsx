@@ -1,5 +1,6 @@
 import { ChangeEvent, useEffect, useState } from "react";
 import ToolStatusCard from "@/components/tools/ToolStatusCard";
+import { RunRecoverySection } from "@/components/tools/RunRecoverySection";
 import {
   Select,
   Button,
@@ -299,6 +300,9 @@ export default function Page() {
                 </>
               )}
               <ToolStatusCard toolId={id || ""} />
+              {config && (
+                <RunRecoverySection toolName={config.name} toolType={String(config.type)} />
+              )}
               {toolCommandsDefined && (
                 <FormControl>
                   <VStack width="100%" spacing={1}>

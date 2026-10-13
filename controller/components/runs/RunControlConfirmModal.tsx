@@ -25,7 +25,12 @@ import {
   runAfterAccepted,
   HEAD_MOVES_NOTE,
 } from "./controlDecision";
-import type { ControlTarget, DecisionValues } from "./controlDecision";
+import type {
+  ControlTarget,
+  DecisionValues,
+  ConfirmedControlRequest,
+  ConfirmedSendOutcome,
+} from "./controlDecision";
 import { useConfirmedControlSend } from "@/hooks/useRunControl";
 import { persistentErrorToast } from "@/components/ui/Toast";
 
@@ -47,6 +52,11 @@ export interface RunControlConfirmModalProps {
   copy?: RunControlConfirmModalCopy;
   afterAccepted?: () => Promise<unknown>;
   onPendingChange?: (pending: boolean) => void;
+  // Plan 02-05: for recovery sends only. Once the operator confirms, close
+  // the modal immediately rather than waiting for the (possibly long,
+  // undeadlined — D-23) send to settle; the owning section shows its own
+  // in-progress state instead.
+  closeOnDispatch?: boolean;
 }
 
 // Shared confirmation modal with non-defaulted yes/no decisions (D-06, D-07).
@@ -58,7 +68,14 @@ export const RunControlConfirmModal: React.FC<RunControlConfirmModalProps> = ({
   copy,
   afterAccepted,
   onPendingChange,
+  closeOnDispatch,
 }) => {
+  // Owned here, not in the body below: a closeOnDispatch send unmounts the
+  // body immediately, but the dispatched call and its pending callbacks
+  // must keep running to completion — they need a hook instance that
+  // outlives the body (D-23).
+  const { send, isSending } = useConfirmedControlSend();
+
   if (request === null) {
     // Nothing is rendered while closed — the body below is mounted fresh
     // on every open, so its decision state is always born empty (D-07).
@@ -72,6 +89,9 @@ export const RunControlConfirmModal: React.FC<RunControlConfirmModalProps> = ({
       copy={copy}
       afterAccepted={afterAccepted}
       onPendingChange={onPendingChange}
+      closeOnDispatch={closeOnDispatch}
+      send={send}
+      isSending={isSending}
     />
   );
 };
@@ -82,12 +102,23 @@ const RunControlConfirmModalBody: React.FC<{
   copy?: RunControlConfirmModalCopy;
   afterAccepted?: () => Promise<unknown>;
   onPendingChange?: (pending: boolean) => void;
-}> = ({ request, onClose, copy, afterAccepted, onPendingChange }) => {
+  closeOnDispatch?: boolean;
+  send: (request: ConfirmedControlRequest) => Promise<ConfirmedSendOutcome>;
+  isSending: boolean;
+}> = ({
+  request,
+  onClose,
+  copy,
+  afterAccepted,
+  onPendingChange,
+  closeOnDispatch,
+  send,
+  isSending,
+}) => {
   const cancelRef = useRef<HTMLButtonElement>(null);
   const bgColor = useColorModeValue("white", "surface.section");
   const spec = getActionSpec(request.toolType, request.action);
   const [values, setValues] = useState<DecisionValues>(() => (spec ? emptyDecisions(spec) : {}));
-  const { send, isSending } = useConfirmedControlSend();
 
   const decisionNames = spec ? Object.keys(spec) : [];
   const canConfirm = spec !== undefined && allDecisionsChosen(spec, values);
@@ -102,17 +133,32 @@ const RunControlConfirmModalBody: React.FC<{
       return;
     }
 
+    const dispatchSend = () =>
+      send({
+        target: request.target,
+        toolType: request.toolType,
+        action: request.action,
+        decisions: completed,
+      });
+
+    if (closeOnDispatch) {
+      // The operator's confirmation was already given; close right away so
+      // a long-blocking recovery call (D-23) does not hold the modal open
+      // over the rest of the page. The result still arrives as the same
+      // success/refusal toast (D-09).
+      onPendingChange?.(true);
+      onClose();
+      const result = await runAfterAccepted(dispatchSend, afterAccepted);
+      onPendingChange?.(false);
+
+      if (result.followUp === "failed") {
+        persistentErrorToast("Follow-up failed", result.followUpMessage ?? "");
+      }
+      return;
+    }
+
     onPendingChange?.(true);
-    const result = await runAfterAccepted(
-      () =>
-        send({
-          target: request.target,
-          toolType: request.toolType,
-          action: request.action,
-          decisions: completed,
-        }),
-      afterAccepted,
-    );
+    const result = await runAfterAccepted(dispatchSend, afterAccepted);
     onPendingChange?.(false);
 
     if (result.followUp === "failed") {
