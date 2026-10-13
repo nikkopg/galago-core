@@ -62,7 +62,7 @@ confirmed decisions, and is prompted when the instrument pauses itself.
      Resume/Abort.
   5. Tests show no code path sends a control action without an operator's confirmed choice, and
      galago-core holds no instrument-state check.
-**Plans**: 5/6 plans executed
+**Plans**: 6/6 plans executed
 **Wave 1**
 - [x] 02-01-PLAN.md — Control bar and the shared confirmed-send path (tracer: confirmed Pause end to end)
 - [x] 02-04-PLAN.md — tool.recoveryControl mutation and fast abort/resume removed from the step editor
@@ -73,7 +73,7 @@ confirmed decisions, and is prompted when the instrument pauses itself.
 - [x] 02-05-PLAN.md — Tool-page Run Recovery card through the shared confirm modal
 
 **Wave 3** *(blocked on Wave 2 completion)*
-- [ ] 02-06-PLAN.md — UI-08 static-scan invariants and the D-25 gate
+- [x] 02-06-PLAN.md — UI-08 static-scan invariants and the D-25 gate
 
 **UI hint**: yes
 

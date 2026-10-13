@@ -4,17 +4,17 @@ milestone: v1
 milestone_name: Live Run Control (queue & run page)
 current_phase: 2
 current_phase_name: Run Page Live Controls
-status: executing
-stopped_at: Completed 02-05-PLAN.md
-last_updated: "2026-10-13T20:27:57.516Z"
+status: verifying
+stopped_at: Completed 02-06-PLAN.md
+last_updated: "2026-10-13T20:42:27.248Z"
 last_activity: 2026-10-13
 last_activity_desc: Phase 2 execution started
-state_head: 957e27eb3367fd6ec9e0dd5cc046026bcfbb9f62
+state_head: a4c0531143dba4b69eea80731a1a4777ce73d28f
 progress:
   total_phases: 2
   completed_phases: 1
   total_plans: 11
-  completed_plans: 10
+  completed_plans: 11
   percent: 50
 ---
 
@@ -32,7 +32,7 @@ decides every recovery action; the web app never acts on its own or pre-selects 
 
 Phase: 2 (Run Page Live Controls) — EXECUTING
 Plan: 6 of 6
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-10-13 — Phase 2 execution started
 
 Progress: [█████░░░░░] 50%
@@ -69,6 +69,7 @@ Progress: [█████░░░░░] 50%
 | Phase 02 P02 | 50min | 2 tasks | 4 files |
 | Phase 02 P03 | 35 min | 2 tasks | 5 files |
 | Phase 02 P05 | 40 min | 2 tasks | 7 files |
+| Phase 02-run-page-live-controls P06 | 25min | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -94,6 +95,8 @@ Recent decisions affecting current work:
 - [Phase 02]: Task 1 (tracer) built the complete stopInterception.ts module up front (including shouldInterceptRunDelete), so Task 2's TDD RED phase found zero failing tests; the additions were committed as regression coverage and Task 2's GREEN commit implemented the genuinely new UI wiring (Clear All, per-run delete, stale-request close)
 - [Phase 02]: Task 1 (tracer) implemented the full recovery routing and predicates needed for the end-to-end Resume path; Task 2's genuinely new RED/GREEN cycle was scoped to the normalizeToolKey export, mirroring the established tracer-preempts-TDD-RED pattern from 02-03/02-04
 - [Phase 02]: useConfirmedControlSend() moved from the inner RunControlConfirmModalBody to the outer RunControlConfirmModal so a closeOnDispatch recovery send and its pending callbacks survive the modal closing
+- [Phase 02-run-page-live-controls]: Scoped the countdown-stop-modal-reuse scan to callers of useConfirmedControlSend rather than any InstrumentStopModal reference, so the legitimate RunsComponent.tsx combination (InstrumentStopModal + pre-existing StopRunModal) doesn't false-fail
+- [Phase 02-run-page-live-controls]: extractBracedRegion does true brace-depth, paren-aware matching (and steps past object-type return annotations) rather than textual next-declaration matching, for robust region extraction in the static scans
 
 ### Pending Todos
 
@@ -119,6 +122,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-13T20:27:45.380Z
-Stopped at: Completed 02-05-PLAN.md
+Last session: 2026-10-13T20:42:27.208Z
+Stopped at: Completed 02-06-PLAN.md
 Resume file: None
