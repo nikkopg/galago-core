@@ -525,7 +525,7 @@ describe("recovery send gate", () => {
       target: { kind: "recovery" as const, toolId: "fast-1" },
       toolType: "fast",
       action: "abort",
-      decisions: { return_liquid: "no" },
+      decisions: { return_liquid: "no" as const },
     };
 
     const first = sender.send(request);

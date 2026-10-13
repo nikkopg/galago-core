@@ -372,7 +372,10 @@ export function shouldShowRecoverySection(toolType: string): boolean {
   return getRunControl(toolType) !== undefined;
 }
 
-function normalizeForTracking(s: string | undefined): string {
+// Same idiom as server/tools.ts's getToolFromDB and server/routers/tool.ts
+// (RESEARCH Open Question 1) — kept in sync by convention, not import,
+// since this module stays free of any server VALUE import (D-24).
+export function normalizeToolKey(s: string | undefined): string {
   return (s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
 }
 
@@ -385,7 +388,7 @@ export function isToolTrackedByRunningStep(
   if (envelope === undefined || !envelope.running) {
     return false;
   }
-  return normalizeForTracking(envelope.toolId) === normalizeForTracking(toolName);
+  return normalizeToolKey(envelope.toolId) === normalizeToolKey(toolName);
 }
 
 // D-18 sequencing primitive (used by plan 02-03): runs an optional follow-up
