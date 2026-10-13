@@ -38,7 +38,7 @@ report that tool's live run state, without touching the queue's busy loop.
 **Plans**: TBD
 - [x] 01-01-PLAN.md
 - [x] 01-02-PLAN.md
-- [ ] 01-03-PLAN.md
+- [x] 01-03-PLAN.md
 - [ ] 01-04-PLAN.md
 - [ ] 01-05-PLAN.md
 
