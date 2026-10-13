@@ -191,7 +191,14 @@ export class RunStateMonitor {
       const message = error instanceof Error ? error.message : String(error);
       this._applyUnknown(generation, step, message);
     } finally {
-      this.inFlight = false;
+      // Only clear the flag when the completing poll still belongs to the
+      // current generation: a stale poll from a superseded generation must
+      // not clear inFlight out from under a genuinely in-flight current-
+      // generation poll (stop()'s own direct reset already handles the
+      // generation-boundary case).
+      if (generation === this.generation) {
+        this.inFlight = false;
+      }
     }
   }
 

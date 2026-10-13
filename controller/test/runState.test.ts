@@ -421,6 +421,54 @@ describe("RunStateMonitor", () => {
     monitor.stop();
   });
 
+  it("a stale poll from a superseded generation does not clear inFlight for a still-outstanding current-generation poll (WR-02)", async () => {
+    const deferredA = deferred<any>();
+    const deferredB = deferred<any>();
+    let calls = 0;
+    const getStatus = vi.fn(() => {
+      calls += 1;
+      return calls === 1 ? deferredA.promise : deferredB.promise;
+    });
+    const monitor = new RunStateMonitor({ lookupTool: () => ({ grpc: { getStatus } }) });
+
+    const stepA = makeStep({ queueId: 1, runId: "run-a" });
+    const stepB = makeStep({ queueId: 2, runId: "run-b" });
+
+    // Poll A (an earlier generation) starts and is left outstanding, as if
+    // getStatus were slow to respond.
+    monitor.start(stepA);
+    expect(getStatus).toHaveBeenCalledTimes(1);
+
+    // start() bumps the generation and immediately issues poll B's own
+    // getStatus call, which is also left outstanding.
+    monitor.start(stepB);
+    expect(getStatus).toHaveBeenCalledTimes(2);
+
+    // Poll A's slow response lands first. Its generation no longer matches
+    // the current generation, so _applyUnknown/_applySuccess correctly
+    // no-op -- but a buggy unconditional `finally { inFlight = false }`
+    // would clear the flag anyway, even though poll B's own call below is
+    // still genuinely outstanding.
+    deferredA.resolve(statusReplyWith({ state: "paused", percent: 0, pause: null }));
+    await vi.advanceTimersByTimeAsync(0);
+
+    // The next scheduled tick for the live generation must NOT fire a
+    // second concurrent getStatus call while poll B's own call is still in
+    // flight (D-11: at most one call in flight at a time).
+    await vi.advanceTimersByTimeAsync(RUN_STATE_POLL_INTERVAL_MS);
+    expect(getStatus).toHaveBeenCalledTimes(2);
+
+    // Once poll B's own call actually completes, inFlight correctly clears
+    // and the following tick is allowed to issue its own call again.
+    deferredB.resolve(statusReplyWith({ state: "running", percent: 5, pause: null }));
+    await vi.advanceTimersByTimeAsync(0);
+
+    await vi.advanceTimersByTimeAsync(RUN_STATE_POLL_INTERVAL_MS);
+    expect(getStatus).toHaveBeenCalledTimes(3);
+
+    monitor.stop();
+  });
+
   it("does not poll a tool type without runControl", async () => {
     const getStatus = vi.fn();
     const monitor = new RunStateMonitor({ lookupTool: () => ({ grpc: { getStatus } }) });
