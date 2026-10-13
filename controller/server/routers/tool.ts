@@ -6,6 +6,8 @@ import { tools, logs, robotArmMotionProfiles, robotArmGripParams, nests } from "
 import { eq } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import Tool from "@/server/tools";
+import CommandQueue from "@/server/command_queue";
+import { recoveryControl } from "@/server/recoveryControl";
 import { Config } from "gen-interfaces/tools/grpc_interfaces/tool_base";
 import { ToolType } from "gen-interfaces/controller";
 
@@ -503,5 +505,32 @@ export const toolRouter = router({
     )
     .mutation(async ({ input }) => {
       return await Tool.executeCommand(input);
+    }),
+
+  // Crash-recovery control (D-22, D-23): sends Resume or Abort to a tool by
+  // id when no queue step is tracking it. action stays z.string() at the
+  // schema level (not restricted to RECOVERY_ACTIONS) so a Pause attempt
+  // still reaches recoveryControl's own refusal and gets logged, the same
+  // reasoning as runCommand's unrestricted params.
+  recoveryControl: procedure
+    .input(
+      z.object({
+        toolId: z.string(),
+        action: z.string(),
+        params: z.record(z.unknown()).optional(),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      const record = await getToolFromDB(input.toolId);
+      const tool = Tool.forId(record.name, record.ip, record.port, record.type as ToolType);
+
+      return recoveryControl({
+        toolName: record.name,
+        toolType: String(record.type),
+        tool,
+        runningStep: CommandQueue.global.runningStep,
+        action: input.action,
+        params: input.params ?? {},
+      });
     }),
 });
