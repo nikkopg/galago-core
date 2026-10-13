@@ -5,16 +5,16 @@ milestone_name: Live Run Control (queue & run page)
 current_phase: 2
 current_phase_name: Run Page Live Controls
 status: executing
-stopped_at: Completed 02-01-PLAN.md
-last_updated: "2026-10-13T13:28:00.636Z"
+stopped_at: Completed 02-04-PLAN.md
+last_updated: "2026-10-13T13:41:28.983Z"
 last_activity: 2026-10-13
 last_activity_desc: Phase 2 execution started
-state_head: ac3880556818f1b76c74edcffd4de26028df6671
+state_head: d4c3c238537d53b1d5037b501d93251fab39cbdd
 progress:
   total_phases: 2
   completed_phases: 1
   total_plans: 11
-  completed_plans: 6
+  completed_plans: 7
   percent: 50
 ---
 
@@ -31,7 +31,7 @@ decides every recovery action; the web app never acts on its own or pre-selects 
 ## Current Position
 
 Phase: 2 (Run Page Live Controls) — EXECUTING
-Plan: 2 of 6
+Plan: 3 of 6
 Status: Ready to execute
 Last activity: 2026-10-13 — Phase 2 execution started
 
@@ -65,6 +65,7 @@ Progress: [█████░░░░░] 50%
 | Phase 01 P04 | ~15min | 2 tasks | 2 files |
 | Phase 01 P05 | ~45min | 3 tasks | 5 files |
 | Phase 02 P01 | 55min | 2 tasks | 9 files |
+| Phase 02 P04 | 45 min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -83,6 +84,8 @@ Recent decisions affecting current work:
 - [Phase 02]: Task 1 (tracer) scoped to Pause only; RadioGroup rendering and multi-decision restateChoice deferred to Task 2's TDD cycle
 - [Phase 02]: RunControlConfirmModal owns its own useConfirmedControlSend() call rather than receiving send as a prop, so every future control entry point gets consistent toast wiring
 - [Phase 02]: runAfterAccepted (D-18) built now as a generic accepted-then-follow-up primitive for plan 02-03's sequenced abort-then-stop flow
+- [Phase 02]: Task 1 (tracer) implemented recoveryControl's full refusal order, transport handling and audit logging in one pass; Task 2's TDD cycle was scoped to the two genuinely new assertions (commandFields.fast removal, inverted D-10 guard), mirroring the Phase 1 precedent
+- [Phase 02]: tool.recoveryControl's action input stays z.string() at the schema level so a Pause attempt still reaches the handler's own refusal check and gets logged, rather than being silently rejected by zod
 
 ### Pending Todos
 
@@ -108,6 +111,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-13T13:28:00.599Z
-Stopped at: Completed 02-01-PLAN.md
+Last session: 2026-10-13T13:41:28.945Z
+Stopped at: Completed 02-04-PLAN.md
 Resume file: None
