@@ -34,6 +34,7 @@ export type RunStateEnvelope =
       runId: string;
       toolId: string;
       toolType: RunningStep["toolType"];
+      command: string;
       status: "ok" | "unknown";
       runState: RunState | null;
       updatedAt: number | null;
@@ -140,6 +141,7 @@ export class RunStateMonitor {
       runId: step.runId,
       toolId: step.toolId,
       toolType: step.toolType,
+      command: step.command,
       status: "unknown",
       runState: null,
       updatedAt: null,
@@ -217,6 +219,7 @@ export class RunStateMonitor {
       runId: step.runId,
       toolId: step.toolId,
       toolType: step.toolType,
+      command: step.command,
       status: "ok",
       runState,
       updatedAt: Date.now(),
@@ -239,6 +242,7 @@ export class RunStateMonitor {
       runId: step.runId,
       toolId: step.toolId,
       toolType: step.toolType,
+      command: step.command,
       status: "unknown",
       runState: previousRunState,
       updatedAt: Date.now(),

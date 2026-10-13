@@ -10,6 +10,8 @@ import {
   Button,
   Text,
   VStack,
+  RadioGroup,
+  Radio,
   useColorModeValue,
 } from "@chakra-ui/react";
 import {
@@ -19,10 +21,13 @@ import {
   completeDecisions,
   confirmHeader,
   restateChoice,
+  decisionLabel,
+  runAfterAccepted,
   HEAD_MOVES_NOTE,
 } from "./controlDecision";
 import type { ControlTarget, DecisionValues } from "./controlDecision";
 import { useConfirmedControlSend } from "@/hooks/useRunControl";
+import { persistentErrorToast } from "@/components/ui/Toast";
 
 export interface RunControlConfirmModalRequest {
   target: ControlTarget;
@@ -30,9 +35,18 @@ export interface RunControlConfirmModalRequest {
   action: string;
 }
 
+export interface RunControlConfirmModalCopy {
+  header?: string;
+  confirmLabel?: string;
+  body?: (values: DecisionValues) => string;
+}
+
 export interface RunControlConfirmModalProps {
   request: RunControlConfirmModalRequest | null;
   onClose: () => void;
+  copy?: RunControlConfirmModalCopy;
+  afterAccepted?: () => Promise<unknown>;
+  onPendingChange?: (pending: boolean) => void;
 }
 
 // Shared confirmation modal with non-defaulted yes/no decisions (D-06, D-07).
@@ -41,6 +55,9 @@ export interface RunControlConfirmModalProps {
 export const RunControlConfirmModal: React.FC<RunControlConfirmModalProps> = ({
   request,
   onClose,
+  copy,
+  afterAccepted,
+  onPendingChange,
 }) => {
   if (request === null) {
     // Nothing is rendered while closed — the body below is mounted fresh
@@ -52,6 +69,9 @@ export const RunControlConfirmModal: React.FC<RunControlConfirmModalProps> = ({
       key={`${request.toolType}:${request.action}`}
       request={request}
       onClose={onClose}
+      copy={copy}
+      afterAccepted={afterAccepted}
+      onPendingChange={onPendingChange}
     />
   );
 };
@@ -59,13 +79,17 @@ export const RunControlConfirmModal: React.FC<RunControlConfirmModalProps> = ({
 const RunControlConfirmModalBody: React.FC<{
   request: RunControlConfirmModalRequest;
   onClose: () => void;
-}> = ({ request, onClose }) => {
+  copy?: RunControlConfirmModalCopy;
+  afterAccepted?: () => Promise<unknown>;
+  onPendingChange?: (pending: boolean) => void;
+}> = ({ request, onClose, copy, afterAccepted, onPendingChange }) => {
   const cancelRef = useRef<HTMLButtonElement>(null);
   const bgColor = useColorModeValue("white", "surface.section");
   const spec = getActionSpec(request.toolType, request.action);
-  const [values] = useState<DecisionValues>(() => (spec ? emptyDecisions(spec) : {}));
+  const [values, setValues] = useState<DecisionValues>(() => (spec ? emptyDecisions(spec) : {}));
   const { send, isSending } = useConfirmedControlSend();
 
+  const decisionNames = spec ? Object.keys(spec) : [];
   const canConfirm = spec !== undefined && allDecisionsChosen(spec, values);
   const confirmColorScheme = request.action === "abort" ? "red" : "teal";
 
@@ -78,17 +102,29 @@ const RunControlConfirmModalBody: React.FC<{
       return;
     }
 
-    const outcome = await send({
-      target: request.target,
-      toolType: request.toolType,
-      action: request.action,
-      decisions: completed,
-    });
+    onPendingChange?.(true);
+    const result = await runAfterAccepted(
+      () =>
+        send({
+          target: request.target,
+          toolType: request.toolType,
+          action: request.action,
+          decisions: completed,
+        }),
+      afterAccepted,
+    );
+    onPendingChange?.(false);
 
-    if (outcome.status !== "ignored") {
+    if (result.followUp === "failed") {
+      persistentErrorToast("Follow-up failed", result.followUpMessage ?? "");
+    }
+
+    if (result.outcome.status !== "ignored") {
       onClose();
     }
   };
+
+  const bodyText = copy?.body?.(values) ?? restateChoice(request.toolType, request.action, values);
 
   return (
     <Modal
@@ -100,7 +136,7 @@ const RunControlConfirmModalBody: React.FC<{
       closeOnOverlayClick={!isSending}>
       <ModalOverlay />
       <ModalContent bg={bgColor}>
-        <ModalHeader fontWeight="bold">{confirmHeader(request.action)}</ModalHeader>
+        <ModalHeader fontWeight="bold">{copy?.header ?? confirmHeader(request.action)}</ModalHeader>
         {!isSending ? <ModalCloseButton /> : null}
         <ModalBody>
           <VStack spacing={4} align="stretch">
@@ -108,8 +144,26 @@ const RunControlConfirmModalBody: React.FC<{
               <Text>This action is not available for this tool.</Text>
             ) : (
               <>
-                <Text>{restateChoice(request.toolType, request.action, values)}</Text>
+                <Text>{bodyText}</Text>
                 <Text>{HEAD_MOVES_NOTE}</Text>
+                {decisionNames.map((name) => (
+                  <VStack key={name} align="stretch" spacing={2}>
+                    <Text fontSize="sm">{decisionLabel(name)}</Text>
+                    <RadioGroup
+                      value={values[name] ?? ""}
+                      onChange={(value) =>
+                        setValues((prev) => ({
+                          ...prev,
+                          [name]: value as DecisionValues[string],
+                        }))
+                      }>
+                      <VStack spacing={2} align="start">
+                        <Radio value="yes">Yes</Radio>
+                        <Radio value="no">No</Radio>
+                      </VStack>
+                    </RadioGroup>
+                  </VStack>
+                ))}
               </>
             )}
           </VStack>
@@ -123,7 +177,7 @@ const RunControlConfirmModalBody: React.FC<{
             onClick={handleConfirm}
             isLoading={isSending}
             isDisabled={spec === undefined || !canConfirm}>
-            Confirm
+            {copy?.confirmLabel ?? "Confirm"}
           </Button>
         </ModalFooter>
       </ModalContent>

@@ -264,17 +264,26 @@ describe("decision completeness", () => {
 
 describe("button hints", () => {
   it("running: pause and abort enabled, resume disabled", () => {
-    const envelope = makeEnvelope({ status: "ok", runState: { state: "running", percent: 1, pause: null } });
+    const envelope = makeEnvelope({
+      status: "ok",
+      runState: { state: "running", percent: 1, pause: null },
+    });
     expect(controlButtonHints(envelope)).toStrictEqual({ pause: true, resume: false, abort: true });
   });
 
   it("paused: resume and abort enabled, pause disabled", () => {
-    const envelope = makeEnvelope({ status: "ok", runState: { state: "paused", percent: 1, pause: null } });
+    const envelope = makeEnvelope({
+      status: "ok",
+      runState: { state: "paused", percent: 1, pause: null },
+    });
     expect(controlButtonHints(envelope)).toStrictEqual({ pause: false, resume: true, abort: true });
   });
 
   it("an unrecognised state enables all three", () => {
-    const envelope = makeEnvelope({ status: "ok", runState: { state: "homing", percent: 1, pause: null } });
+    const envelope = makeEnvelope({
+      status: "ok",
+      runState: { state: "homing", percent: 1, pause: null },
+    });
     expect(controlButtonHints(envelope)).toStrictEqual({ pause: true, resume: true, abort: true });
   });
 
@@ -305,7 +314,12 @@ describe("progress", () => {
 
 describe("unknown since", () => {
   it("starts tracking since on the first unknown poll with a lastError", () => {
-    const envelope = makeEnvelope({ status: "unknown", runState: null, lastError: "x", updatedAt: 1000 });
+    const envelope = makeEnvelope({
+      status: "unknown",
+      runState: null,
+      lastError: "x",
+      updatedAt: 1000,
+    });
     expect(nextUnknownSince(null, envelope, 5000)).toStrictEqual({ queueId: 1, since: 1000 });
   });
 

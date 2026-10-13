@@ -84,6 +84,91 @@ export function shouldShowControlBar(
   );
 }
 
+// D-04: a hint for button enablement only — nothing else may consult it
+// before sending (the core gates every action). Unknown or ambiguous state
+// (any status other than "ok", or a null runState) enables all three.
+export function controlButtonHints(envelope: RunningEnvelope): {
+  pause: boolean;
+  resume: boolean;
+  abort: boolean;
+} {
+  if (envelope.status !== "ok" || envelope.runState === null) {
+    return { pause: true, resume: true, abort: true };
+  }
+  const state = envelope.runState.state;
+  if (state === "running") {
+    return { pause: true, resume: false, abort: true };
+  }
+  if (state === "paused") {
+    return { pause: false, resume: true, abort: true };
+  }
+  return { pause: true, resume: true, abort: true };
+}
+
+export function progressValue(percent: number | null): number | null {
+  if (percent === null || !Number.isFinite(percent)) {
+    return null;
+  }
+  const clamped = Math.min(100, Math.max(0, percent));
+  return Math.round(clamped);
+}
+
+export interface UnknownSince {
+  queueId: number;
+  since: number;
+}
+
+// Tracks the first failed poll seen by THIS client (not a server-recorded
+// instant): the pending first poll (status "unknown", no lastError yet) is
+// not shown as unknown.
+export function nextUnknownSince(
+  prev: UnknownSince | null,
+  envelope: RunStateEnvelope | undefined,
+  nowMs: number,
+): UnknownSince | null {
+  if (envelope === undefined) {
+    return prev;
+  }
+  if (!envelope.running) {
+    return null;
+  }
+  if (envelope.status === "ok") {
+    return null;
+  }
+  if (envelope.lastError === undefined) {
+    return null;
+  }
+  if (prev !== null && prev.queueId === envelope.queueId) {
+    return prev;
+  }
+  return { queueId: envelope.queueId, since: envelope.updatedAt ?? nowMs };
+}
+
+export function formatClock(ms: number): string {
+  return new Date(ms).toLocaleTimeString(undefined, {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  });
+}
+
+// UI-01 adjacency (D-02, D-12): a confirm opened for one step must close
+// if the run resumes (running: false) or moves on to a different step
+// (queueId change) before the operator confirmed.
+export function confirmStillValid(
+  openedForQueueId: number,
+  envelope: RunStateEnvelope | undefined,
+): boolean {
+  if (envelope === undefined) {
+    return true;
+  }
+  if (!envelope.running) {
+    return false;
+  }
+  return envelope.queueId === openedForQueueId;
+}
+
 function capitalize(action: string): string {
   return action.length === 0 ? action : action[0].toUpperCase() + action.slice(1);
 }
@@ -112,16 +197,37 @@ export function successTitle(action: string): string {
     : action;
 }
 
+const DECISION_LABELS: Readonly<Record<string, string>> = {
+  is_tip_broken: "Tip broken?",
+  return_liquid: "Return liquid?",
+};
+
+export function decisionLabel(name: string): string {
+  return Object.prototype.hasOwnProperty.call(DECISION_LABELS, name)
+    ? DECISION_LABELS[name]
+    : `${name}?`;
+}
+
 // D-06/D-08: Pause has no decisions, so it keeps its short question form.
-// Any other action restates the choice made (extended in Task 2 to list
-// every declared decision); for now (no decision-aware callers yet) it
-// falls back to a plain statement.
-export function restateChoice(toolType: string, action: string, _values: DecisionValues): string {
+// Any other action restates the choice made, one " {Label}: {Yes/No/not
+// chosen}." sentence per declared decision, in declaration order.
+export function restateChoice(toolType: string, action: string, values: DecisionValues): string {
   const name = toolDisplayName(toolType);
   if (action === "pause") {
     return `Pause the ${name} run?`;
   }
-  return `${capitalize(action)} the ${name} run.`;
+
+  let sentence = `${capitalize(action)} the ${name} run.`;
+  const spec = getActionSpec(toolType, action);
+  if (spec) {
+    for (const decisionName of Object.keys(spec)) {
+      const label = decisionLabel(decisionName).replace(/\?$/, "");
+      const value = values[decisionName];
+      const valueText = value === "yes" ? "Yes" : value === "no" ? "No" : "not chosen";
+      sentence += ` ${label}: ${valueText}.`;
+    }
+  }
+  return sentence;
 }
 
 // Plan 02-05 adds the recovery (non-running) target; only "running" exists
@@ -211,4 +317,28 @@ export function createConfirmedSender(deps: ConfirmedSendDeps): {
     send,
     isInFlight: () => inFlight,
   };
+}
+
+// D-18 sequencing primitive (used by plan 02-03): runs an optional follow-up
+// ONLY after an accepted send, and never lets a follow-up failure propagate
+// as an unhandled rejection — it is reported back instead.
+export async function runAfterAccepted(
+  send: () => Promise<ConfirmedSendOutcome>,
+  followUp?: () => Promise<unknown>,
+): Promise<{
+  outcome: ConfirmedSendOutcome;
+  followUp: "done" | "skipped" | "failed";
+  followUpMessage?: string;
+}> {
+  const outcome = await send();
+  if (outcome.status !== "accepted" || !followUp) {
+    return { outcome, followUp: "skipped" };
+  }
+  try {
+    await followUp();
+    return { outcome, followUp: "done" };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return { outcome, followUp: "failed", followUpMessage: message };
+  }
 }
