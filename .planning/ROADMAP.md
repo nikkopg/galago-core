@@ -14,7 +14,7 @@ leaves an instrument run untracked. Governing design: galago-tools
 `docs/specs/2026-10-12-galago-live-run-control-design.md`. Companion milestone: galago-tools
 "F.A.S.T. Live Run Control (adapter & rollout)".
 
-- [ ] **Phase 1: Queue Control Path & Run State** - tRPC control path to the running step's tool, a
+- [x] **Phase 1: Queue Control Path & Run State** - tRPC control path to the running step's tool, a (completed 2026-10-13)
   generic `runControl` capability, a `runState` query and a heartbeat that retries.
 - [ ] **Phase 2: Run Page Live Controls** - Control bar, `tool_paused` prompt, Stop confirmation and
   step-editor cleanup, with every decision explicit and confirmed.

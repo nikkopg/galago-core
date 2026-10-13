@@ -44,6 +44,10 @@ both and runs the supervised live acceptance.
   from the galago-tools fork via the `vendor/galago-tools` submodule
 - ✓ Production compose builds from local source with the SQLite volume, `GRPC_HOST` and
   `TOOLBOX_PORT` (`318ec7f`); deployed as `galago-web` on forb01 (`:3010`)
+- ✓ QUE-01..QUE-06: `commandQueue.toolControl` (operator Pause/Resume/Abort sent directly to the
+  running step's tool, fail-closed `"yes"`/`"no"` decisions), the generic `runControl` map
+  (`server/runControl.ts`), the `commandQueue.runState` query backed by a 2 s server-side poller, a
+  heartbeat that keeps retrying, and interfaces regenerated from galago-tools `cb7886d` — Phase 1
 
 ### Active
 
@@ -61,7 +65,7 @@ See `.planning/REQUIREMENTS.md` (QUE-*, UI-*).
 
 - **Key code:** `controller/server/command_queue.ts` (busy loop, `_runningPromise`, `UIMessage`
   modals that resolve the step via `_messageResolve`), `controller/server/tools.ts` (`Tool` with one
-  gRPC client per tool; `fetchStatus` stops the heartbeat after one failure),
+  gRPC client per tool; `fetchStatus` keeps the heartbeat running through failures since Phase 1),
   `controller/server/routers/command_queue.ts` (tRPC), `controller/components/runs/`
   (`RunsComponent.tsx`, `PauseModal`, `StopRunModal` — which auto-confirms after a 5 s countdown).
 - **No gRPC deadline** on `executeCommand`, so a step can stay open through a long pause.
@@ -69,7 +73,10 @@ See `.planning/REQUIREMENTS.md` (QUE-*, UI-*).
   generates a broken `tool_base.ts`); Node via nvm (`~/.nvm/versions/node/v24.14.1/bin`).
 - **Build:** `.dockerignore` keeps host `controller/node_modules` out of the image (host-built
   native modules broke `better-sqlite3`).
-- **Gate:** `tsc --noEmit` in `controller/` — 0 errors as of 2026-10-09.
+- **Gate:** `tsc --noEmit` in `controller/` (0 errors) plus the Vitest unit suite
+  (`npm run test:unit`, 92 tests as of Phase 1); `bin/make test` runs both, with `prettier --check`.
+- **Live control (Phase 1):** `CommandQueue.runningStep` (in-memory, set only around a tool step),
+  `toolControl`, `runState`/`RunStateMonitor` (`server/runState.ts`), and `Tool.controlCommand`.
 - **Research:** `.planning/research/` (copied from the fast-mcp planning, 2026-10-12; cross-repo).
 
 ## Constraints
@@ -85,8 +92,11 @@ See `.planning/REQUIREMENTS.md` (QUE-*, UI-*).
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
 | Plan the Galago side per repo (galago-core: queue + UI; galago-tools: adapter + rollout) | Clearer separation; each repo plans the code it changes | — Pending |
-| D2 2 s run-state polling; D3 abort/resume out of the step editor; D4 Stop asks abort or cancel; D6 generic `runControl` | Settled 2026-10-12 | — Pending |
-| `tool_paused` reads its own `runState` query, not the queue's modal state | The queue's modals block the busy loop; a pause happens inside an in-flight step | — Pending |
+| D2 2 s run-state polling; D3 abort/resume out of the step editor; D4 Stop asks abort or cancel; D6 generic `runControl` | Settled 2026-10-12 | ✓ D2 and D6 shipped in Phase 1; D3 and D4 are Phase 2 |
+| `tool_paused` reads its own `runState` query, not the queue's modal state | The queue's modals block the busy loop; a pause happens inside an in-flight step | ✓ `runState` shipped independent of `modalState` (Phase 1); the prompt itself is Phase 2 |
+| Running step tracked in memory, not read back from SQLite `STARTED` rows | After a restart no step is running, so no control bar appears (design §8) | ✓ Phase 1 |
+| Vitest 2.1.9 for server unit tests (human-approved package set A) | It supports the Docker builder's node 22.11; `tsc` stays the type gate | ✓ Phase 1 |
+| Accept the residual control race (step ends during the gRPC round trip) | galago-core may not check instrument state (D-04); the F.A.S.T. core's state gates refuse invalid actions | ✓ Accepted in Phase 1 UAT, 2026-10-13 |
 
 ## Evolution
 
@@ -106,4 +116,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-10-12 after project initialization (moved from fast-mcp planning)*
+*Last updated: 2026-10-13 after Phase 1*
