@@ -15,7 +15,7 @@ the 25 requirements approved on 2026-10-12; each requirement below names the ori
 - [x] **QUE-02**: `toolControl` refuses when no step is running, when the running step's tool type has no `runControl` entry, or when a decision value is blank or unclear; the queue gains an accessor for the running (`STARTED`) step — *RCTL-08, RSAFE-02*
 - [x] **QUE-03**: Each tool type declares live run control in a `runControl` entry, separate from `commandFields`; the F.A.S.T. declares pause, resume (`is_tip_broken` yes/no) and abort (`return_liquid` yes/no) — *RCTL-08*
 - [ ] **QUE-04**: A `commandQueue.runState` query returns the running step's tool `run_state` (state, percent, pause info), independent of `modalState` and the queue's `UIMessage` modals — *RSTATE-01, PAUSE-03*
-- [ ] **QUE-05**: A failed status poll reports "run state unknown" and keeps retrying; `Tool.fetchStatus` no longer stops the heartbeat after a single failure — *RSTATE-03*
+- [x] **QUE-05**: A failed status poll reports "run state unknown" and keeps retrying; `Tool.fetchStatus` no longer stops the heartbeat after a single failure — *RSTATE-03*
 - [ ] **QUE-06**: Generated interfaces include `StatusReply.run_state` and the F.A.S.T. `Pause` command (submodule bumped to the galago-tools commit, regenerated with ts-proto 1.151.1), and `tsc` stays at 0 errors — *RSTATE-01*
 
 ### Run page live controls (UI)
@@ -53,7 +53,7 @@ the 25 requirements approved on 2026-10-12; each requirement below names the ori
 | QUE-02 | Phase 1 | Complete |
 | QUE-03 | Phase 1 | Complete |
 | QUE-04 | Phase 1 | Pending |
-| QUE-05 | Phase 1 | Pending |
+| QUE-05 | Phase 1 | Complete |
 | QUE-06 | Phase 1 | Pending |
 | UI-01 | Phase 2 | Pending |
 | UI-02 | Phase 2 | Pending |

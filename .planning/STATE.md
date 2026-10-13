@@ -5,16 +5,16 @@ milestone_name: Live Run Control (queue & run page)
 current_phase: 1
 current_phase_name: Queue Control Path & Run State
 status: executing
-stopped_at: Completed 01-03-PLAN.md
-last_updated: "2026-10-13T02:32:38.351Z"
+stopped_at: Completed 01-04-PLAN.md
+last_updated: "2026-10-13T02:39:00.085Z"
 last_activity: 2026-10-13
 last_activity_desc: Phase 1 execution started
-state_head: f01c90759f7a2637bccfa6ca3f76cebfbdabcd77
+state_head: 7d3e08a747db6d1a685c68b712187cdc83265549
 progress:
   total_phases: 2
   completed_phases: 0
   total_plans: 5
-  completed_plans: 3
+  completed_plans: 4
   percent: 0
 ---
 
@@ -31,7 +31,7 @@ decides every recovery action; the web app never acts on its own or pre-selects 
 ## Current Position
 
 Phase: 1 (Queue Control Path & Run State) — EXECUTING
-Plan: 4 of 5
+Plan: 5 of 5
 Status: Ready to execute
 Last activity: 2026-10-13 — Phase 1 execution started
 
@@ -62,6 +62,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 01 P01 | 20 min | 3 tasks | 6 files |
 | Phase 01 P02 | ~35min | 2 tasks | 6 files |
 | Phase 01 P03 | 18min | 2 tasks | 4 files |
+| Phase 01 P04 | ~15min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -74,6 +75,7 @@ Recent decisions affecting current work:
   page; galago-tools owns the adapter, re-pin, deploy and live acceptance.
 - [Phase 01]: Approved vitest@2.1.9 + vite-tsconfig-paths@5.1.4 (Set A) as controller's test runner, sidestepping the package-legitimacy 'too-new' flag on vitest's latest release cadence — Older, long-proven minor compatible with both node v24.14.1 (dev) and node 22.11 (Docker builder); tsc --noEmit stays the gate per D-20
 - [Phase 01]: Task 1 (tracer) implemented toolControl's transport-error handling and full audit logging ahead of Task 2's planned split; Task 2's RED phase only drove the genuinely new undeclared-parameter refusal (check e)
+- [Phase 01]: Heartbeat retry (D-15) and de-duplicated failure/recovery logging with a failure-streak counter (D-16) implemented in Tool.fetchStatus; the heartbeat no longer stops after a single failed poll, for every tool type.
 
 ### Pending Todos
 
@@ -96,6 +98,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-13T02:32:38.330Z
-Stopped at: Completed 01-03-PLAN.md
+Last session: 2026-10-13T02:39:00.062Z
+Stopped at: Completed 01-04-PLAN.md
 Resume file: None
