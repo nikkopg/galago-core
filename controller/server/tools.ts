@@ -65,6 +65,8 @@ export default class Tool {
   uptime?: number;
 
   private heartbeat: ReturnType<typeof setInterval> | undefined;
+  private _consecutiveStatusFailures = 0;
+  private _statusUnknownSince?: number;
 
   constructor(
     private toolId: string,
@@ -88,6 +90,16 @@ export default class Tool {
     return this.toolType;
   }
 
+  // D-16: length of the current status-poll failure streak; 0 when healthy.
+  get consecutiveStatusFailures(): number {
+    return this._consecutiveStatusFailures;
+  }
+
+  // D-16: epoch ms when the current failure streak began; undefined when healthy.
+  get statusUnknownSince(): number | undefined {
+    return this._statusUnknownSince;
+  }
+
   startHeartbeat(heartbeatInterval: number) {
     if (this.heartbeat) {
       return;
@@ -105,11 +117,30 @@ export default class Tool {
   async fetchStatus() {
     try {
       const statusReply = await this.grpc.getStatus({});
+      if (this._consecutiveStatusFailures > 0) {
+        logAction({
+          level: "info",
+          action: "Tool Status Recovered",
+          details: `Tool ${this.toolId} (${this.toolType}) status poll recovered after ${this._consecutiveStatusFailures} failed polls`,
+        });
+      }
+      this._consecutiveStatusFailures = 0;
+      this._statusUnknownSince = undefined;
       this.status = statusReply.status;
       this.uptime = statusReply.uptime;
       return statusReply;
     } catch (e) {
-      console.error(`Failed to fetch status for tool ${this.toolId}: ${e}`);
+      this._consecutiveStatusFailures++;
+      if (this._consecutiveStatusFailures === 1) {
+        this._statusUnknownSince = Date.now();
+        const details = `Tool ${this.toolId} (${this.toolType}) status poll failed; retrying every heartbeat: ${e}`;
+        logAction({
+          level: "warning",
+          action: "Tool Status Unknown",
+          details,
+        });
+        console.warn(details);
+      }
       this.status = ToolStatus.UNKNOWN_STATUS;
       // keep retrying at the normal interval
       return { uptime: 0, status: ToolStatus.UNKNOWN_STATUS } as tool_base.StatusReply;
