@@ -376,10 +376,7 @@ export default class Tool {
   // does NOT reuse executeCommand: no variable substitution, no step plumbing,
   // not enqueued, never stored as a step (D-05). No try/catch here — a transport
   // error propagates to the caller (CommandQueue.toolControl) uncaught (D-06).
-  async controlCommand(
-    action: string,
-    params: Record<string, string>,
-  ): Promise<ToolControlResult> {
+  async controlCommand(action: string, params: Record<string, string>): Promise<ToolControlResult> {
     const payload = this._payloadForCommand({
       toolId: this.toolId,
       toolType: this.toolType,

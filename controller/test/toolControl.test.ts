@@ -366,9 +366,9 @@ describe("toolControl", () => {
         .mock.calls.map(([call]) => call as { level: string; action: string; details: string })
         .filter((call) => call.action.startsWith("Tool Control"));
 
-    await expect(
-      caller.toolControl({ action: "resume", params: {} }),
-    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    await expect(caller.toolControl({ action: "resume", params: {} })).rejects.toMatchObject({
+      code: "BAD_REQUEST",
+    });
     let logs = toolControlLogs();
     expect(logs).toHaveLength(1);
     expect(logs[0]).toMatchObject({ level: "warning", action: "Tool Control Refused" });

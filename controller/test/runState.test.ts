@@ -6,11 +6,7 @@ import type { RunningStep } from "@/server/command_queue";
 import Tool from "@/server/tools";
 import { commandQueueRouter } from "@/server/routers/command_queue";
 import { installFakeTool, removeFakeTool, deferred, FakeGrpc } from "./helpers/fakeTool";
-import {
-  RUN_STATE_POLL_INTERVAL_MS,
-  extractRunState,
-  RunStateMonitor,
-} from "@/server/runState";
+import { RUN_STATE_POLL_INTERVAL_MS, extractRunState, RunStateMonitor } from "@/server/runState";
 
 function statusReplyWith(run_state: unknown): any {
   return { uptime: 1, status: ToolStatus.BUSY, run_state };
@@ -146,14 +142,11 @@ describe("extractRunState", () => {
     expect((result as any).runState.pause).toBeNull();
   });
 
-  it.each([[[]], ["x"], [5]])(
-    "rejects a run_state that is not a plain object (%j)",
-    (value) => {
-      const result = extractRunState(statusReplyWith(value));
-      expect(result.ok).toBe(false);
-      expect((result as any).error).toMatch(/not an object/);
-    },
-  );
+  it.each([[[]], ["x"], [5]])("rejects a run_state that is not a plain object (%j)", (value) => {
+    const result = extractRunState(statusReplyWith(value));
+    expect(result.ok).toBe(false);
+    expect((result as any).error).toMatch(/not an object/);
+  });
 
   it.each([[{}], [{ state: 3 }]])(
     "rejects a run_state with a missing or non-string state (%j)",
@@ -290,9 +283,9 @@ describe("RunStateMonitor", () => {
   }
 
   it("polls at start and every 2000 ms", async () => {
-    const getStatus = vi.fn().mockResolvedValue(
-      statusReplyWith({ state: "running", percent: 1, pause: null }),
-    );
+    const getStatus = vi
+      .fn()
+      .mockResolvedValue(statusReplyWith({ state: "running", percent: 1, pause: null }));
     const monitor = new RunStateMonitor({ lookupTool: () => ({ grpc: { getStatus } }) });
 
     monitor.start(makeStep());
