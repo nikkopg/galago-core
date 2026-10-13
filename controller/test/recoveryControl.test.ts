@@ -48,7 +48,10 @@ describe("recoveryControl", () => {
 
     fastGrpc = installFakeTool("fast-1", ToolType.fast).grpc;
     pf400Grpc = installFakeTool("pf400-1", ToolType.pf400).grpc;
-    fastGrpc.executeCommand.mockResolvedValue({ response: ResponseCode.SUCCESS, return_reply: true });
+    fastGrpc.executeCommand.mockResolvedValue({
+      response: ResponseCode.SUCCESS,
+      return_reply: true,
+    });
   });
 
   afterEach(async () => {
@@ -69,7 +72,9 @@ describe("recoveryControl", () => {
 
     expect(result).toMatchObject({ ok: true, response: ResponseCode.SUCCESS });
     expect(fastGrpc.executeCommand).toHaveBeenCalledTimes(1);
-    expect(fastGrpc.executeCommand).toHaveBeenCalledWith({ fast: { resume: { is_tip_broken: "no" } } });
+    expect(fastGrpc.executeCommand).toHaveBeenCalledWith({
+      fast: { resume: { is_tip_broken: "no" } },
+    });
     expect(fastGrpc.executeCommand.mock.calls[0]).toHaveLength(1);
 
     expect(logAction).toHaveBeenCalledTimes(1);
@@ -120,7 +125,11 @@ describe("recoveryControl", () => {
     });
 
     await expect(
-      caller().recoveryControl({ toolId: "fast-1", action: "resume", params: { is_tip_broken: "no" } }),
+      caller().recoveryControl({
+        toolId: "fast-1",
+        action: "resume",
+        params: { is_tip_broken: "no" },
+      }),
     ).rejects.toMatchObject({ code: "PRECONDITION_FAILED" });
     expect(fastGrpc.executeCommand).not.toHaveBeenCalled();
   });
@@ -142,7 +151,9 @@ describe("recoveryControl", () => {
     });
 
     expect(result).toMatchObject({ ok: true });
-    expect(fastGrpc.executeCommand).toHaveBeenCalledWith({ fast: { abort: { return_liquid: "yes" } } });
+    expect(fastGrpc.executeCommand).toHaveBeenCalledWith({
+      fast: { abort: { return_liquid: "yes" } },
+    });
   });
 
   it("refuses pause", async () => {
@@ -163,14 +174,24 @@ describe("recoveryControl", () => {
     async (params) => {
       await expect(
         caller().recoveryControl({ toolId: "fast-1", action: "resume", params }),
-      ).rejects.toMatchObject({ code: "BAD_REQUEST", message: expect.stringContaining("is_tip_broken") });
+      ).rejects.toMatchObject({
+        code: "BAD_REQUEST",
+        message: expect.stringContaining("is_tip_broken"),
+      });
     },
   );
 
   it("refuses an abort decision that is not exact yes/no", async () => {
     await expect(
-      caller().recoveryControl({ toolId: "fast-1", action: "abort", params: { return_liquid: "Yes" } }),
-    ).rejects.toMatchObject({ code: "BAD_REQUEST", message: expect.stringContaining("return_liquid") });
+      caller().recoveryControl({
+        toolId: "fast-1",
+        action: "abort",
+        params: { return_liquid: "Yes" },
+      }),
+    ).rejects.toMatchObject({
+      code: "BAD_REQUEST",
+      message: expect.stringContaining("return_liquid"),
+    });
   });
 
   it("refuses an undeclared parameter", async () => {
@@ -213,7 +234,11 @@ describe("recoveryControl", () => {
     fastGrpc.executeCommand.mockRejectedValue(new Error("14 UNAVAILABLE"));
 
     await expect(
-      caller().recoveryControl({ toolId: "fast-1", action: "resume", params: { is_tip_broken: "no" } }),
+      caller().recoveryControl({
+        toolId: "fast-1",
+        action: "resume",
+        params: { is_tip_broken: "no" },
+      }),
     ).rejects.toMatchObject({
       code: "INTERNAL_SERVER_ERROR",
       message: expect.stringContaining("14 UNAVAILABLE"),
@@ -244,7 +269,11 @@ describe("recoveryControl", () => {
       error_message: "instrument not ready",
     });
 
-    await caller().recoveryControl({ toolId: "fast-1", action: "resume", params: { is_tip_broken: "no" } });
+    await caller().recoveryControl({
+      toolId: "fast-1",
+      action: "resume",
+      params: { is_tip_broken: "no" },
+    });
 
     expect(logAction).toHaveBeenCalledTimes(1);
     expect(logAction).toHaveBeenCalledWith(
@@ -256,7 +285,11 @@ describe("recoveryControl", () => {
     fastGrpc.executeCommand.mockRejectedValue(new Error("14 UNAVAILABLE"));
 
     await expect(
-      caller().recoveryControl({ toolId: "fast-1", action: "resume", params: { is_tip_broken: "no" } }),
+      caller().recoveryControl({
+        toolId: "fast-1",
+        action: "resume",
+        params: { is_tip_broken: "no" },
+      }),
     ).rejects.toBeDefined();
 
     expect(logAction).toHaveBeenCalledTimes(1);

@@ -339,10 +339,5 @@ export const commandFields: CommandFields = {
     get_tip_status: [],
     scan_tips: [{ name: "is_tip_broken", type: "boolean", defaultValue: false }],
     eject_tray: [],
-    // Operator recovery from an instrument pause. "yes" or "no", typed by the
-    // operator: text with no defaultValue, never boolean, because an untouched
-    // boolean is saved as false. Blank is rejected by the tool.
-    abort: [{ name: "return_liquid", type: "text" }],
-    resume: [{ name: "is_tip_broken", type: "text" }],
   },
 };
