@@ -56,7 +56,10 @@ function pauseEqual(a: PauseState | null, b: PauseState | null): boolean {
     return false;
   }
   return (
-    a.name === b.name && a.code === b.code && a.startedAt === b.startedAt && jsonEqual(a.detail, b.detail)
+    a.name === b.name &&
+    a.code === b.code &&
+    a.startedAt === b.startedAt &&
+    jsonEqual(a.detail, b.detail)
   );
 }
 
@@ -71,9 +74,11 @@ function jsonEqual(a: unknown, b: unknown): boolean {
   }
 }
 
-// Task 1 scope: the opening path only. A poll whose envelope has a pause
-// with a key different from state.episodeKey opens the prompt; the same key
-// keeps isOpen as it is and refreshes pause. Unchanged results return the
+// D-11..D-13: the full closing-rule order. A poll whose envelope has a
+// pause with a key different from state.episodeKey opens the prompt; the
+// same key keeps isOpen as it is and refreshes pause. The run resuming,
+// the step ending or the step changing all close a tracked episode (D-12);
+// an "unknown" poll never closes one (D-13). Unchanged results return the
 // identical state object (referential equality) so effects do not loop.
 function reducePoll(
   state: PausePromptState,
@@ -82,12 +87,37 @@ function reducePoll(
   if (envelope === undefined) {
     return { state, closedBy: null };
   }
+
+  const episodeTracked = state.episodeKey !== null;
+
   if (!envelope.running) {
+    if (episodeTracked) {
+      return { state: INITIAL_PAUSE_PROMPT, closedBy: "step-ended" };
+    }
     return { state, closedBy: null };
   }
 
+  if (episodeTracked && state.queueId !== null && state.queueId !== envelope.queueId) {
+    const fromInitial = reducePoll(INITIAL_PAUSE_PROMPT, envelope);
+    return { state: fromInitial.state, closedBy: "step-ended" };
+  }
+
   const pause = envelope.runState?.pause ?? null;
+
   if (pause === null) {
+    if (envelope.status === "ok") {
+      if (episodeTracked) {
+        return {
+          state: { ...INITIAL_PAUSE_PROMPT, queueId: envelope.queueId },
+          closedBy: "resumed",
+        };
+      }
+      if (state.queueId === envelope.queueId) {
+        return { state, closedBy: null };
+      }
+      return { state: { ...state, queueId: envelope.queueId }, closedBy: null };
+    }
+    // D-13: status "unknown" never closes the prompt.
     return { state, closedBy: null };
   }
 

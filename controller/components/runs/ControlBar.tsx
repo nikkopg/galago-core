@@ -58,28 +58,27 @@ export const ControlBar: React.FC<{ envelope: RunStateEnvelope | undefined }> = 
   }, [envelope]);
 
   // D-11..D-14: the tool_paused prompt is driven only by this poll. It never
-  // reads or writes the queue's UIMessage modal state (ToolPausedModal, D-10).
+  // reads or writes the queue's own UIMessage bookkeeping (ToolPausedModal, D-10).
+  // UI-01 adjacency (D-02, D-12): a confirm opened for a step that has since
+  // resumed or ended before the operator confirmed closes with it — one
+  // effect, one toast, whether the confirm came from the bar or the prompt
+  // (a prompt-origin close and a step-ended/queueId-change close are often
+  // the SAME transition, so checking both conditions separately would fire
+  // the toast twice for a single event).
   useEffect(() => {
     const result = reducePausePrompt(prompt, { type: "poll", envelope });
     if (result.state !== prompt) {
       setPrompt(result.state);
     }
-    // D-12: a confirm opened from the prompt closes with it, once (not
-    // double-toasted alongside the bar-origin effect below).
-    if (result.closedBy !== null && request !== null && request.origin === "prompt" && !pending) {
-      setRequest(null);
-      infoToast("Confirmation closed", NOTHING_SENT_MESSAGE);
+    if (request !== null && !pending) {
+      const promptClosedThisRequest = request.origin === "prompt" && result.closedBy !== null;
+      const stepMovedOn = !confirmStillValid(request.queueId, envelope);
+      if (promptClosedThisRequest || stepMovedOn) {
+        setRequest(null);
+        infoToast("Confirmation closed", NOTHING_SENT_MESSAGE);
+      }
     }
   }, [envelope, prompt, request, pending]);
-
-  // UI-01 adjacency (D-02, D-12): close a confirm opened for a step that
-  // has since resumed or ended before the operator confirmed.
-  useEffect(() => {
-    if (request !== null && !pending && !confirmStillValid(request.queueId, envelope)) {
-      setRequest(null);
-      infoToast("Confirmation closed", NOTHING_SENT_MESSAGE);
-    }
-  }, [envelope, request, pending]);
 
   const hints = showBar ? controlButtonHints(envelope) : null;
   const percent = showBar ? progressValue(envelope.runState?.percent ?? null) : null;
@@ -177,7 +176,9 @@ export const ControlBar: React.FC<{ envelope: RunStateEnvelope | undefined }> = 
                     variant="outline"
                     colorScheme="teal"
                     leftIcon={<Icon as={TriangleAlert} />}
-                    onClick={() => setPrompt((s) => reducePausePrompt(s, { type: "reopen" }).state)}>
+                    onClick={() =>
+                      setPrompt((s) => reducePausePrompt(s, { type: "reopen" }).state)
+                    }>
                     Paused: view reason
                   </Button>
                 ) : null}

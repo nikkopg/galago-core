@@ -307,7 +307,10 @@ describe("closes on step change", () => {
         pause: { name: "A", code: 1, detail: null, startedAt: "2026-01-01T00:00:00Z" },
       },
     });
-    const opened = reducePausePrompt(INITIAL_PAUSE_PROMPT, { type: "poll", envelope: pausedOnSeven });
+    const opened = reducePausePrompt(INITIAL_PAUSE_PROMPT, {
+      type: "poll",
+      envelope: pausedOnSeven,
+    });
 
     const runningOnEight = makeEnvelope({
       queueId: 8,
@@ -360,7 +363,10 @@ describe("keeps open on unknown", () => {
         pause: { name: "A", code: 1, detail: null, startedAt: "2026-01-01T00:00:00Z" },
       },
     });
-    const stillOpen = reducePausePrompt(opened.state, { type: "poll", envelope: unknownStillPaused });
+    const stillOpen = reducePausePrompt(opened.state, {
+      type: "poll",
+      envelope: unknownStillPaused,
+    });
     expect(stillOpen.state.isOpen).toBe(true);
     expect(stillOpen.closedBy).toBeNull();
 
@@ -370,7 +376,10 @@ describe("keeps open on unknown", () => {
       lastError: "x",
       runState: null,
     });
-    const unchanged = reducePausePrompt(opened.state, { type: "poll", envelope: unknownNoRunState });
+    const unchanged = reducePausePrompt(opened.state, {
+      type: "poll",
+      envelope: unknownNoRunState,
+    });
     expect(unchanged.state).toBe(opened.state);
     expect(unchanged.closedBy).toBeNull();
   });
@@ -382,9 +391,7 @@ describe("reason and detail edge cases", () => {
     expect(formatPauseReason({ name: null, code: 5, detail: null, startedAt: null })).toBe(
       "Error code 5",
     );
-    expect(
-      formatPauseReason({ name: null, code: null, detail: null, startedAt: null }),
-    ).toBeNull();
+    expect(formatPauseReason({ name: null, code: null, detail: null, startedAt: null })).toBeNull();
   });
 
   it("describePauseDetail covers known and unknown shapes", () => {
