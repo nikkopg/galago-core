@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   Spinner,
   Button,
@@ -21,12 +21,20 @@ import {
   Pause, // replaces FaPause
   Trash2, // replaces FaTrash
 } from "lucide-react";
+import { shouldInterceptQueueStop, buildStopRequest } from "../stopInterception";
+import type { InstrumentStopRequest } from "../stopInterception";
+import { InstrumentStopModal } from "../InstrumentStopModal";
+import type { RunStateEnvelope } from "@/server/runState";
 
 interface QueueStatusComponent {
   totalRuns: number;
+  runControlState?: RunStateEnvelope;
 }
 
-export const QueueStatusComponent: React.FC<QueueStatusComponent> = ({ totalRuns }) => {
+export const QueueStatusComponent: React.FC<QueueStatusComponent> = ({
+  totalRuns,
+  runControlState,
+}) => {
   const stateQuery = trpc.commandQueue.state.useQuery(undefined, { refetchInterval: 1000 });
   const commandsQuery = trpc.commandQueue.getAll.useQuery(undefined, { refetchInterval: 1000 });
   const stateMutationOpts = {
@@ -42,12 +50,19 @@ export const QueueStatusComponent: React.FC<QueueStatusComponent> = ({ totalRuns
   const clearAllMutation = queue.clearAll.useMutation(stateMutationOpts);
   const { isOpen, onOpen, onClose } = useDisclosure();
   const getError = queue.getError.useQuery(undefined, { refetchInterval: 1500 });
+  const [stopRequest, setStopRequest] = useState<InstrumentStopRequest | null>(null);
 
   const run = async () => {
     restartMutation.mutate();
   };
 
+  // D-16: a running controllable step opens the Stop modal instead of
+  // calling stop directly; otherwise behaves exactly as today.
   const pause = async () => {
+    if (shouldInterceptQueueStop(runControlState)) {
+      setStopRequest(buildStopRequest(runControlState, () => stopMutation.mutateAsync()));
+      return;
+    }
     stopMutation.mutate();
   };
 
@@ -93,6 +108,11 @@ export const QueueStatusComponent: React.FC<QueueStatusComponent> = ({ totalRuns
   return (
     <>
       {confirmRunStartModal()}
+      <InstrumentStopModal
+        request={stopRequest}
+        envelope={runControlState}
+        onClose={() => setStopRequest(null)}
+      />
       <ButtonGroup spacing={2}>
         {isRunning ? (
           <Button
@@ -100,7 +120,7 @@ export const QueueStatusComponent: React.FC<QueueStatusComponent> = ({ totalRuns
             colorScheme="orange"
             variant="solid"
             onClick={() => pause()}>
-            Pause
+            Pause queue
           </Button>
         ) : (
           <Button

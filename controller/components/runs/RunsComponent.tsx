@@ -530,7 +530,10 @@ export const RunsComponent: React.FC = () => {
                     </HStack>
                   </VStack>
                 </HStack>
-                <QueueStatusComponent totalRuns={totalRuns} />
+                <QueueStatusComponent
+                  totalRuns={totalRuns}
+                  runControlState={runControlQuery.data}
+                />
               </Flex>
 
               <Divider />
