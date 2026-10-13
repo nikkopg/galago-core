@@ -770,7 +770,7 @@ is removed. This is a UI-surface change, not a capability removal.
 repo, this session) or `[CITED]` from `.planning/PROJECT.md`/`.planning/research/ARCHITECTURE.md`,
 both already-approved project documents.**
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Does `recoveryControl`'s `toolId`-match check need the same normalize-both-sides comparison as
    `getToolFromDB`, or can it compare raw strings?**
@@ -781,6 +781,7 @@ both already-approved project documents.**
    - Recommendation: normalize both sides with the same `(s||"").toLowerCase().replace(/[^a-z0-9]/g,"")`
      idiom already used twice in this codebase, to be safe and consistent, rather than assuming exact
      string equality.
+   - RESOLVED: normalize both sides — implemented in 02-04 (`normalize(runningStep.toolId)` vs `normalize(toolName)`).
 
 2. **Should the per-run delete button's existing generic `ConfirmationModal` be removed entirely when
    `InstrumentStopModal` is shown, or layered (confirm twice)?**
@@ -792,6 +793,8 @@ both already-approved project documents.**
      entirely and go straight to `InstrumentStopModal` (which already has its own Cancel) — avoids a
      confusing double-confirmation UX; when no controllable step is running, keep today's
      `ConfirmationModal` unchanged.
+   - RESOLVED: skip the generic modal and go straight to `InstrumentStopModal` while a controllable
+     step runs — implemented in 02-03 Task 2.
 
 ## Environment Availability
 
