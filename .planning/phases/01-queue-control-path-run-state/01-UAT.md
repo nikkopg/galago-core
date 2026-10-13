@@ -1,39 +1,35 @@
 ---
-status: testing
+status: complete
 phase: 01-queue-control-path-run-state
 source: [01-VERIFICATION.md]
 started: 2026-10-13T03:20:00Z
-updated: 2026-10-13T03:20:00Z
+updated: 2026-10-13T07:38:14.209Z
 ---
 
 ## Current Test
 
-number: 1
-name: Decide on WR-01 (toolControl does not re-check the running step before sending)
-expected: |
-  A deliberate decision recorded: fix now, defer to Phase 2, or accept the risk. Today a Pause, Resume or Abort that was validated against one step can reach, or be logged against, the next step if the busy loop moves on during the gRPC round trip.
-awaiting: user response
+[testing complete]
 
 ## Tests
 
-### 1. Decide on WR-01 (toolControl does not re-check the running step before sending)
-expected: A deliberate decision recorded: fix now, defer to Phase 2, or accept the risk. The source is `controller/server/command_queue.ts:429-495`, where no identity re-check happens before `await tool.controlCommand(...)`.
-result: [pending]
+### 1. Accept the remaining WR-01 race (step ends during the gRPC control round trip)
+expected: You accept that a Pause, Resume or Abort can still reach the next step on the same tool if the step ends during the gRPC round trip. The F.A.S.T. core's state gates are the protection, because galago-core may not add instrument-state checks (D-04). The `62e505c` re-check in `controller/server/command_queue.ts` toolControl only covers the moment before sending.
+result: pass
 
-### 2. Decide on WR-02 (RunStateMonitor's in-flight guard is cleared without checking the generation)
-expected: A deliberate decision recorded. The one-line fix (`if (generation === this.generation) { this.inFlight = false; }`) is proposed in 01-REVIEW.md. The impact is limited to read-only run-state staleness.
-result: [pending]
+### 2. Confirm the WR-02 fix (generation-guarded in-flight reset)
+expected: `controller/server/runState.ts` `_poll` resets `inFlight` only when `generation === this.generation` (commit `42fd1af`). A regression test in `controller/test/runState.test.ts` covers it, and all 92 tests pass.
+result: pass
 
 ### 3. Confirm "galago-core performs no instrument-state check" (plan 01-02, D-04)
 expected: The decision path in toolControl reads only `this._runningStep` and `runControl`/`validateControlRequest` before sending. No `Tool.status`, run state or tool reply field gates the send.
-result: [pending]
+result: pass
 
 ## Summary
 
 total: 3
-passed: 0
+passed: 3
 issues: 0
-pending: 3
+pending: 0
 skipped: 0
 blocked: 0
 
