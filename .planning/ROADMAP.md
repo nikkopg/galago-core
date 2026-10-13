@@ -40,7 +40,7 @@ report that tool's live run state, without touching the queue's busy loop.
 - [x] 01-02-PLAN.md
 - [x] 01-03-PLAN.md
 - [x] 01-04-PLAN.md
-- [ ] 01-05-PLAN.md
+- [x] 01-05-PLAN.md
 
 **Research flags**: whether `runState` polling races the existing `modalState`/queue queries
 (research Pitfall 9) is worth a short design spike at plan time.

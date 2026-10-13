@@ -4,17 +4,17 @@ milestone: v1
 milestone_name: Live Run Control (queue & run page)
 current_phase: 1
 current_phase_name: Queue Control Path & Run State
-status: executing
-stopped_at: Completed 01-04-PLAN.md
-last_updated: "2026-10-13T02:39:00.085Z"
+status: verifying
+stopped_at: Completed 01-05-PLAN.md
+last_updated: "2026-10-13T02:55:58.570Z"
 last_activity: 2026-10-13
 last_activity_desc: Phase 1 execution started
-state_head: 7d3e08a747db6d1a685c68b712187cdc83265549
+state_head: 268707e92f3d58c433c9cad4d59b622852d874bd
 progress:
   total_phases: 2
   completed_phases: 0
   total_plans: 5
-  completed_plans: 4
+  completed_plans: 5
   percent: 0
 ---
 
@@ -32,7 +32,7 @@ decides every recovery action; the web app never acts on its own or pre-selects 
 
 Phase: 1 (Queue Control Path & Run State) — EXECUTING
 Plan: 5 of 5
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-10-13 — Phase 1 execution started
 
 Progress: [░░░░░░░░░░] 0%
@@ -63,6 +63,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 01 P02 | ~35min | 2 tasks | 6 files |
 | Phase 01 P03 | 18min | 2 tasks | 4 files |
 | Phase 01 P04 | ~15min | 2 tasks | 2 files |
+| Phase 01 P05 | ~45min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -76,6 +77,8 @@ Recent decisions affecting current work:
 - [Phase 01]: Approved vitest@2.1.9 + vite-tsconfig-paths@5.1.4 (Set A) as controller's test runner, sidestepping the package-legitimacy 'too-new' flag on vitest's latest release cadence — Older, long-proven minor compatible with both node v24.14.1 (dev) and node 22.11 (Docker builder); tsc --noEmit stays the gate per D-20
 - [Phase 01]: Task 1 (tracer) implemented toolControl's transport-error handling and full audit logging ahead of Task 2's planned split; Task 2's RED phase only drove the genuinely new undeclared-parameter refusal (check e)
 - [Phase 01]: Heartbeat retry (D-15) and de-duplicated failure/recovery logging with a failure-streak counter (D-16) implemented in Tool.fetchStatus; the heartbeat no longer stops after a single failed poll, for every tool type.
+- [Phase 01]: Pinned vendor/galago-tools to the exact human-approved SHA cb7886d1f3bdcdeeee71c55996f0dd62cf49ba7f rather than a newer FETCH_HEAD the remote had advanced to mid-task, per the checkpoint's pin-exactly instruction
+- [Phase 01]: Phase 1 (Queue Control Path & Run State) complete: QUE-01 through QUE-06 proven on the real generated protobuf encoders after the galago-tools proto regeneration
 
 ### Pending Todos
 
@@ -98,6 +101,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-13T02:39:00.062Z
-Stopped at: Completed 01-04-PLAN.md
+Last session: 2026-10-13T02:55:58.548Z
+Stopped at: Completed 01-05-PLAN.md
 Resume file: None
