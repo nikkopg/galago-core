@@ -19,6 +19,9 @@ import {
   restateChoice,
   decisionLabel,
   runAfterAccepted,
+  shouldShowRecoverySection,
+  isToolTrackedByRunningStep,
+  normalizeToolKey,
   type RunningEnvelope,
   type ConfirmedSendOutcome,
 } from "@/components/runs/controlDecision";
@@ -401,6 +404,138 @@ describe("restatement", () => {
   it("decisionLabel maps the known decisions", () => {
     expect(decisionLabel("is_tip_broken")).toBe("Tip broken?");
     expect(decisionLabel("return_liquid")).toBe("Return liquid?");
+  });
+});
+
+describe("recovery section visibility", () => {
+  it("is true only for a tool type with a runControl entry, independent of any running step", () => {
+    expect(shouldShowRecoverySection("fast")).toBe(true);
+    expect(shouldShowRecoverySection("pf400")).toBe(false);
+    expect(shouldShowRecoverySection("toolbox")).toBe(false);
+    expect(shouldShowRecoverySection("constructor")).toBe(false);
+    expect(shouldShowRecoverySection("")).toBe(false);
+  });
+});
+
+describe("tracked tool", () => {
+  it("normalizeToolKey folds case and separators the same way for equivalent names", () => {
+    expect(normalizeToolKey("FAST 1")).toBe(normalizeToolKey("fast-1"));
+  });
+
+  it("is false for an undefined envelope", () => {
+    expect(isToolTrackedByRunningStep(undefined, "fast-1")).toBe(false);
+  });
+
+  it("is false when not running", () => {
+    expect(isToolTrackedByRunningStep({ running: false }, "fast-1")).toBe(false);
+  });
+
+  it("is true for a running envelope on this tool, even with status unknown", () => {
+    const envelope = makeEnvelope({ toolId: "FAST 1", status: "unknown" });
+    expect(isToolTrackedByRunningStep(envelope, "fast-1")).toBe(true);
+  });
+
+  it("is false for a running envelope on a different tool", () => {
+    const envelope = makeEnvelope({ toolId: "fast-2" });
+    expect(isToolTrackedByRunningStep(envelope, "fast-1")).toBe(false);
+  });
+});
+
+describe("recovery send gate", () => {
+  it("ignores a recovery pause and sends nothing", async () => {
+    const sendRecovery = vi.fn().mockResolvedValue({ ok: true, response: "SUCCESS" });
+    const notify = { accepted: vi.fn(), refused: vi.fn() };
+    const sender = createConfirmedSender({ sendRunning: vi.fn(), sendRecovery, notify });
+
+    const outcome = await sender.send({
+      target: { kind: "recovery", toolId: "fast-1" },
+      toolType: "fast",
+      action: "pause",
+      decisions: {},
+    });
+
+    expect(outcome).toStrictEqual({ status: "ignored", reason: "incomplete" });
+    expect(sendRecovery).not.toHaveBeenCalled();
+  });
+
+  it("ignores a recovery resume with incomplete decisions and sends nothing", async () => {
+    const sendRecovery = vi.fn().mockResolvedValue({ ok: true, response: "SUCCESS" });
+    const notify = { accepted: vi.fn(), refused: vi.fn() };
+    const sender = createConfirmedSender({ sendRunning: vi.fn(), sendRecovery, notify });
+
+    const outcome = await sender.send({
+      target: { kind: "recovery", toolId: "fast-1" },
+      toolType: "fast",
+      action: "resume",
+      decisions: {},
+    });
+
+    expect(outcome).toStrictEqual({ status: "ignored", reason: "incomplete" });
+    expect(sendRecovery).not.toHaveBeenCalled();
+  });
+
+  it("sends a complete recovery abort to sendRecovery and never sendRunning", async () => {
+    const sendRecovery = vi.fn().mockResolvedValue({ ok: true, response: "SUCCESS" });
+    const sendRunning = vi.fn();
+    const notify = { accepted: vi.fn(), refused: vi.fn() };
+    const sender = createConfirmedSender({ sendRunning, sendRecovery, notify });
+
+    const outcome = await sender.send({
+      target: { kind: "recovery", toolId: "fast-1" },
+      toolType: "fast",
+      action: "abort",
+      decisions: { return_liquid: "no" },
+    });
+
+    expect(outcome).toStrictEqual({ status: "accepted" });
+    expect(sendRecovery).toHaveBeenCalledTimes(1);
+    expect(sendRecovery).toHaveBeenCalledWith({
+      toolId: "fast-1",
+      action: "abort",
+      params: { return_liquid: "no" },
+    });
+    expect(sendRunning).not.toHaveBeenCalled();
+  });
+
+  it("fails and notifies refused when no sendRecovery dependency is given", async () => {
+    const notify = { accepted: vi.fn(), refused: vi.fn() };
+    const sender = createConfirmedSender({ sendRunning: vi.fn(), notify });
+
+    const outcome = await sender.send({
+      target: { kind: "recovery", toolId: "fast-1" },
+      toolType: "fast",
+      action: "resume",
+      decisions: { is_tip_broken: "yes" },
+    });
+
+    expect(outcome).toStrictEqual({
+      status: "failed",
+      message: "Crash-recovery control is not available here.",
+    });
+    expect(notify.refused).toHaveBeenCalledWith("Crash-recovery control is not available here.");
+  });
+
+  it("ignores a second recovery send while the first is pending", async () => {
+    const pending = deferred<{ ok: boolean; response: string }>();
+    const sendRecovery = vi.fn().mockReturnValue(pending.promise);
+    const notify = { accepted: vi.fn(), refused: vi.fn() };
+    const sender = createConfirmedSender({ sendRunning: vi.fn(), sendRecovery, notify });
+
+    const request = {
+      target: { kind: "recovery" as const, toolId: "fast-1" },
+      toolType: "fast",
+      action: "abort",
+      decisions: { return_liquid: "no" },
+    };
+
+    const first = sender.send(request);
+    const second = await sender.send(request);
+
+    expect(second).toStrictEqual({ status: "ignored", reason: "in-flight" });
+    expect(sendRecovery).toHaveBeenCalledTimes(1);
+
+    pending.resolve({ ok: true, response: "SUCCESS" });
+    await first;
   });
 });
 
