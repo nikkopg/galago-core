@@ -26,8 +26,8 @@ the 25 requirements approved on 2026-10-12; each requirement below names the ori
 - [x] **UI-04**: An instrument pause opens a `tool_paused` prompt within about 2 s with the reason (name and code), the detail in plain language (e.g. "Deck 3: expected plate 1, found none") and when it started — *PAUSE-01, PAUSE-02*
 - [ ] **UI-05**: The `tool_paused` prompt offers Resume and Abort, closes when the run resumes or the step ends, and never resolves, advances or blocks the queue — *PAUSE-03*
 - [ ] **UI-06**: Stop during a controllable step opens a new confirmation, "abort the instrument run (return liquid? yes/no)" or Cancel, with no timer and no default; dismissing it means Cancel; `StopRunModal` is not reused — *RCTL-06*
-- [ ] **UI-07**: abort/resume are removed from the protocol step editor; the tool page offers Resume/Abort separately for crash recovery when no step is tracking a run — *RCTL-07*
-- [ ] **UI-08**: No galago-core code path sends Pause/Resume/Abort except an operator's confirmed action, and galago-core adds no instrument-state check (the core gates) — *RSAFE-01, RSAFE-03*
+- [x] **UI-07**: abort/resume are removed from the protocol step editor; the tool page offers Resume/Abort separately for crash recovery when no step is tracking a run — *RCTL-07*
+- [x] **UI-08**: No galago-core code path sends Pause/Resume/Abort except an operator's confirmed action, and galago-core adds no instrument-state check (the core gates) — *RSAFE-01, RSAFE-03*
 
 ## Future Requirements
 
@@ -61,8 +61,8 @@ the 25 requirements approved on 2026-10-12; each requirement below names the ori
 | UI-04 | Phase 2 | Complete |
 | UI-05 | Phase 2 | Pending |
 | UI-06 | Phase 2 | Pending |
-| UI-07 | Phase 2 | Pending |
-| UI-08 | Phase 2 | Pending |
+| UI-07 | Phase 2 | Complete |
+| UI-08 | Phase 2 | Complete |
 
 **Coverage:**
 - Milestone requirements: 14 total

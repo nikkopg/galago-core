@@ -5,16 +5,16 @@ milestone_name: Live Run Control (queue & run page)
 current_phase: 2
 current_phase_name: Run Page Live Controls
 status: executing
-stopped_at: Completed 02-03-PLAN.md
-last_updated: "2026-10-13T14:20:04.176Z"
+stopped_at: Completed 02-05-PLAN.md
+last_updated: "2026-10-13T20:27:57.516Z"
 last_activity: 2026-10-13
 last_activity_desc: Phase 2 execution started
-state_head: 85b9c16ca5aa91225a445aa671967edeb789be9e
+state_head: 957e27eb3367fd6ec9e0dd5cc046026bcfbb9f62
 progress:
   total_phases: 2
   completed_phases: 1
   total_plans: 11
-  completed_plans: 9
+  completed_plans: 10
   percent: 50
 ---
 
@@ -31,7 +31,7 @@ decides every recovery action; the web app never acts on its own or pre-selects 
 ## Current Position
 
 Phase: 2 (Run Page Live Controls) — EXECUTING
-Plan: 5 of 6
+Plan: 6 of 6
 Status: Ready to execute
 Last activity: 2026-10-13 — Phase 2 execution started
 
@@ -68,6 +68,7 @@ Progress: [█████░░░░░] 50%
 | Phase 02 P04 | 45 min | 2 tasks | 5 files |
 | Phase 02 P02 | 50min | 2 tasks | 4 files |
 | Phase 02 P03 | 35 min | 2 tasks | 5 files |
+| Phase 02 P05 | 40 min | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -91,6 +92,8 @@ Recent decisions affecting current work:
 - [Phase 02]: Task 1 (tracer) absorbed the full pause formatters and the reducer's opening path, since the tracer's own end-to-end test needed real content formatting; Task 2's TDD cycle was scoped to the genuinely new closing/hide/reopen rules (D-11..D-13)
 - [Phase 02]: Merged ControlBar's prompt-driven close effect and plan 02-01's bar-adjacency effect into one effect, so a prompt-origin confirm closed by a step-ended/queueId-change transition produces exactly one 'nothing was sent' toast, not two
 - [Phase 02]: Task 1 (tracer) built the complete stopInterception.ts module up front (including shouldInterceptRunDelete), so Task 2's TDD RED phase found zero failing tests; the additions were committed as regression coverage and Task 2's GREEN commit implemented the genuinely new UI wiring (Clear All, per-run delete, stale-request close)
+- [Phase 02]: Task 1 (tracer) implemented the full recovery routing and predicates needed for the end-to-end Resume path; Task 2's genuinely new RED/GREEN cycle was scoped to the normalizeToolKey export, mirroring the established tracer-preempts-TDD-RED pattern from 02-03/02-04
+- [Phase 02]: useConfirmedControlSend() moved from the inner RunControlConfirmModalBody to the outer RunControlConfirmModal so a closeOnDispatch recovery send and its pending callbacks survive the modal closing
 
 ### Pending Todos
 
@@ -116,6 +119,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-13T14:20:04.137Z
-Stopped at: Completed 02-03-PLAN.md
+Last session: 2026-10-13T20:27:45.380Z
+Stopped at: Completed 02-05-PLAN.md
 Resume file: None
