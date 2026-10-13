@@ -20,11 +20,19 @@ describe("runControl map", () => {
   });
 });
 
-describe("commandFields untouched (D-10)", () => {
-  it("leaves commandFields.fast.abort and .resume unchanged, with no pause entry", () => {
-    expect(commandFields.fast.abort).toStrictEqual([{ name: "return_liquid", type: "text" }]);
-    expect(commandFields.fast.resume).toStrictEqual([{ name: "is_tip_broken", type: "text" }]);
+describe("commandFields drops fast abort/resume (D-20)", () => {
+  it("has no abort, resume or pause entries for fast, and keeps transfer", () => {
+    expect(Object.prototype.hasOwnProperty.call(commandFields.fast, "abort")).toBe(false);
+    expect(Object.prototype.hasOwnProperty.call(commandFields.fast, "resume")).toBe(false);
     expect(Object.prototype.hasOwnProperty.call(commandFields.fast, "pause")).toBe(false);
+    expect(Object.prototype.hasOwnProperty.call(commandFields.fast, "transfer")).toBe(true);
+  });
+});
+
+describe("legacy saved fast abort/resume steps stay safe in the editor (D-20)", () => {
+  it("resolves to an empty field list via the AddToolCommandModal lookup expression", () => {
+    expect(commandFields["fast"]?.["abort"] || []).toStrictEqual([]);
+    expect(commandFields["fast"]?.["resume"] || []).toStrictEqual([]);
   });
 });
 
