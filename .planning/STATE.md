@@ -5,16 +5,16 @@ milestone_name: Live Run Control (queue & run page)
 current_phase: 2
 current_phase_name: Run Page Live Controls
 status: executing
-stopped_at: Completed 02-04-PLAN.md
-last_updated: "2026-10-13T13:41:28.983Z"
+stopped_at: Completed 02-02-PLAN.md
+last_updated: "2026-10-13T14:03:36.701Z"
 last_activity: 2026-10-13
 last_activity_desc: Phase 2 execution started
-state_head: d4c3c238537d53b1d5037b501d93251fab39cbdd
+state_head: 7f115ea334ff7d390bf82e9d02d476e3ce89c683
 progress:
   total_phases: 2
   completed_phases: 1
   total_plans: 11
-  completed_plans: 7
+  completed_plans: 8
   percent: 50
 ---
 
@@ -31,7 +31,7 @@ decides every recovery action; the web app never acts on its own or pre-selects 
 ## Current Position
 
 Phase: 2 (Run Page Live Controls) — EXECUTING
-Plan: 3 of 6
+Plan: 4 of 6
 Status: Ready to execute
 Last activity: 2026-10-13 — Phase 2 execution started
 
@@ -66,6 +66,7 @@ Progress: [█████░░░░░] 50%
 | Phase 01 P05 | ~45min | 3 tasks | 5 files |
 | Phase 02 P01 | 55min | 2 tasks | 9 files |
 | Phase 02 P04 | 45 min | 2 tasks | 5 files |
+| Phase 02 P02 | 50min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -86,6 +87,8 @@ Recent decisions affecting current work:
 - [Phase 02]: runAfterAccepted (D-18) built now as a generic accepted-then-follow-up primitive for plan 02-03's sequenced abort-then-stop flow
 - [Phase 02]: Task 1 (tracer) implemented recoveryControl's full refusal order, transport handling and audit logging in one pass; Task 2's TDD cycle was scoped to the two genuinely new assertions (commandFields.fast removal, inverted D-10 guard), mirroring the Phase 1 precedent
 - [Phase 02]: tool.recoveryControl's action input stays z.string() at the schema level so a Pause attempt still reaches the handler's own refusal check and gets logged, rather than being silently rejected by zod
+- [Phase 02]: Task 1 (tracer) absorbed the full pause formatters and the reducer's opening path, since the tracer's own end-to-end test needed real content formatting; Task 2's TDD cycle was scoped to the genuinely new closing/hide/reopen rules (D-11..D-13)
+- [Phase 02]: Merged ControlBar's prompt-driven close effect and plan 02-01's bar-adjacency effect into one effect, so a prompt-origin confirm closed by a step-ended/queueId-change transition produces exactly one 'nothing was sent' toast, not two
 
 ### Pending Todos
 
@@ -111,6 +114,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-13T13:41:28.945Z
-Stopped at: Completed 02-04-PLAN.md
+Last session: 2026-10-13T14:03:36.663Z
+Stopped at: Completed 02-02-PLAN.md
 Resume file: None

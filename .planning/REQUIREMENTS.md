@@ -23,7 +23,7 @@ the 25 requirements approved on 2026-10-12; each requirement below names the ori
 - [x] **UI-01**: While a controllable step runs, the run page shows a control bar with its state and percent (refreshed every 2 s) and Pause/Resume/Abort enabled according to run state; tools without `runControl` show none — *RSTATE-02, RCTL-08*
 - [ ] **UI-02**: Every control action asks for confirmation before anything is sent — *RCTL-04*
 - [x] **UI-03**: Resume requires "tip broken? yes/no" and Abort requires "return liquid? yes/no"; nothing is preselected and the action stays disabled until a choice is made — *RCTL-02, RCTL-03, RSAFE-02*
-- [ ] **UI-04**: An instrument pause opens a `tool_paused` prompt within about 2 s with the reason (name and code), the detail in plain language (e.g. "Deck 3: expected plate 1, found none") and when it started — *PAUSE-01, PAUSE-02*
+- [x] **UI-04**: An instrument pause opens a `tool_paused` prompt within about 2 s with the reason (name and code), the detail in plain language (e.g. "Deck 3: expected plate 1, found none") and when it started — *PAUSE-01, PAUSE-02*
 - [ ] **UI-05**: The `tool_paused` prompt offers Resume and Abort, closes when the run resumes or the step ends, and never resolves, advances or blocks the queue — *PAUSE-03*
 - [ ] **UI-06**: Stop during a controllable step opens a new confirmation, "abort the instrument run (return liquid? yes/no)" or Cancel, with no timer and no default; dismissing it means Cancel; `StopRunModal` is not reused — *RCTL-06*
 - [ ] **UI-07**: abort/resume are removed from the protocol step editor; the tool page offers Resume/Abort separately for crash recovery when no step is tracking a run — *RCTL-07*
@@ -58,7 +58,7 @@ the 25 requirements approved on 2026-10-12; each requirement below names the ori
 | UI-01 | Phase 2 | Complete |
 | UI-02 | Phase 2 | Pending |
 | UI-03 | Phase 2 | Complete |
-| UI-04 | Phase 2 | Pending |
+| UI-04 | Phase 2 | Complete |
 | UI-05 | Phase 2 | Pending |
 | UI-06 | Phase 2 | Pending |
 | UI-07 | Phase 2 | Pending |
