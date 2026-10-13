@@ -15,7 +15,7 @@ import {
   Text,
   useColorModeValue,
 } from "@chakra-ui/react";
-import { Pause, Play, StopCircle } from "lucide-react";
+import { Pause, Play, StopCircle, TriangleAlert } from "lucide-react";
 import type { RunStateEnvelope } from "@/server/runState";
 import {
   shouldShowControlBar,
@@ -30,9 +30,16 @@ import {
 import type { UnknownSince } from "./controlDecision";
 import { RunControlConfirmModal } from "./RunControlConfirmModal";
 import type { RunControlConfirmModalRequest } from "./RunControlConfirmModal";
+import { ToolPausedModal } from "./ToolPausedModal";
+import { reducePausePrompt, INITIAL_PAUSE_PROMPT } from "./pausePrompt";
 import { infoToast } from "@/components/ui/Toast";
 
-type PendingRequest = RunControlConfirmModalRequest & { queueId: number };
+// origin "prompt" (D-12): a confirm opened from ToolPausedModal's
+// Resume/Abort, closed by the prompt effect below when its own episode ends.
+type PendingRequest = RunControlConfirmModalRequest & {
+  queueId: number;
+  origin: "bar" | "prompt";
+};
 
 // Run-page control bar container (D-02): a Card shown only while a
 // controllable step is running, plus its always-mounted confirm modal.
@@ -41,12 +48,29 @@ export const ControlBar: React.FC<{ envelope: RunStateEnvelope | undefined }> = 
   const [request, setRequest] = useState<PendingRequest | null>(null);
   const [pending, setPending] = useState(false);
   const [unknownSince, setUnknownSince] = useState<UnknownSince | null>(null);
+  const [prompt, setPrompt] = useState(INITIAL_PAUSE_PROMPT);
 
   const showBar = shouldShowControlBar(envelope);
+  const toolType = envelope?.running ? envelope.toolType : "";
 
   useEffect(() => {
     setUnknownSince((prev) => nextUnknownSince(prev, envelope, Date.now()));
   }, [envelope]);
+
+  // D-11..D-14: the tool_paused prompt is driven only by this poll. It never
+  // reads or writes the queue's UIMessage modal state (ToolPausedModal, D-10).
+  useEffect(() => {
+    const result = reducePausePrompt(prompt, { type: "poll", envelope });
+    if (result.state !== prompt) {
+      setPrompt(result.state);
+    }
+    // D-12: a confirm opened from the prompt closes with it, once (not
+    // double-toasted alongside the bar-origin effect below).
+    if (result.closedBy !== null && request !== null && request.origin === "prompt" && !pending) {
+      setRequest(null);
+      infoToast("Confirmation closed", NOTHING_SENT_MESSAGE);
+    }
+  }, [envelope, prompt, request, pending]);
 
   // UI-01 adjacency (D-02, D-12): close a confirm opened for a step that
   // has since resumed or ended before the operator confirmed.
@@ -65,6 +89,8 @@ export const ControlBar: React.FC<{ envelope: RunStateEnvelope | undefined }> = 
       : showBar && envelope.runState?.state === "running"
         ? "green"
         : "gray";
+  const unknownWarning =
+    unknownSince !== null ? `Run state unknown since ${formatClock(unknownSince.since)}` : null;
 
   return (
     <>
@@ -111,6 +137,7 @@ export const ControlBar: React.FC<{ envelope: RunStateEnvelope | undefined }> = 
                       toolType: envelope.toolType,
                       action: "pause",
                       queueId: envelope.queueId,
+                      origin: "bar",
                     })
                   }>
                   Pause instrument
@@ -125,6 +152,7 @@ export const ControlBar: React.FC<{ envelope: RunStateEnvelope | undefined }> = 
                       toolType: envelope.toolType,
                       action: "resume",
                       queueId: envelope.queueId,
+                      origin: "bar",
                     })
                   }>
                   Resume instrument
@@ -139,15 +167,55 @@ export const ControlBar: React.FC<{ envelope: RunStateEnvelope | undefined }> = 
                       toolType: envelope.toolType,
                       action: "abort",
                       queueId: envelope.queueId,
+                      origin: "bar",
                     })
                   }>
                   Abort instrument run
                 </Button>
+                {prompt.pause !== null ? (
+                  <Button
+                    variant="outline"
+                    colorScheme="teal"
+                    leftIcon={<Icon as={TriangleAlert} />}
+                    onClick={() => setPrompt((s) => reducePausePrompt(s, { type: "reopen" }).state)}>
+                    Paused: view reason
+                  </Button>
+                ) : null}
               </ButtonGroup>
             </VStack>
           </CardBody>
         </Card>
       ) : null}
+      <ToolPausedModal
+        isOpen={prompt.isOpen}
+        pause={prompt.pause}
+        toolType={toolType}
+        unknownWarning={unknownWarning}
+        lastError={envelope?.running ? envelope.lastError : undefined}
+        onHide={() => setPrompt((s) => reducePausePrompt(s, { type: "hide" }).state)}
+        onResume={() => {
+          if (prompt.queueId !== null) {
+            setRequest({
+              target: { kind: "running" },
+              toolType,
+              action: "resume",
+              queueId: prompt.queueId,
+              origin: "prompt",
+            });
+          }
+        }}
+        onAbort={() => {
+          if (prompt.queueId !== null) {
+            setRequest({
+              target: { kind: "running" },
+              toolType,
+              action: "abort",
+              queueId: prompt.queueId,
+              origin: "prompt",
+            });
+          }
+        }}
+      />
       <RunControlConfirmModal
         request={request}
         onClose={() => setRequest(null)}
