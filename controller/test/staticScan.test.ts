@@ -267,3 +267,97 @@ describe("single confirmed send path", () => {
     expect(recoveryControlRouters).toStrictEqual(["server/routers/tool.ts"]);
   });
 });
+
+describe("safety invariants", () => {
+  // The explicit control-UI module list (D-07, D-17, D-24). RunsComponent.tsx
+  // (LastUpdatedTime clock), StopRunModal.tsx and TimerModal.tsx hold
+  // legitimate pre-existing timers and are never scanned here.
+  const controlUiModules = [
+    "components/runs/controlDecision.ts",
+    "components/runs/pausePrompt.ts",
+    "components/runs/stopInterception.ts",
+    "hooks/useRunControl.ts",
+    "components/runs/RunControlConfirmModal.tsx",
+    "components/runs/ControlBar.tsx",
+    "components/runs/ToolPausedModal.tsx",
+    "components/runs/InstrumentStopModal.tsx",
+    "components/tools/RunRecoverySection.tsx",
+  ];
+
+  it("no timers in the control UI", () => {
+    const timerPattern = /\b(?:window\.|globalThis\.)?set(?:Timeout|Interval)\(/;
+    for (const file of controlUiModules) {
+      expect(stripComments(read(file))).not.toMatch(timerPattern);
+    }
+  });
+
+  it("the countdown stop modal is not reused", () => {
+    const noReuseFiles = [
+      "components/runs/InstrumentStopModal.tsx",
+      "components/runs/stopInterception.ts",
+      "components/runs/status/QueueStatuscomponent.tsx",
+      "components/runs/RunControlConfirmModal.tsx",
+      "components/runs/ControlBar.tsx",
+      "components/runs/ToolPausedModal.tsx",
+      "components/tools/RunRecoverySection.tsx",
+    ];
+    for (const file of noReuseFiles) {
+      expect(stripComments(read(file))).not.toMatch(/StopRunModal/);
+    }
+
+    // Beyond the fixed list: any module that actually calls the confirmed-
+    // send hook (the new Stop flow's own entry point into live control) must
+    // never reach for the countdown modal instead. Scoped to callers of
+    // useConfirmedControlSend rather than every InstrumentStopModal
+    // reference: RunsComponent.tsx legitimately composes the pre-existing
+    // StopRunModal (Tool Box stop_run step) alongside the new
+    // InstrumentStopModal (per-run delete interception, D-19) without
+    // itself performing a confirmed send — that combination is correct by
+    // design and is not the reuse this invariant guards against.
+    const clientFiles = [...walk("components"), ...walk("hooks"), ...walk("pages")].map(rel);
+    const confirmedSendCallers = clientFiles.filter(
+      (relPath) =>
+        relPath !== "hooks/useRunControl.ts" &&
+        /useConfirmedControlSend\(/.test(stripComments(read(relPath))),
+    );
+    expect(confirmedSendCallers.length).toBeGreaterThan(0);
+    for (const relPath of confirmedSendCallers) {
+      expect(stripComments(read(relPath))).not.toMatch(/StopRunModal/);
+    }
+  });
+
+  it("the pause prompt stays out of the queue's modal plumbing", () => {
+    const pattern = /modalState|messageData|isModalOpen|commandQueue\.resume|resumeMutation/;
+    const files = [
+      "components/runs/ToolPausedModal.tsx",
+      "components/runs/pausePrompt.ts",
+      "components/runs/ControlBar.tsx",
+    ];
+    for (const file of files) {
+      expect(stripComments(read(file))).not.toMatch(pattern);
+    }
+  });
+
+  it("no instrument-state check before sending", () => {
+    const pattern = /runState|_runStateMonitor|fetchStatus|getStatus|\.status\b/;
+
+    const queueSrc = stripComments(read("server/command_queue.ts"));
+    const toolControlBody = extractBracedRegion(queueSrc, /async toolControl\(/);
+    expect(toolControlBody.length).toBeGreaterThan(0);
+    expect(toolControlBody).not.toMatch(pattern);
+
+    const recoverySrc = stripComments(read("server/recoveryControl.ts"));
+    expect(recoverySrc).not.toMatch(pattern);
+
+    const decisionSrc = stripComments(read("components/runs/controlDecision.ts"));
+    const senderBody = extractBracedRegion(decisionSrc, /export function createConfirmedSender\(/);
+    expect(senderBody.length).toBeGreaterThan(0);
+    expect(senderBody).not.toMatch(/runState|envelope|controlButtonHints/);
+  });
+
+  it("no Enter-bound default or preselected decision", () => {
+    const pattern = /<form|autoFocus|defaultValue|defaultChecked/;
+    expect(stripComments(read("components/runs/RunControlConfirmModal.tsx"))).not.toMatch(pattern);
+    expect(stripComments(read("components/runs/ToolPausedModal.tsx"))).not.toMatch(pattern);
+  });
+});
