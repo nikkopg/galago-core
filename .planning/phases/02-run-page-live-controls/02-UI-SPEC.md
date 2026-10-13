@@ -55,7 +55,7 @@ an exception — confirm it against `node_modules/@chakra-ui/react` if in doubt.
 
 | Component | Import path | Notes |
 |-----------|-------------|-------|
-| `Modal`, `ModalOverlay`, `ModalContent`, `ModalHeader`, `ModalBody`, `ModalFooter`, `ModalCloseButton` | `@chakra-ui/react` | Base for `RunControlConfirmModal`, `ToolPausedModal`, `InstrumentStopModal` — model on `PauseModal.tsx`'s structure, never `StopRunModal.tsx`'s countdown logic |
+| `Modal`, `ModalOverlay`, `ModalContent`, `ModalHeader`, `ModalBody`, `ModalFooter`, `ModalCloseButton` | `@chakra-ui/react` | Base for `RunControlConfirmModal`, `ToolPausedModal`, `InstrumentStopModal` — model on `PauseModal.tsx`'s structure, never `StopRunModal.tsx`'s countdown logic. Pass `fontWeight="bold"` on each `ModalHeader` (Chakra's Modal theme otherwise defaults it to `semibold`) — see Typography's explicit-override note; this keeps the phase's type scale at two weights |
 | `AlertDialog`, `AlertDialogOverlay`, `AlertDialogContent`, `AlertDialogHeader`, `AlertDialogBody`, `AlertDialogFooter`, `AlertDialogCloseButton` | `@chakra-ui/react` | Used by the existing `ConfirmationModal.tsx` (style reference only, not reused directly — no decision-state support) |
 | `RadioGroup`, `Radio` | `@chakra-ui/react` | Drives every yes/no decision (D-03). Pass `value={decision ?? ""}` to `RadioGroup` (never render a `Radio` with `value=""`) to avoid the uncontrolled→controlled dev warning while keeping the underlying state `"yes" \| "no" \| undefined` for the Confirm-disabled check |
 | `Progress` | `@chakra-ui/react` | Control bar percent bar; `isIndeterminate` when `percent` is `null` (D-03) |
@@ -109,8 +109,14 @@ value, in `fontSize=`/`fontWeight=` props.
 |------|------|---------------|--------|----------------|-------------|
 | Label | 14px | `sm` | 400 (regular) | `normal` | 1.375 (`short`) |
 | Body | 16px | `md` | 400 (regular) | `normal` | 1.5 (`base`) |
-| Heading | 20px | `xl` | 600 (semibold) | `semibold` | 1.2 (close to `shorter` = 1.25, acceptable) |
+| Heading | 20px | `xl` | 700 (bold) | `bold` | 1.2 (close to `shorter` = 1.25, acceptable) |
 | Display | n/a | — | — | — | Not used this phase — no large numeric readout is introduced; percent is conveyed via the `Progress` bar itself plus a `Label`-sized `%` text, not a standalone display-scale number |
+
+**Two weights total this phase: 400 (regular — Label/Body) and 700 (bold — Heading/Button).**
+`Heading` is pinned to `bold` rather than Chakra's Modal-theme default of `semibold`, specifically so
+it matches the project-wide `Button baseStyle.fontWeight: "bold"` override (see below) and the
+phase's type scale never introduces a third weight. See the explicit-override note in the usage map
+below for exactly where this diverges from an unmodified Chakra default.
 
 **Usage map (phase-specific):**
 - **Label (14px/400):** decision question labels ("Tip broken?", "Return liquid?"), pause start-time
@@ -118,12 +124,22 @@ value, in `fontSize=`/`fontWeight=` props.
   "A run step is tracking this tool; use the run page" disabled-button hint.
 - **Body (16px/400):** confirmation restatement copy (D-08, e.g. "Resume the F.A.S.T. run. Tip
   broken: No."), `tool_paused` reason/detail body text, toast descriptions.
-- **Heading (20px/600):** every new modal's `ModalHeader` equivalent (e.g. "Resume Instrument",
-  "Abort Instrument Run", "Run Paused" reused style), the control bar's tool-name/command label, the
-  tool page's "Run Recovery" section heading.
-- **Button text:** inherits the project-wide `Button baseStyle.fontWeight: "bold"` (700) override
-  from `themes/customTheme.ts` — this predates the phase and is not a new token; do not override it
-  per-button.
+- **Heading (20px/700 bold):** every new modal's `ModalHeader` equivalent (e.g. "Resume Instrument",
+  "Abort Instrument Run"), the control bar's tool-name/command label, the tool page's "Run Recovery"
+  section heading. **Explicit-override note:** Chakra's `Modal` theme defaults `ModalHeader` to
+  `fontWeight: "semibold"` (600) — `PauseModal.tsx`'s existing "Run Paused" header relies on that
+  unmodified default, unchanged by this phase. The three *new* modals this phase builds
+  (`RunControlConfirmModal`, `ToolPausedModal`, `InstrumentStopModal`) must pass an explicit
+  `fontWeight="bold"` prop on their `ModalHeader` to opt out of that default — this is the one
+  intentional visual divergence from `PauseModal.tsx` needed to keep this phase's declared type
+  scale at two weights. The control bar's tool-name label and the "Run Recovery" section heading use
+  the `Heading` component directly, which already defaults to `bold`
+  (`node_modules/@chakra-ui/theme`'s `headingTheme.baseStyle.fontWeight: "bold"`) — no override
+  needed there, and this matches existing non-modal `Heading` usage already in `RunsComponent.tsx`
+  (`<Heading size="lg">Protocol Runs</Heading>`, no weight override, renders bold).
+- **Button text (700 bold):** inherits the project-wide `Button baseStyle.fontWeight: "bold"`
+  override from `themes/customTheme.ts` — this predates the phase and is not a new token; do not
+  override it per-button. It is the *same* weight as Heading above, not a third weight.
 
 ---
 
@@ -215,7 +231,14 @@ No third-party component registries are declared or used this phase.
   between the Gantt-chart Card and the Runs List Card (research-confirmed insertion point, lines
   564–566). Heading-size label with tool name/type + running command; `Badge` for state; `Progress`
   for percent; `ButtonGroup` for Pause/Resume/Abort; a `TriangleAlert`-icon "Paused: view reason"
-  outline button appears only while `runState.pause` is non-null (D-11).
+  outline button appears only while `runState.pause` is non-null (D-11). **Visual anchor:** the state
+  `Badge` and `Progress` bar are the primary visual anchor — together they are the single glanceable
+  answer to "what is this tool doing right now," sized/weighted to draw the eye first (place them on
+  their own row, full-width `Progress`, `Badge` sized `lg`). The tool-name/command `Heading` label is
+  secondary context (smaller visual weight, sits above the badge/progress row, never competes with it
+  for emphasis); the action `ButtonGroup` is tertiary — present but not the first thing the eye lands
+  on, consistent with D-04's "hint, not a gate" framing (buttons are always available, so they don't
+  need to shout).
 - **`RunControlConfirmModal.tsx`** (new, shared): modeled on `PauseModal.tsx`'s plain `ModalBody`/
   `ModalFooter` structure (no `<form>` wrapper, no `autoFocus` on Confirm — avoids Enter-to-confirm
   per D-07). Chakra's `closeOnOverlayClick`/`closeOnEsc` default to `true` in 2.8.2 — no extra props
@@ -224,7 +247,12 @@ No third-party component registries are declared or used this phase.
 - **`ToolPausedModal.tsx`** (new): sits next to `PauseModal.tsx` in `components/runs/`, mounted
   independent of `messageData`/`isModalOpen`. Icon: `TriangleAlert` (orange) — distinct from
   `PauseModal.tsx`'s calm `Pause` icon, signaling an instrument-reported reason rather than an
-  operator-initiated pause.
+  operator-initiated pause. **Visual anchor:** the reason line (`"{name} ({code})"`, D-14) is the
+  primary visual anchor — it is the first thing the operator needs to read to know *why* the run
+  stopped, so it renders directly under the `TriangleAlert` icon at Heading weight/size, above
+  everything else in the body. The `describePauseDetail` plain-language line (or the collapsible
+  "Raw detail" fallback) and the start-time line are secondary — Label-sized, stacked below the
+  reason line, supporting it rather than competing with it.
 - **`InstrumentStopModal.tsx`** (new): icon `StopCircle` (red), matching `StopRunModal.tsx`'s visual
   language exactly (same icon/color) despite being an entirely separate component with no shared
   import (D-17's "neither imported nor reused" is a code-level constraint, not a visual one).
