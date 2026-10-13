@@ -8,7 +8,19 @@ import { installFakeTool, removeFakeTool, deferred, FakeGrpc } from "./helpers/f
 import {
   shouldShowControlBar,
   createConfirmedSender,
+  getActionSpec,
+  emptyDecisions,
+  allDecisionsChosen,
+  completeDecisions,
+  controlButtonHints,
+  progressValue,
+  nextUnknownSince,
+  confirmStillValid,
+  restateChoice,
+  decisionLabel,
+  runAfterAccepted,
   type RunningEnvelope,
+  type ConfirmedSendOutcome,
 } from "@/components/runs/controlDecision";
 import type { RunStateEnvelope } from "@/server/runState";
 
@@ -96,18 +108,24 @@ describe("confirmed pause reaches the running tool", () => {
   });
 });
 
+function makeEnvelope(overrides: Partial<RunningEnvelope> = {}): RunningEnvelope {
+  return {
+    running: true,
+    queueId: 1,
+    runId: "run-1",
+    toolId: "tool-1",
+    toolType: "fast" as any,
+    command: "transfer",
+    status: "ok",
+    runState: null,
+    updatedAt: Date.now(),
+    ...overrides,
+  };
+}
+
 describe("bar visibility", () => {
   function runningEnvelope(toolType: string): RunningEnvelope {
-    return {
-      running: true,
-      queueId: 1,
-      runId: "run-1",
-      toolId: "tool-1",
-      toolType: toolType as any,
-      status: "ok",
-      runState: null,
-      updatedAt: Date.now(),
-    };
+    return makeEnvelope({ toolType: toolType as any });
   }
 
   it("is false for undefined", () => {
@@ -205,5 +223,206 @@ describe("confirmed sender", () => {
 
     expect(outcome).toStrictEqual({ status: "ignored", reason: "incomplete" });
     expect(sendRunning).not.toHaveBeenCalled();
+  });
+});
+
+describe("decision completeness", () => {
+  const resumeSpec = getActionSpec("fast", "resume")!;
+  const pauseSpec = getActionSpec("fast", "pause")!;
+
+  it("emptyDecisions gives every declared decision undefined", () => {
+    expect(emptyDecisions(resumeSpec)).toStrictEqual({ is_tip_broken: undefined });
+  });
+
+  it("allDecisionsChosen is false until every decision is exactly yes/no", () => {
+    expect(allDecisionsChosen(resumeSpec, {})).toBe(false);
+    expect(allDecisionsChosen(resumeSpec, { is_tip_broken: undefined })).toBe(false);
+    expect(allDecisionsChosen(resumeSpec, { is_tip_broken: "" as any })).toBe(false);
+    expect(allDecisionsChosen(resumeSpec, { is_tip_broken: "Yes" as any })).toBe(false);
+    expect(allDecisionsChosen(resumeSpec, { is_tip_broken: "yes" })).toBe(true);
+    expect(allDecisionsChosen(resumeSpec, { is_tip_broken: "no" })).toBe(true);
+  });
+
+  it("completeDecisions returns null until complete, else the declared keys", () => {
+    expect(completeDecisions(resumeSpec, {})).toBeNull();
+    expect(completeDecisions(resumeSpec, { is_tip_broken: "no" })).toStrictEqual({
+      is_tip_broken: "no",
+    });
+  });
+
+  it("pause's empty spec is complete with {}", () => {
+    expect(completeDecisions(pauseSpec, {})).toStrictEqual({});
+  });
+
+  it("a fresh emptyDecisions call after a completed one is again all undefined (reset on reopen)", () => {
+    const completed = emptyDecisions(resumeSpec);
+    completed.is_tip_broken = "yes";
+    const fresh = emptyDecisions(resumeSpec);
+    expect(fresh).toStrictEqual({ is_tip_broken: undefined });
+  });
+});
+
+describe("button hints", () => {
+  it("running: pause and abort enabled, resume disabled", () => {
+    const envelope = makeEnvelope({ status: "ok", runState: { state: "running", percent: 1, pause: null } });
+    expect(controlButtonHints(envelope)).toStrictEqual({ pause: true, resume: false, abort: true });
+  });
+
+  it("paused: resume and abort enabled, pause disabled", () => {
+    const envelope = makeEnvelope({ status: "ok", runState: { state: "paused", percent: 1, pause: null } });
+    expect(controlButtonHints(envelope)).toStrictEqual({ pause: false, resume: true, abort: true });
+  });
+
+  it("an unrecognised state enables all three", () => {
+    const envelope = makeEnvelope({ status: "ok", runState: { state: "homing", percent: 1, pause: null } });
+    expect(controlButtonHints(envelope)).toStrictEqual({ pause: true, resume: true, abort: true });
+  });
+
+  it("a null runState enables all three", () => {
+    const envelope = makeEnvelope({ status: "ok", runState: null });
+    expect(controlButtonHints(envelope)).toStrictEqual({ pause: true, resume: true, abort: true });
+  });
+
+  it("status unknown enables all three even with a last-good running state", () => {
+    const envelope = makeEnvelope({
+      status: "unknown",
+      runState: { state: "running", percent: 1, pause: null },
+      lastError: "x",
+    });
+    expect(controlButtonHints(envelope)).toStrictEqual({ pause: true, resume: true, abort: true });
+  });
+});
+
+describe("progress", () => {
+  it("clamps, rounds, and maps non-finite to null", () => {
+    expect(progressValue(null)).toBeNull();
+    expect(progressValue(NaN)).toBeNull();
+    expect(progressValue(42.6)).toBe(43);
+    expect(progressValue(-5)).toBe(0);
+    expect(progressValue(140)).toBe(100);
+  });
+});
+
+describe("unknown since", () => {
+  it("starts tracking since on the first unknown poll with a lastError", () => {
+    const envelope = makeEnvelope({ status: "unknown", runState: null, lastError: "x", updatedAt: 1000 });
+    expect(nextUnknownSince(null, envelope, 5000)).toStrictEqual({ queueId: 1, since: 1000 });
+  });
+
+  it("a later unknown poll for the same queueId keeps the original since", () => {
+    const prev = { queueId: 1, since: 1000 };
+    const envelope = makeEnvelope({
+      status: "unknown",
+      runState: null,
+      lastError: "x",
+      updatedAt: 2000,
+    });
+    expect(nextUnknownSince(prev, envelope, 5000)).toStrictEqual(prev);
+  });
+
+  it("status ok clears it", () => {
+    const envelope = makeEnvelope({ status: "ok" });
+    expect(nextUnknownSince({ queueId: 1, since: 1000 }, envelope, 5000)).toBeNull();
+  });
+
+  it("the pending first poll (unknown, no lastError) gives null", () => {
+    const envelope = makeEnvelope({ status: "unknown", runState: null, updatedAt: null });
+    expect(nextUnknownSince(null, envelope, 5000)).toBeNull();
+  });
+
+  it("running false gives null", () => {
+    expect(nextUnknownSince({ queueId: 1, since: 1000 }, { running: false }, 5000)).toBeNull();
+  });
+
+  it("a queueId change restarts since", () => {
+    const prev = { queueId: 1, since: 1000 };
+    const envelope = makeEnvelope({
+      queueId: 2,
+      status: "unknown",
+      runState: null,
+      lastError: "x",
+      updatedAt: 3000,
+    });
+    expect(nextUnknownSince(prev, envelope, 5000)).toStrictEqual({ queueId: 2, since: 3000 });
+  });
+});
+
+describe("confirm validity", () => {
+  it("undefined envelope keeps it valid", () => {
+    expect(confirmStillValid(7, undefined)).toBe(true);
+  });
+
+  it("running false invalidates", () => {
+    expect(confirmStillValid(7, { running: false })).toBe(false);
+  });
+
+  it("a different queueId invalidates", () => {
+    expect(confirmStillValid(7, makeEnvelope({ queueId: 8 }))).toBe(false);
+  });
+
+  it("the same queueId stays valid", () => {
+    expect(confirmStillValid(7, makeEnvelope({ queueId: 7 }))).toBe(true);
+  });
+});
+
+describe("restatement", () => {
+  it("restates resume with the chosen decision", () => {
+    expect(restateChoice("fast", "resume", { is_tip_broken: "no" })).toBe(
+      "Resume the F.A.S.T. run. Tip broken: No.",
+    );
+  });
+
+  it("restates abort with the chosen decision", () => {
+    expect(restateChoice("fast", "abort", { return_liquid: "yes" })).toBe(
+      "Abort the F.A.S.T. run. Return liquid: Yes.",
+    );
+  });
+
+  it("restates an unchosen decision as 'not chosen'", () => {
+    expect(restateChoice("fast", "resume", {})).toBe(
+      "Resume the F.A.S.T. run. Tip broken: not chosen.",
+    );
+  });
+
+  it("decisionLabel maps the known decisions", () => {
+    expect(decisionLabel("is_tip_broken")).toBe("Tip broken?");
+    expect(decisionLabel("return_liquid")).toBe("Return liquid?");
+  });
+});
+
+describe("accepted then follow-up", () => {
+  function outcomeSend(outcome: ConfirmedSendOutcome) {
+    return () => Promise.resolve(outcome);
+  }
+
+  it("calls followUp once after an accepted send resolves", async () => {
+    const followUp = vi.fn().mockResolvedValue(undefined);
+    const result = await runAfterAccepted(outcomeSend({ status: "accepted" }), followUp);
+
+    expect(followUp).toHaveBeenCalledTimes(1);
+    expect(result).toStrictEqual({ outcome: { status: "accepted" }, followUp: "done" });
+  });
+
+  it.each([
+    { status: "refused", message: "no" } as ConfirmedSendOutcome,
+    { status: "failed", message: "no" } as ConfirmedSendOutcome,
+    { status: "ignored", reason: "in-flight" } as ConfirmedSendOutcome,
+  ])("never calls followUp for a non-accepted outcome (%j)", async (outcome) => {
+    const followUp = vi.fn().mockResolvedValue(undefined);
+    const result = await runAfterAccepted(outcomeSend(outcome), followUp);
+
+    expect(followUp).not.toHaveBeenCalled();
+    expect(result).toStrictEqual({ outcome, followUp: "skipped" });
+  });
+
+  it("reports a thrown followUp error without throwing", async () => {
+    const followUp = vi.fn().mockRejectedValue(new Error("boom"));
+    const result = await runAfterAccepted(outcomeSend({ status: "accepted" }), followUp);
+
+    expect(result).toStrictEqual({
+      outcome: { status: "accepted" },
+      followUp: "failed",
+      followUpMessage: "boom",
+    });
   });
 });

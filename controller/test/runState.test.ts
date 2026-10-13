@@ -98,6 +98,7 @@ describe("runState", () => {
     expect(snapshot.toolId).toBe("fast-1");
     expect(snapshot.toolType).toBe(ToolType.fast);
     expect(snapshot.status).toBe("ok");
+    expect(snapshot.command).toBe("transfer");
     expect(snapshot.runState).toMatchObject({
       state: "paused",
       percent: 40,
