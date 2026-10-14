@@ -76,6 +76,25 @@ export const RunControlConfirmModal: React.FC<RunControlConfirmModalProps> = ({
   // outlives the body (D-23).
   const { send, isSending } = useConfirmedControlSend();
 
+  // WR-03: `toolType:action` alone does not disambiguate request *instances*
+  // — if a caller ever replaces one non-null request directly with a
+  // different non-null request of the same toolType/action (e.g. two
+  // buttons that both resolve to {toolType:"fast", action:"abort"}, fired
+  // back-to-back before the first modal's overlay blocks further clicks),
+  // React would not remount the body and stale `values` from the replaced
+  // request could leak into the new confirmation (breaking D-07: decision
+  // state must always be born empty). Bump a counter whenever the `request`
+  // *reference* changes while non-null, independent of any caller
+  // cooperation, and fold it into the remount key below.
+  const idRef = useRef(0);
+  const prevRequestRef = useRef<RunControlConfirmModalRequest | null>(null);
+  if (request !== prevRequestRef.current) {
+    prevRequestRef.current = request;
+    if (request !== null) {
+      idRef.current += 1;
+    }
+  }
+
   if (request === null) {
     // Nothing is rendered while closed — the body below is mounted fresh
     // on every open, so its decision state is always born empty (D-07).
@@ -83,7 +102,7 @@ export const RunControlConfirmModal: React.FC<RunControlConfirmModalProps> = ({
   }
   return (
     <RunControlConfirmModalBody
-      key={`${request.toolType}:${request.action}`}
+      key={`${idRef.current}:${request.toolType}:${request.action}`}
       request={request}
       onClose={onClose}
       copy={copy}

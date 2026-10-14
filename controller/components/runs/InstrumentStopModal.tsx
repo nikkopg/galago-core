@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { RunControlConfirmModal } from "./RunControlConfirmModal";
 import { STOP_MODAL_COPY, stopModalBody } from "./stopInterception";
 import type { InstrumentStopRequest } from "./stopInterception";
@@ -40,13 +40,26 @@ export const InstrumentStopModal: React.FC<InstrumentStopModalProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [envelope, request, pending]);
 
+  // WR-03: memoize on the stable `request` (InstrumentStopRequest) reference
+  // rather than rebuilding this object on every render. RunControlConfirmModal
+  // keys its body's remount on the `request` object identity it receives; a
+  // fresh object literal here on every poll-driven re-render would spuriously
+  // remount the open confirm body and wipe the operator's in-progress
+  // decision, while never changing identity here would fail to remount for a
+  // genuinely new confirmation. Both are avoided by deriving identity from
+  // `request` itself, which only changes when the caller sets a new stop
+  // request.
+  const confirmRequest = useMemo(
+    () =>
+      request === null
+        ? null
+        : { target: { kind: "running" as const }, toolType: request.toolType, action: "abort" },
+    [request],
+  );
+
   return (
     <RunControlConfirmModal
-      request={
-        request === null
-          ? null
-          : { target: { kind: "running" }, toolType: request.toolType, action: "abort" }
-      }
+      request={confirmRequest}
       onClose={onClose}
       copy={{ ...STOP_MODAL_COPY, body: stopModalBody }}
       afterAccepted={request?.followUp}
