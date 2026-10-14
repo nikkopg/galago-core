@@ -24,7 +24,7 @@ export function shouldInterceptQueueStop(
 export function shouldInterceptRunDelete(
   envelope: RunStateEnvelope | undefined,
   runId: string,
-): boolean {
+): envelope is RunningEnvelope {
   return shouldInterceptQueueStop(envelope) && envelope.runId === runId;
 }
 

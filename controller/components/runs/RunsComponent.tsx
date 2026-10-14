@@ -37,7 +37,6 @@ import { ControlBar } from "./ControlBar";
 import { InstrumentStopModal } from "./InstrumentStopModal";
 import { shouldInterceptRunDelete, buildStopRequest } from "./stopInterception";
 import type { InstrumentStopRequest } from "./stopInterception";
-import type { RunningEnvelope } from "./controlDecision";
 import { useRunControlState } from "@/hooks/useRunControl";
 import { getRunAttributes, groupCommandsByRun } from "./utils";
 import { ChartGantt, Trash2 } from "lucide-react";
@@ -452,13 +451,14 @@ export const RunsComponent: React.FC = () => {
                       _hover={{ bg: "transparent" }}
                       _focus={{ boxShadow: "none" }}
                       _active={{ bg: "transparent" }}
-                      onClick={() =>
+                      onClick={() => {
+                        if (!shouldInterceptRunDelete(runControlQuery.data, run.Id)) return;
                         setRunStopRequest(
-                          buildStopRequest(runControlQuery.data as RunningEnvelope, () =>
+                          buildStopRequest(runControlQuery.data, () =>
                             skipRunMutation.mutateAsync(run.Id),
                           ),
-                        )
-                      }
+                        );
+                      }}
                     />
                   ) : (
                     <DeleteWithConfirmation
