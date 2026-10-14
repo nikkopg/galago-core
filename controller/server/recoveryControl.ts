@@ -1,6 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { logAction } from "./logger";
 import { validateControlRequest } from "./runControl";
+import { normalizeToolKey as normalize } from "./toolKey";
 import type { ToolControlResult } from "./tools";
 import type Tool from "./tools";
 import type { RunningStep } from "./command_queue";
@@ -14,8 +15,6 @@ import type { RunningStep } from "./command_queue";
 // poll, no run-state read, no reply field) before deciding to send; the core
 // owns the state gates (UI-08).
 export const RECOVERY_ACTIONS = ["resume", "abort"] as const;
-
-const normalize = (s: string | undefined) => (s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
 
 export async function recoveryControl(args: {
   toolName: string;

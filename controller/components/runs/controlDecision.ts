@@ -2,11 +2,12 @@
 // confirmed-send gate and accepted-then-follow-up sequencing for live run
 // control (D-24: no React import, no .tsx import — safe to import from any
 // context, including the confirmed-send hook and tests). The only server
-// imports are `getRunControl` (a zero-import module, safe client-side) and
-// the `RunStateEnvelope` TYPE (import type only, so no server code reaches
-// the client bundle).
+// imports are `getRunControl` and `normalizeToolKey` (both zero-import
+// modules, safe client-side) and the `RunStateEnvelope` TYPE (import type
+// only, so no server code reaches the client bundle).
 import { getRunControl } from "@/server/runControl";
 import type { ControlDecisionValue, RunControlActionSpec } from "@/server/runControl";
+import { normalizeToolKey } from "@/server/toolKey";
 import type { RunStateEnvelope } from "@/server/runState";
 
 // Mirrors the server's RUN_STATE_POLL_INTERVAL_MS (D-01) without importing
@@ -372,12 +373,12 @@ export function shouldShowRecoverySection(toolType: string): boolean {
   return getRunControl(toolType) !== undefined;
 }
 
-// Same idiom as server/tools.ts's getToolFromDB and server/routers/tool.ts
-// (RESEARCH Open Question 1) — kept in sync by convention, not import,
-// since this module stays free of any server VALUE import (D-24).
-export function normalizeToolKey(s: string | undefined): string {
-  return (s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
-}
+// WR-06: imported from the shared, zero-dependency @/server/toolKey module
+// (same idiom as @/server/runControl's getRunControl, D-24) and re-exported
+// here, so recoveryControl.ts and routers/tool.ts's getToolFromDB use the
+// exact same transform instead of each keeping their own copy "in sync by
+// convention, not import".
+export { normalizeToolKey };
 
 // A queue-state read, not an instrument-state check (D-21, D-22): true only
 // while a running step is tracking THIS tool by normalized name.

@@ -8,6 +8,7 @@ import { TRPCError } from "@trpc/server";
 import Tool from "@/server/tools";
 import CommandQueue from "@/server/command_queue";
 import { recoveryControl } from "@/server/recoveryControl";
+import { normalizeToolKey as normalize } from "@/server/toolKey";
 import { Config } from "gen-interfaces/tools/grpc_interfaces/tool_base";
 import { ToolType } from "gen-interfaces/controller";
 
@@ -50,7 +51,6 @@ async function getToolFromDB(toolId: string) {
 
   const allTools = await findMany(tools, eq(tools.workcellId, workcellId));
 
-  const normalize = (s: string) => (s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
   const needle = normalize(toolId);
 
   // Match by normalized name to handle ids like "tool_box" vs "Tool Box" and tutorial ids with underscores.
@@ -398,7 +398,6 @@ export const toolRouter = router({
       }),
     )
     .query(async ({ input }) => {
-      const normalize = (s: string) => (s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
       if (normalize(input.toolId) === normalize("Tool Box")) {
         const toolbox = Tool.toolBoxConfig();
         const tool = Tool.forId("Tool Box", toolbox.ip, toolbox.port, toolbox.type as ToolType);
@@ -426,7 +425,6 @@ export const toolRouter = router({
       }),
     )
     .query(async ({ input }) => {
-      const normalize = (s: string) => (s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
       if (normalize(input.toolId) === normalize("Tool Box")) {
         const toolbox = Tool.toolBoxConfig();
         return {
