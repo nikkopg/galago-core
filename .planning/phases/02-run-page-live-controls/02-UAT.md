@@ -3,7 +3,7 @@ status: partial
 phase: 02-run-page-live-controls
 source: [02-VERIFICATION.md]
 started: 2026-10-13T21:16:40Z
-updated: 2026-10-14T10:10:22.539Z
+updated: 2026-10-14T10:10:52.930Z
 ---
 
 ## Current Test
@@ -18,9 +18,9 @@ result: pass
 
 ### 2. During the same transfer, click Pause instrument, Resume instrument and Abort instrument run; try Enter and Esc while the confirm is open
 expected: Each opens a confirmation whose Yes/No starts unselected and whose Confirm stays disabled until chosen; Enter and Esc never confirm (only Cancel/Esc/overlay dismiss, which sends nothing)
-result: issue
-reported: "i got Action refused Tool replied UNRECOGNIZED_COMMAND"
-severity: major
+result: blocked
+blocked_by: prior-phase
+reason: "i got Action refused Tool replied UNRECOGNIZED_COMMAND — reclassified from issue: the running galago-tools servers (started 2026-10-12 13:15) predate the Pause command (galago-tools commits 2026-10-13); galago-web confirmation, send path and verbatim refusal toast behaved correctly, and control-bar Abort was accepted (log 08:57:40 SUCCESS). Re-run after galago-tools Phase 3 deploy."
 
 ### 3. Click 'Pause queue' during the transfer
 expected: Opens 'Abort Instrument Run' with a Return-liquid Yes/No choice, no countdown, Abort disabled until chosen
@@ -55,19 +55,10 @@ note: "Refusal half verified on the Test 2 UNRECOGNIZED_COMMAND toast (persisten
 
 total: 8
 passed: 6
-issues: 1
+issues: 0
 pending: 0
 skipped: 0
-blocked: 1
+blocked: 2
 
 ## Gaps
 
-- truth: "Each opens a confirmation whose Yes/No starts unselected and whose Confirm stays disabled until chosen; Enter and Esc never confirm (only Cancel/Esc/overlay dismiss, which sends nothing)"
-  status: failed
-  reason: "User reported: i got Action refused Tool replied UNRECOGNIZED_COMMAND"
-  severity: major
-  test: 2
-  root_cause: ""
-  artifacts: []
-  missing: []
-  debug_session: ""
