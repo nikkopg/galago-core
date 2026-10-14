@@ -34,6 +34,24 @@ import type {
 import { useConfirmedControlSend } from "@/hooks/useRunControl";
 import { persistentErrorToast } from "@/components/ui/Toast";
 
+// WR-07: the instrument genuinely accepted the abort here, but the
+// queue-side follow-up mutation then failed, so the queue's own bookkeeping
+// (runningStep, queue state) was never updated to match. Never retried or
+// re-sent automatically (the operator's prior confirmation does not cover a
+// second, unconfirmed send) — this only makes the resulting desync hard to
+// miss and tells the operator what to do about it. A plain "Follow-up
+// failed" toast that the operator can dismiss and forget would leave the
+// queue silently showing a step as running that the instrument has already
+// aborted.
+function followUpFailureToast(message: string | undefined): void {
+  persistentErrorToast(
+    "Instrument aborted, but the queue did not update",
+    `The instrument accepted the abort, but recording it in the queue failed${
+      message ? `: ${message}` : "."
+    } This step may still show as running here even though the instrument has stopped — verify the instrument directly and do not rely on this page's status for it until resolved. This was not retried automatically.`,
+  );
+}
+
 export interface RunControlConfirmModalRequest {
   target: ControlTarget;
   toolType: string;
@@ -171,7 +189,7 @@ const RunControlConfirmModalBody: React.FC<{
       onPendingChange?.(false);
 
       if (result.followUp === "failed") {
-        persistentErrorToast("Follow-up failed", result.followUpMessage ?? "");
+        followUpFailureToast(result.followUpMessage);
       }
       return;
     }
@@ -181,7 +199,7 @@ const RunControlConfirmModalBody: React.FC<{
     onPendingChange?.(false);
 
     if (result.followUp === "failed") {
-      persistentErrorToast("Follow-up failed", result.followUpMessage ?? "");
+      followUpFailureToast(result.followUpMessage);
     }
 
     if (result.outcome.status !== "ignored") {
