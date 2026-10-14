@@ -5,31 +5,31 @@ titles: json
 findings:
   - id: WR-01
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "Unsound type assertion can build a stop request with `toolType: undefined`"
   - id: WR-02
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "Two independent confirm modals can be open at once with no mutual exclusion"
   - id: WR-03
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "Confirm-modal remount key doesn't disambiguate by request identity"
   - id: WR-04
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "`stopModalBody` hardcodes the `return_liquid` decision key"
   - id: WR-05
     severity: warning
-    disposition: open
+    disposition: skipped
     title: "`HEAD_MOVES_NOTE` is shown unconditionally, including for Pause"
   - id: WR-06
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "Tool-id normalization is reimplemented independently in three places"
   - id: WR-07
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "A failed Stop/Clear-All/Delete-Run follow-up after an accepted abort leaves queue state desynced from instrument state"
   - id: IN-01
     severity: info
@@ -39,22 +39,22 @@ findings:
     severity: info
     disposition: open
     title: "`tip_reuse` command field has no enum/select type despite only two valid values"
-open: 9
+open: 2
 total: 9
-recorded: 2026-10-13T21:07:32.776Z
+recorded: 2026-10-14T13:28:55.730Z
 ---
 
 # Phase 02: Code Review Disposition
 
 | Finding | Severity | Disposition | Source |
 |---------|----------|-------------|--------|
-| WR-01 | warning | open | - |
-| WR-02 | warning | open | - |
-| WR-03 | warning | open | - |
-| WR-04 | warning | open | - |
-| WR-05 | warning | open | - |
-| WR-06 | warning | open | - |
-| WR-07 | warning | open | - |
+| WR-01 | warning | fixed | 02-REVIEW-FIX.md |
+| WR-02 | warning | fixed | 02-REVIEW-FIX.md |
+| WR-03 | warning | fixed | 02-REVIEW-FIX.md |
+| WR-04 | warning | fixed | 02-REVIEW-FIX.md |
+| WR-05 | warning | skipped | 02-REVIEW-FIX.md |
+| WR-06 | warning | fixed | 02-REVIEW-FIX.md |
+| WR-07 | warning | fixed | 02-REVIEW-FIX.md |
 | IN-01 | info | open | - |
 | IN-02 | info | open | - |
 
