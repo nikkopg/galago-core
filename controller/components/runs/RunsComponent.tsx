@@ -524,6 +524,17 @@ export const RunsComponent: React.FC = () => {
         onClose={handleResume}
         onConfirm={handleRunStop}
       />
+      {/* WR-02 (accepted): this modal's `runStopRequest` state is independent
+          from QueueStatusComponent's own `stopRequest` state below — two
+          near-simultaneous clicks (e.g. "Delete Run" here and "Clear All"
+          there) can set both non-null before either modal's overlay blocks
+          further input, briefly showing two overlapping confirm dialogs.
+          No action is ever sent without confirmation: the stale modal
+          self-closes once an accepted action moves the step on
+          (confirmStillValid's staleness check). Unifying these into one
+          mutually-exclusive modal would require lifting stop-request state
+          to a shared parent/context, which is out of scope for this fix
+          pass; documented here per REVIEW.md WR-02 option (b). */}
       <InstrumentStopModal
         request={runStopRequest}
         envelope={runControlQuery.data}

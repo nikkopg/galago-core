@@ -115,6 +115,10 @@ export const QueueStatusComponent: React.FC<QueueStatusComponent> = ({
   return (
     <>
       {confirmRunStartModal()}
+      {/* WR-02 (accepted): independent from RunsComponent's `runStopRequest`
+          state — see the matching comment there. No action is ever sent
+          without confirmation; the stale modal self-closes via
+          confirmStillValid once an accepted action moves the step on. */}
       <InstrumentStopModal
         request={stopRequest}
         envelope={runControlState}

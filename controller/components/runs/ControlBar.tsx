@@ -188,7 +188,13 @@ export const ControlBar: React.FC<{ envelope: RunStateEnvelope | undefined }> = 
         </Card>
       ) : null}
       <ToolPausedModal
-        isOpen={prompt.isOpen}
+        // WR-02: suppress the prompt-driven pause modal while a
+        // RunControlConfirmModal request is already open for this bar, so an
+        // organic new pause episode arriving mid-confirm cannot stack a
+        // second modal on top of the one the operator is actively deciding
+        // on. `prompt.isOpen` stays true in state regardless (set by the
+        // poll reducer) and renders as soon as `request` clears.
+        isOpen={prompt.isOpen && request === null}
         pause={prompt.pause}
         toolType={toolType}
         unknownWarning={unknownWarning}
