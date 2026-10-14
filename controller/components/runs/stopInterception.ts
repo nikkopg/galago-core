@@ -1,7 +1,7 @@
 // Pure interception predicates and Stop-modal copy for the "Pause queue" /
 // Clear All / per-run delete Stop flow (D-05, D-16..D-19). No React import,
 // no .tsx import (D-24) — safe to import from any context, including tests.
-import { shouldShowControlBar } from "./controlDecision";
+import { shouldShowControlBar, getActionSpec, decisionLabel } from "./controlDecision";
 import type { DecisionValues, RunningEnvelope } from "./controlDecision";
 import type { RunStateEnvelope } from "@/server/runState";
 
@@ -28,11 +28,24 @@ export function shouldInterceptRunDelete(
   return shouldInterceptQueueStop(envelope) && envelope.runId === runId;
 }
 
-// D-17: "Abort the instrument run (return liquid? Yes|No|not chosen)".
-export function stopModalBody(values: DecisionValues): string {
-  const value = values.return_liquid;
-  const valueText = value === "yes" ? "Yes" : value === "no" ? "No" : "not chosen";
-  return `Abort the instrument run (return liquid? ${valueText})`;
+// D-17/WR-04: restates every decision declared by the tool's "abort" spec,
+// derived from getActionSpec rather than hardcoding `return_liquid` — this
+// stays correct for any future tool type whose abort action declares a
+// differently-named (or additional) decision, instead of silently reading
+// `undefined` forever (mirrors how restateChoice derives its sentence from
+// the same spec).
+export function stopModalBody(toolType: string, values: DecisionValues): string {
+  const spec = getActionSpec(toolType, "abort");
+  const decisionNames = spec ? Object.keys(spec) : [];
+  if (decisionNames.length === 0) {
+    return "Abort the instrument run.";
+  }
+  const parts = decisionNames.map((name) => {
+    const value = values[name];
+    const valueText = value === "yes" ? "Yes" : value === "no" ? "No" : "not chosen";
+    return `${decisionLabel(name)} ${valueText}`;
+  });
+  return `Abort the instrument run (${parts.join(", ")})`;
 }
 
 export interface InstrumentStopRequest {

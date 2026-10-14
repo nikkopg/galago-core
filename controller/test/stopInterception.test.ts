@@ -258,20 +258,27 @@ describe("run delete interception", () => {
 });
 
 describe("stop modal copy", () => {
+  // WR-04: stopModalBody derives its decision keys from the tool's declared
+  // abort spec (getActionSpec) instead of hardcoding `return_liquid`, so it
+  // needs a toolType with a runControl entry — "fast" is the only one today.
   it("restates return liquid: yes", () => {
-    expect(stopModalBody({ return_liquid: "yes" })).toBe(
-      "Abort the instrument run (return liquid? Yes)",
+    expect(stopModalBody("fast", { return_liquid: "yes" })).toBe(
+      "Abort the instrument run (Return liquid? Yes)",
     );
   });
 
   it("restates return liquid: no", () => {
-    expect(stopModalBody({ return_liquid: "no" })).toBe(
-      "Abort the instrument run (return liquid? No)",
+    expect(stopModalBody("fast", { return_liquid: "no" })).toBe(
+      "Abort the instrument run (Return liquid? No)",
     );
   });
 
   it("restates not chosen when undefined", () => {
-    expect(stopModalBody({})).toBe("Abort the instrument run (return liquid? not chosen)");
+    expect(stopModalBody("fast", {})).toBe("Abort the instrument run (Return liquid? not chosen)");
+  });
+
+  it("falls back to a plain sentence for a tool type with no declared abort decisions", () => {
+    expect(stopModalBody("unknown-tool-type", {})).toBe("Abort the instrument run.");
   });
 
   it("confirm label is Abort", () => {

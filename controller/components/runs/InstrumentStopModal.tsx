@@ -61,7 +61,14 @@ export const InstrumentStopModal: React.FC<InstrumentStopModalProps> = ({
     <RunControlConfirmModal
       request={confirmRequest}
       onClose={onClose}
-      copy={{ ...STOP_MODAL_COPY, body: stopModalBody }}
+      copy={{
+        ...STOP_MODAL_COPY,
+        // WR-04: stopModalBody now derives its decision keys from the
+        // tool's declared abort spec rather than hardcoding `return_liquid`
+        // — it needs the toolType to look that spec up. Only invoked while
+        // `confirmRequest` (and therefore `request`) is non-null.
+        body: (values) => stopModalBody(request?.toolType ?? "", values),
+      }}
       afterAccepted={request?.followUp}
       onPendingChange={setPending}
     />
