@@ -191,6 +191,11 @@ function prettyJson(value: unknown): string {
   }
 }
 
+// -1 is the instrument's no-plate-detected sentinel.
+function isNoPlateDetected(value: unknown): boolean {
+  return value === null || value === undefined || value === "" || value === -1;
+}
+
 function describeWrongDetectionEntry(entry: unknown): string | null {
   if (!isPlainObject(entry)) {
     return null;
@@ -201,10 +206,7 @@ function describeWrongDetectionEntry(entry: unknown): string | null {
     return null;
   }
   const detectedRaw = entry["detectedPlateID"];
-  const found =
-    detectedRaw === null || detectedRaw === undefined || detectedRaw === ""
-      ? "none"
-      : String(detectedRaw);
+  const found = isNoPlateDetected(detectedRaw) ? "none" : String(detectedRaw);
   return `Deck ${position}: expected plate ${expectedPlateID}, found ${found}`;
 }
 

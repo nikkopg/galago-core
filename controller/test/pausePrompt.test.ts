@@ -421,6 +421,20 @@ describe("reason and detail edge cases", () => {
     expect(describePauseDetail([1, 2])).toStrictEqual({ lines: [], raw: "[\n  1,\n  2\n]" });
   });
 
+  it("describePauseDetail renders the no-plate sentinel detectedPlateID -1 as none", () => {
+    expect(
+      describePauseDetail({
+        wrongDetection: [{ expectedPlateID: 2, detectedPlateID: -1, position: 1 }],
+      }),
+    ).toStrictEqual({ lines: ["Deck 1: expected plate 2, found none"], raw: null });
+
+    expect(
+      describePauseDetail({
+        wrongDetection: [{ expectedPlateID: 2, detectedPlateID: 5, position: 1 }],
+      }),
+    ).toStrictEqual({ lines: ["Deck 1: expected plate 2, found 5"], raw: null });
+  });
+
   it("formatPauseStartedAt handles null, invalid, sub-minute and multi-hour ages", () => {
     expect(formatPauseStartedAt(null, Date.now())).toBeNull();
     expect(formatPauseStartedAt("not a date", Date.now())).toBe("not a date");
