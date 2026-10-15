@@ -191,9 +191,12 @@ function prettyJson(value: unknown): string {
   }
 }
 
-// -1 is the instrument's no-plate-detected sentinel.
+// Number -1 and string "-1" are both treated as the instrument's
+// no-plate-detected sentinel, because detail is untyped instrument JSON and
+// a stringified sentinel is plausible. All other values, including 0 and
+// other negatives, render verbatim so no real plate ID is hidden.
 function isNoPlateDetected(value: unknown): boolean {
-  return value === null || value === undefined || value === "" || value === -1;
+  return value === null || value === undefined || value === "" || value === -1 || value === "-1";
 }
 
 function describeWrongDetectionEntry(entry: unknown): string | null {

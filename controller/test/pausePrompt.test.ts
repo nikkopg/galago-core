@@ -435,6 +435,38 @@ describe("reason and detail edge cases", () => {
     ).toStrictEqual({ lines: ["Deck 1: expected plate 2, found 5"], raw: null });
   });
 
+  it('describePauseDetail treats string "-1" as the sentinel and renders other IDs verbatim', () => {
+    expect(
+      describePauseDetail({
+        wrongDetection: [{ expectedPlateID: 2, detectedPlateID: "-1", position: 1 }],
+      }),
+    ).toStrictEqual({ lines: ["Deck 1: expected plate 2, found none"], raw: null });
+
+    expect(
+      describePauseDetail({
+        wrongDetection: [{ expectedPlateID: 2, detectedPlateID: -2, position: 1 }],
+      }),
+    ).toStrictEqual({ lines: ["Deck 1: expected plate 2, found -2"], raw: null });
+
+    expect(
+      describePauseDetail({
+        wrongDetection: [{ expectedPlateID: 2, detectedPlateID: 0, position: 1 }],
+      }),
+    ).toStrictEqual({ lines: ["Deck 1: expected plate 2, found 0"], raw: null });
+
+    expect(
+      describePauseDetail({
+        wrongDetection: [
+          { expectedPlateID: 2, detectedPlateID: -1, position: 1 },
+          { expectedPlateID: 4, detectedPlateID: 7, position: 3 },
+        ],
+      }),
+    ).toStrictEqual({
+      lines: ["Deck 1: expected plate 2, found none", "Deck 3: expected plate 4, found 7"],
+      raw: null,
+    });
+  });
+
   it("formatPauseStartedAt handles null, invalid, sub-minute and multi-hour ages", () => {
     expect(formatPauseStartedAt(null, Date.now())).toBeNull();
     expect(formatPauseStartedAt("not a date", Date.now())).toBe("not a date");
