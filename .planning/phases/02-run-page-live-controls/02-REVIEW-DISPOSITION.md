@@ -9,11 +9,11 @@ findings:
     title: "Dead state and legacy debug artifact in `RunsComponent.tsx` (carried forward, unresolved, pre-existing, out of this round's file scope)"
   - id: IN-02
     severity: info
-    disposition: skipped
+    disposition: fixed
     title: "`tip_reuse` command field has no enum/select type despite only two valid values (carried forward, unresolved, pre-existing, out of this round's file scope)"
   - id: WR-05
     severity: warning
-    disposition: skipped
+    disposition: fixed
     title: "`HEAD_MOVES_NOTE` is shown unconditionally, including for Pause"
   - id: WR-01
     severity: warning
@@ -41,7 +41,7 @@ findings:
     title: "A failed Stop/Clear-All/Delete-Run follow-up after an accepted abort leaves queue state desynced from instrument state"
 open: 0
 total: 9
-recorded: 2026-10-15T04:24:12.525Z
+recorded: 2026-10-15T04:53:59.028Z
 ---
 
 # Phase 02: Code Review Disposition
@@ -49,8 +49,8 @@ recorded: 2026-10-15T04:24:12.525Z
 | Finding | Severity | Disposition | Source |
 |---------|----------|-------------|--------|
 | IN-01 | info | fixed | 02-REVIEW-FIX.md |
-| IN-02 | info | skipped | 02-REVIEW-FIX.md |
-| WR-05 | warning | skipped | 02-REVIEW-FIX.md |
+| IN-02 | info | fixed | 02-REVIEW-FIX.md |
+| WR-05 | warning | fixed | 02-REVIEW-FIX.md |
 | WR-01 | warning | fixed | 02-REVIEW-FIX.md (not in the current review) |
 | WR-02 | warning | fixed | 02-REVIEW-FIX.md (not in the current review) |
 | WR-03 | warning | fixed | 02-REVIEW-FIX.md (not in the current review) |
