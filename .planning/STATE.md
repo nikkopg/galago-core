@@ -5,10 +5,10 @@ milestone_name: Live Run Control (queue & run page)
 current_phase: 2
 status: completed
 stopped_at: Phase 2 complete — all phases complete
-last_updated: "2026-10-15T04:00:07.595Z"
+last_updated: "2026-10-15T05:37:41.298Z"
 last_activity: 2026-10-15
 last_activity_desc: Phase 2 complete
-state_head: e6b0e9765c28168a7d004c9d78ae4188db48e1d8
+state_head: e18a177e05f452e6bfb9e165e5c1746cacaf979e
 progress:
   total_phases: 2
   completed_phases: 1
@@ -32,7 +32,7 @@ decides every recovery action; the web app never acts on its own or pre-selects 
 Phase: 2
 Plan: Not started
 Status: All phases complete
-Last activity: 2026-10-15 - Completed quick task 261015-f48: fix pausePrompt describeWrongDetectionEntry: render detectedPlateID -1 (no plate detected) as "none", add unit test
+Last activity: 2026-10-15 - Completed quick task 261015-h0q: fix SqliteQueue: an operator-aborted (FAILED) command must not be re-run by startNext on the next queue start; add unit test
 
 Progress: [█████░░░░░] 50%
 
@@ -118,6 +118,7 @@ Recent decisions affecting current work:
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 261015-f48 | fix pausePrompt describeWrongDetectionEntry: render detectedPlateID -1 (no plate detected) as "none", add unit test | 2026-10-15 | e6b0e97 | [261015-f48-fix-pauseprompt-describewrongdetectionen](./quick/261015-f48-fix-pauseprompt-describewrongdetectionen/) |
+| 261015-h0q | fix SqliteQueue: an operator-aborted (FAILED) command must not be re-run by startNext on the next queue start; add unit test | 2026-10-15 | e18a177 | [261015-h0q-fix-sqlitequeue-an-operator-aborted-fail](./quick/261015-h0q-fix-sqlitequeue-an-operator-aborted-fail/) |
 
 ## Deferred Items
 
