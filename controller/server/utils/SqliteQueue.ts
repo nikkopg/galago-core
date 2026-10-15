@@ -490,22 +490,68 @@ export default class SqliteQueue {
     }
   }
 
-  // By default a failed step stays queued, so startNext re-runs it on the
-  // next queue start (upstream retry; the operator can Skip it instead).
-  // options.dequeue is for a step whose failure is an operator abort the
-  // tool accepted, which must leave the queue like complete() and skip() do.
-  async fail(id: number, error: Error, options: { dequeue?: boolean } = {}): Promise<void> {
+  // A failed step stays queued, so startNext re-runs it on the next queue
+  // start (upstream retry; the operator can Skip it instead). A step whose
+  // failure is an operator abort the tool accepted uses failAndDequeueRun
+  // instead, which also removes it and the rest of its run from the queue.
+  async fail(id: number, error: Error): Promise<void> {
     this.db.transaction(() => {
       this._updateItem(id, { status: "FAILED", error });
-      if (options.dequeue) {
-        this.db
-          .prepare(
-            `
-          DELETE FROM ${this.queueName}_queue WHERE queue_id = ?
-        `,
-          )
-          .run(id);
+    })();
+  }
+
+  // Scoped to the given run_id and to rows still in `<q>_queue`, ordered by
+  // position. Runs inside the caller's transaction (opens none of its own).
+  // A row still CREATED becomes SKIPPED (so skippedAt is set); any other
+  // status is left alone and the row is just dequeued. Records are kept.
+  // Returns the removed queueIds in position order. A no-op for an empty
+  // runId, mirroring clearByRunId's guard.
+  private _dequeueRunRemainder(runId: string): number[] {
+    if (!runId) return [];
+
+    const rows = this.db
+      .prepare(
+        `
+      SELECT q.queue_id as queue_id, c.status as status
+      FROM ${this.queueName}_queue q
+      INNER JOIN ${this.queueName}_commands c ON c.queue_id = q.queue_id
+      WHERE c.run_id = ?
+      ORDER BY q.position ASC
+    `,
+      )
+      .all(runId) as Array<{ queue_id: number; status: string }>;
+
+    for (const row of rows) {
+      if (row.status === "CREATED") {
+        this._updateItem(row.queue_id, { status: "SKIPPED" });
       }
+      this.db
+        .prepare(
+          `
+        DELETE FROM ${this.queueName}_queue WHERE queue_id = ?
+      `,
+        )
+        .run(row.queue_id);
+    }
+
+    return rows.map((row) => row.queue_id);
+  }
+
+  // Fails `id` and, in the same transaction, removes the rest of its run
+  // from the queue (CREATED rows become SKIPPED; other statuses are just
+  // dequeued). Used when an operator abort is accepted while the step ran.
+  // Throws `Item ${id} not found` exactly as fail does if the row is
+  // missing. Returns the queueIds of the run's other steps it removed.
+  async failAndDequeueRun(id: number, error: Error): Promise<number[]> {
+    const db = this.db;
+    return db.transaction(() => {
+      const updated = this._updateItem(id, { status: "FAILED", error });
+      db.prepare(
+        `
+        DELETE FROM ${this.queueName}_queue WHERE queue_id = ?
+      `,
+      ).run(id);
+      return this._dequeueRunRemainder(updated.runId);
     })();
   }
 

@@ -456,30 +456,29 @@ describe("toolControl", () => {
     await loop;
   });
 
+  // Pushes a step with a distinct params.step label so individual steps of
+  // a run are identifiable across restarts and executeCommand calls.
+  async function pushLabeledStep(runId: string, label: string) {
+    await queue.commands.push({
+      runId,
+      status: "CREATED",
+      commandInfo: {
+        toolId: "fast-1",
+        toolType: ToolType.fast,
+        command: "transfer",
+        params: { step: label },
+      },
+    } as any);
+  }
+
   it("an accepted abort keeps the aborted step out of the next queue start", async () => {
-    await queue.commands.push({
-      runId: "run-1",
-      status: "CREATED",
-      commandInfo: {
-        toolId: "fast-1",
-        toolType: ToolType.fast,
-        command: "transfer",
-        params: {},
-      },
-    } as any);
-    await queue.commands.push({
-      runId: "run-1",
-      status: "CREATED",
-      commandInfo: {
-        toolId: "fast-1",
-        toolType: ToolType.fast,
-        command: "transfer",
-        params: {},
-      },
-    } as any);
-    const [a, b] = await queue.commands.all();
-    const aId = a.queueId;
-    const bId = b.queueId;
+    await pushLabeledStep("run-1", "a1");
+    await pushLabeledStep("run-1", "a2");
+    await pushLabeledStep("run-2", "b1");
+    const [a1, a2, b1] = await queue.commands.all();
+    const aId = a1.queueId;
+    const a2Id = a2.queueId;
+    const bId = b1.queueId;
 
     loop = queue._start();
 
@@ -503,10 +502,21 @@ describe("toolControl", () => {
 
     expect(queue.state).toBe(ToolStatus.FAILED);
     expect(queue.commands.find(aId).status).toBe("FAILED");
+    expect(queue.commands.find(a2Id).status).toBe("SKIPPED");
+    expect(queue.commands.find(a2Id).skippedAt).toBeDefined();
     expect((await queue.commands.getPaginated()).map((c) => c.queueId)).toStrictEqual([bId]);
     const allAfterAbort = await queue.commands.all();
     expect(allAfterAbort.map((c) => c.queueId)).toContain(aId);
+    expect(allAfterAbort.map((c) => c.queueId)).toContain(a2Id);
     expect(allAfterAbort.find((c) => c.queueId === aId)?.status).toBe("FAILED");
+
+    const dequeueLogs = vi
+      .mocked(logAction)
+      .mock.calls.map(([call]) => call as { level: string; action: string; details: string })
+      .filter((call) => call.action === "Aborted Run Dequeued");
+    expect(dequeueLogs.length).toBeGreaterThan(0);
+    expect(dequeueLogs[0].details).toContain(`queueId=${aId}`);
+    expect(dequeueLogs[0].details).toContain(String(a2Id));
 
     // Restart the queue: the aborted step must not run again.
     step = deferred<any>();
@@ -525,6 +535,7 @@ describe("toolControl", () => {
       toolId: "fast-1",
       toolType: ToolType.fast,
       command: "transfer",
+      params: { step: "b1" },
     });
 
     step.resolve(undefined);

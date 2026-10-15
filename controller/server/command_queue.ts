@@ -59,7 +59,9 @@ export class CommandQueue {
   private readonly _runStateMonitor = new RunStateMonitor();
   // The queueId of the running step whose operator Abort the tool accepted.
   // Set only from toolControl and consumed by the busy-loop catch when that
-  // step ends. In memory only, like _runningStep (D-01).
+  // step ends: the catch fails it and dequeues the rest of its run (every
+  // other queued step of the same run_id), instead of letting startNext
+  // re-run any of them. In memory only, like _runningStep (D-01).
   private _abortAcceptedQueueId?: number;
 
   // Message handling state variables
@@ -1201,16 +1203,28 @@ export class CommandQueue {
         logger.error("Failed to execute command", e);
 
         // An accepted operator abort for this exact step must leave the
-        // queue (Phase 2 D-18); any other failure keeps upstream retry.
+        // queue together with the rest of its run (Phase 2 D-18); any other
+        // failure keeps upstream retry.
         const abortAccepted = this._abortAcceptedQueueId === nextCommand.queueId;
         this._abortAcceptedQueueId = undefined;
 
-        // Mark command as failed in the queue
-        await this.commands.fail(
-          nextCommand.queueId,
-          e instanceof Error ? e : new Error("Unknown error"),
-          { dequeue: abortAccepted },
-        );
+        const err = e instanceof Error ? e : new Error("Unknown error");
+
+        if (abortAccepted) {
+          const removed = await this.commands.failAndDequeueRun(nextCommand.queueId, err);
+          logAction({
+            level: "info",
+            action: "Aborted Run Dequeued",
+            details:
+              `queueId=${nextCommand.queueId} runId=${nextCommand.runId} ` +
+              `toolId=${nextCommand.commandInfo?.toolId} ` +
+              `removed=${removed.length ? removed.join(",") : "none"} ` +
+              `reason=operator abort accepted while the step ran`,
+          });
+        } else {
+          // Mark command as failed in the queue
+          await this.commands.fail(nextCommand.queueId, err);
+        }
 
         // Set error state for UI to display
         this.error = e instanceof Error ? e : new Error("Execution failed");
@@ -1222,7 +1236,7 @@ export class CommandQueue {
           details:
             `Command failed: ${e instanceof Error ? e.message : e}` +
             (abortAccepted
-              ? " (operator abort accepted by the tool; removed from the queue, it will not re-run on the next queue start)"
+              ? " (operator abort accepted by the tool; this step and the rest of its run were removed from the queue and will not run on the next queue start)"
               : ""),
         });
 
