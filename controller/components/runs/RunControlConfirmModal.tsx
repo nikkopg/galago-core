@@ -23,7 +23,7 @@ import {
   restateChoice,
   decisionLabel,
   runAfterAccepted,
-  HEAD_MOVES_NOTE,
+  headMovesNote,
 } from "./controlDecision";
 import type {
   ControlTarget,
@@ -158,6 +158,7 @@ const RunControlConfirmModalBody: React.FC<{
   const [values, setValues] = useState<DecisionValues>(() => (spec ? emptyDecisions(spec) : {}));
 
   const decisionNames = spec ? Object.keys(spec) : [];
+  const headNote = headMovesNote(request.toolType, request.action);
   const canConfirm = spec !== undefined && allDecisionsChosen(spec, values);
   const confirmColorScheme = request.action === "abort" ? "red" : "teal";
 
@@ -228,7 +229,7 @@ const RunControlConfirmModalBody: React.FC<{
             ) : (
               <>
                 <Text>{bodyText}</Text>
-                <Text>{HEAD_MOVES_NOTE}</Text>
+                {headNote !== null ? <Text>{headNote}</Text> : null}
                 {decisionNames.map((name) => (
                   <VStack key={name} align="stretch" spacing={2}>
                     <Text fontSize="sm">{decisionLabel(name)}</Text>

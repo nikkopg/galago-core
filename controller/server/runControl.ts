@@ -39,6 +39,31 @@ export const runControl: Readonly<Record<string, RunControlToolSpec>> = deepFree
   },
 });
 
+// WR-05: whether each declared action physically moves the instrument head,
+// kept apart from `runControl` so that map's action specs stay "decision name
+// -> kind" only. Pause is a soft pause and leaves the head where it is.
+export const runControlMovesHead: Readonly<Record<string, Readonly<Record<string, boolean>>>> =
+  deepFreeze({
+    fast: {
+      pause: false,
+      resume: true,
+      abort: true,
+    },
+  });
+
+// Fails toward warning: only an explicit own-property `false` says the head
+// stays put. An undeclared tool type or action is assumed to move the head.
+export function actionMovesHead(toolType: string, action: string): boolean {
+  if (!Object.prototype.hasOwnProperty.call(runControlMovesHead, toolType)) {
+    return true;
+  }
+  const toolSpec = runControlMovesHead[toolType];
+  if (!Object.prototype.hasOwnProperty.call(toolSpec, action)) {
+    return true;
+  }
+  return toolSpec[action] !== false;
+}
+
 // Own-property lookup only: inherited names such as "constructor", "toString"
 // and "__proto__" must never resolve to a declared tool type (D-09/D-10).
 export function getRunControl(toolType: string): RunControlToolSpec | undefined {

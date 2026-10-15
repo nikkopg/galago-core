@@ -2,10 +2,10 @@
 // confirmed-send gate and accepted-then-follow-up sequencing for live run
 // control (D-24: no React import, no .tsx import — safe to import from any
 // context, including the confirmed-send hook and tests). The only server
-// imports are `getRunControl` and `normalizeToolKey` (both zero-import
+// imports are `getRunControl`, `actionMovesHead` and `normalizeToolKey` (both zero-import
 // modules, safe client-side) and the `RunStateEnvelope` TYPE (import type
 // only, so no server code reaches the client bundle).
-import { getRunControl } from "@/server/runControl";
+import { actionMovesHead, getRunControl } from "@/server/runControl";
 import type { ControlDecisionValue, RunControlActionSpec } from "@/server/runControl";
 import { normalizeToolKey } from "@/server/toolKey";
 import type { RunStateEnvelope } from "@/server/runState";
@@ -15,6 +15,12 @@ import type { RunStateEnvelope } from "@/server/runState";
 export const RUN_CONTROL_POLL_MS = 2000;
 
 export const HEAD_MOVES_NOTE = "The instrument head will move.";
+
+// WR-05: the note is shown only for actions that move the head (Pause on the
+// F.A.S.T. does not). Unknown tool types and actions still get the note.
+export function headMovesNote(toolType: string, action: string): string | null {
+  return actionMovesHead(toolType, action) ? HEAD_MOVES_NOTE : null;
+}
 
 // D-12 (verbatim): shown when a confirm opened for a step that has since
 // ended or moved on closes itself without sending anything.

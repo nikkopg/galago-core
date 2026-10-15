@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { runControl, getRunControl, validateControlRequest } from "@/server/runControl";
+import {
+  runControl,
+  getRunControl,
+  validateControlRequest,
+  runControlMovesHead,
+  actionMovesHead,
+} from "@/server/runControl";
 import { commandFields } from "@/components/tools/constants";
 
 describe("runControl map", () => {
@@ -153,5 +159,32 @@ describe("getRunControl own-property safety", () => {
 
   it("resolves a declared tool type", () => {
     expect(getRunControl("fast")).toBe(runControl.fast);
+  });
+});
+
+describe("actionMovesHead (WR-05)", () => {
+  it("declares head movement for every F.A.S.T. control action", () => {
+    expect(runControlMovesHead).toStrictEqual({
+      fast: { pause: false, resume: true, abort: true },
+    });
+    expect(Object.keys(runControlMovesHead.fast).sort()).toStrictEqual(
+      Object.keys(runControl.fast).sort(),
+    );
+    expect(Object.isFrozen(runControlMovesHead)).toBe(true);
+    expect(Object.isFrozen(runControlMovesHead.fast)).toBe(true);
+  });
+
+  it("is false only for the F.A.S.T. soft pause", () => {
+    expect(actionMovesHead("fast", "pause")).toBe(false);
+    expect(actionMovesHead("fast", "resume")).toBe(true);
+    expect(actionMovesHead("fast", "abort")).toBe(true);
+  });
+
+  it("assumes the head moves for undeclared tool types, actions and inherited names", () => {
+    expect(actionMovesHead("pf400", "pause")).toBe(true);
+    expect(actionMovesHead("fast", "home")).toBe(true);
+    expect(actionMovesHead("constructor", "pause")).toBe(true);
+    expect(actionMovesHead("fast", "toString")).toBe(true);
+    expect(actionMovesHead("__proto__", "pause")).toBe(true);
   });
 });

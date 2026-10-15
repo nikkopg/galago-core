@@ -22,6 +22,8 @@ import {
   shouldShowRecoverySection,
   isToolTrackedByRunningStep,
   normalizeToolKey,
+  headMovesNote,
+  HEAD_MOVES_NOTE,
   type RunningEnvelope,
   type ConfirmedSendOutcome,
 } from "@/components/runs/controlDecision";
@@ -573,5 +575,21 @@ describe("accepted then follow-up", () => {
       followUp: "failed",
       followUpMessage: "boom",
     });
+  });
+});
+
+describe("headMovesNote (WR-05)", () => {
+  it("omits the head-moves note for a F.A.S.T. pause", () => {
+    expect(headMovesNote("fast", "pause")).toBeNull();
+  });
+
+  it("shows the note for F.A.S.T. resume and abort", () => {
+    expect(headMovesNote("fast", "resume")).toBe(HEAD_MOVES_NOTE);
+    expect(headMovesNote("fast", "abort")).toBe(HEAD_MOVES_NOTE);
+  });
+
+  it("shows the note when the tool type or action is not declared", () => {
+    expect(headMovesNote("pf400", "pause")).toBe(HEAD_MOVES_NOTE);
+    expect(headMovesNote("fast", "unknown")).toBe(HEAD_MOVES_NOTE);
   });
 });
