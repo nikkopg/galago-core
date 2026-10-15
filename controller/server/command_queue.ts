@@ -38,6 +38,9 @@ export interface UIMessage {
 // A snapshot of the single tool step the busy loop is currently awaiting.
 // Set immediately before that step's executeCommand and cleared in a finally
 // (D-01, D-02). In-memory only: a restart means no running step, by design.
+// A row left STARTED by a previous process (one this process never saw as
+// its own running step) is failed at CommandQueue construction instead
+// (T-o44-03).
 export interface RunningStep {
   queueId: number;
   runId: string;
@@ -46,6 +49,12 @@ export interface RunningStep {
   command: string;
   startedAt: number;
 }
+
+// galago-web restarted mid-step: the instrument's real-world state after an
+// interrupted step is unknown, so it is never automatically re-sent.
+const INTERRUPTED_BY_RESTART_ERROR =
+  "Interrupted: galago-web restarted while this step was running. It was not re-run; " +
+  "check the instrument before re-queuing it.";
 
 export class CommandQueue {
   private _state: CommandQueueState = ToolStatus.OFFLINE;
@@ -71,6 +80,11 @@ export class CommandQueue {
   // queue action that supersedes a pending stale reply (_start, gotoCommand,
   // gotoCommandByRunIndex), and consumed (cleared) on use.
   private _failedAttempt?: Readonly<RunningStep>;
+  // Set only after _recoverInterruptedSteps succeeds once (at construction
+  // or from _start's retry). Guards against recovering twice and, more
+  // importantly, against _start skipping the retry it needs when
+  // construction's own attempt failed (T-o44-03).
+  private _interruptedStepsRecovered = false;
 
   // Message handling state variables
   private _isWaitingForInput: boolean = false;
@@ -93,6 +107,46 @@ export class CommandQueue {
     }
 
     this.commands = new SqliteQueue(dbPath, "command_queue_2");
+
+    // Runs only here (construction of the single global CommandQueue,
+    // before any busy loop in this process) and in _start until it has
+    // succeeded once, so it never sees this process's own running step
+    // (T-o44-04). The constructor must not throw: a failure here is
+    // retried by _start before its first busy loop (fail closed).
+    try {
+      this._recoverInterruptedSteps();
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logAction({
+        level: "error",
+        action: "Interrupted Step Recovery Failed",
+        details: `error=${errorMessage} note=the queue will retry before its next start and will not start until that succeeds`,
+      });
+    }
+  }
+
+  // Fails every row left STARTED by a previous process and dequeues each
+  // one's run remainder (the same run-wide primitive as an accepted abort).
+  // Logs "Interrupted Step Failed" per orphan and sets
+  // _interruptedStepsRecovered only after the SqliteQueue call succeeds;
+  // logs nothing when there is nothing to recover.
+  private _recoverInterruptedSteps(): void {
+    const recovered = this.commands.recoverInterruptedSteps(
+      new Error(INTERRUPTED_BY_RESTART_ERROR),
+    );
+
+    for (const entry of recovered) {
+      logAction({
+        level: "warning",
+        action: "Interrupted Step Failed",
+        details:
+          `queueId=${entry.queueId} runId=${entry.runId} toolId=${entry.toolId ?? "unknown"} ` +
+          `removed=${entry.remainder.length ? entry.remainder.join(",") : "none"} ` +
+          `reason=galago-web restarted while the step was running; it was not re-run`,
+      });
+    }
+
+    this._interruptedStepsRecovered = true;
   }
 
   fail(error: any) {
@@ -829,6 +883,11 @@ export class CommandQueue {
     this._setState(ToolStatus.READY);
     this.error = undefined;
     try {
+      // Retry interrupted-step recovery if construction's own attempt
+      // failed; a throw here lands in this try's catch below, so the queue
+      // fails closed (FAILED, nothing dispatched) instead of starting with
+      // an unrecovered orphan still STARTED.
+      if (!this._interruptedStepsRecovered) this._recoverInterruptedSteps();
       this._runningPromise = this._runBusyLoopWhileQueueNotEmpty(120);
       await this._runningPromise;
     } catch (e) {

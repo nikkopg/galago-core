@@ -281,4 +281,27 @@ describe("SqliteQueue", () => {
       expect(result).toBe(false);
     }
   });
+
+  it("recoverInterruptedSteps fails orphaned STARTED rows and dequeues their run's remainder", async () => {
+    const { aId, a2Id, bId } = await pushThree();
+    await queue.startNext();
+
+    const recovered = queue.recoverInterruptedSteps(new Error("interrupted"));
+    expect(recovered).toStrictEqual([
+      { queueId: aId, runId: "run-1", toolId: "fast-1", remainder: [a2Id] },
+    ]);
+
+    const aRecord = queue.find(aId);
+    expect(aRecord.status).toBe("FAILED");
+    expect((aRecord.error as Error)?.message).toBe("interrupted");
+
+    expect(queue.find(a2Id).status).toBe("SKIPPED");
+    expect(queue.find(bId).status).toBe("CREATED");
+
+    const paginated = await queue.getPaginated();
+    expect(paginated.map((c) => c.queueId)).toStrictEqual([bId]);
+
+    const second = queue.recoverInterruptedSteps(new Error("interrupted"));
+    expect(second).toStrictEqual([]);
+  });
 });

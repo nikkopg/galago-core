@@ -555,6 +555,55 @@ export default class SqliteQueue {
     })();
   }
 
+  // Fails every row left STARTED (an orphan from a previous process that
+  // died mid-step) and dequeues each one's run remainder, in one
+  // transaction. Synchronous: called from the CommandQueue constructor and
+  // from _start before the first busy loop, so it never sees this
+  // process's own running step (T-o44-04). Returns [] when nothing is
+  // STARTED.
+  recoverInterruptedSteps(
+    error: Error,
+  ): Array<{ queueId: number; runId: string; toolId?: string; remainder: number[] }> {
+    const db = this.db;
+    return db.transaction(() => {
+      const rows = db
+        .prepare(
+          `
+        SELECT queue_id FROM ${this.queueName}_commands WHERE status = 'STARTED' ORDER BY queue_id ASC
+      `,
+        )
+        .all() as Array<{ queue_id: number }>;
+
+      const results: Array<{
+        queueId: number;
+        runId: string;
+        toolId?: string;
+        remainder: number[];
+      }> = [];
+
+      for (const row of rows) {
+        const item = this.find(row.queue_id);
+        const updated = this._updateItem(row.queue_id, { status: "FAILED", error });
+        this.db
+          .prepare(
+            `
+          DELETE FROM ${this.queueName}_queue WHERE queue_id = ?
+        `,
+          )
+          .run(row.queue_id);
+
+        results.push({
+          queueId: row.queue_id,
+          runId: updated.runId,
+          toolId: item.commandInfo?.toolId,
+          remainder: this._dequeueRunRemainder(updated.runId),
+        });
+      }
+
+      return results;
+    })();
+  }
+
   // Gated late-reply removal (T-01-08): removes `id` from the run order and
   // dequeues the rest of its run only if the row still exists, run_id
   // matches, status is FAILED and it is still queued. Returns false and
