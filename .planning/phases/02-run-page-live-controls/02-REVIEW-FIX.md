@@ -43,7 +43,7 @@ removing it only unlinks the pointer and never touches the real `node_modules` c
 
 ## Fixed Issues
 
-### IN-01: Dead state and legacy debug artifact in `RunsComponent.tsx`
+### IN-01: Dead state and legacy debug artifact in `RunsComponent.tsx` (carried forward, unresolved, pre-existing, out of this round's file scope)
 
 **Files modified:** `controller/components/runs/RunsComponent.tsx`
 **Commit:** `16318a8`
@@ -77,7 +77,7 @@ emoji-prefixed `console.error("❌ Failed to load form:", ...)` was still presen
 
 ## Skipped Issues
 
-### IN-02: `tip_reuse` command field has no enum/select type despite only two valid values
+### IN-02: `tip_reuse` command field has no enum/select type despite only two valid values (carried forward, unresolved, pre-existing, out of this round's file scope)
 
 **File:** `controller/components/tools/constants.ts:328`
 **Reason:** Re-verified against current source: `commandFields.fast.transfer` still declares
