@@ -5,11 +5,11 @@ titles: json
 findings:
   - id: IN-01
     severity: info
-    disposition: open
+    disposition: fixed
     title: "Dead state and legacy debug artifact in `RunsComponent.tsx` (carried forward, unresolved, pre-existing, out of this round's file scope)"
   - id: IN-02
     severity: info
-    disposition: open
+    disposition: skipped
     title: "`tip_reuse` command field has no enum/select type despite only two valid values (carried forward, unresolved, pre-existing, out of this round's file scope)"
   - id: WR-05
     severity: warning
@@ -39,17 +39,17 @@ findings:
     severity: warning
     disposition: fixed
     title: "A failed Stop/Clear-All/Delete-Run follow-up after an accepted abort leaves queue state desynced from instrument state"
-open: 2
+open: 0
 total: 9
-recorded: 2026-10-15T04:23:58.735Z
+recorded: 2026-10-15T04:24:12.525Z
 ---
 
 # Phase 02: Code Review Disposition
 
 | Finding | Severity | Disposition | Source |
 |---------|----------|-------------|--------|
-| IN-01 | info | open | - |
-| IN-02 | info | open | - |
+| IN-01 | info | fixed | 02-REVIEW-FIX.md |
+| IN-02 | info | skipped | 02-REVIEW-FIX.md |
 | WR-05 | warning | skipped | 02-REVIEW-FIX.md |
 | WR-01 | warning | fixed | 02-REVIEW-FIX.md (not in the current review) |
 | WR-02 | warning | fixed | 02-REVIEW-FIX.md (not in the current review) |
