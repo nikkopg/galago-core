@@ -1,7 +1,9 @@
 type Field = {
   name: string;
-  type: "text" | "number" | "text_array" | "boolean";
+  type: "text" | "number" | "text_array" | "boolean" | "select";
   defaultValue?: any;
+  // Allowed values for a "select" field; ignored for every other type.
+  options?: readonly string[];
 };
 
 type Command = {
@@ -16,4 +18,4 @@ type CommandStatus = {
   [commandName: string]: "idle" | "success" | "error";
 };
 
-type FieldType = "text" | "number" | "text_array" | "boolean" | Field[];
+type FieldType = "text" | "number" | "text_array" | "boolean" | "select" | Field[];

@@ -578,6 +578,46 @@ export const AddToolCommandModal: React.FC<AddToolCommandModalProps> = ({
             </Select>
           </HStack>
         );
+      case "select":
+        return (
+          <HStack width="100%">
+            <Select
+              flex={1}
+              value={
+                isVariable
+                  ? ""
+                  : currentValue !== undefined
+                    ? currentValue
+                    : field.defaultValue !== undefined
+                      ? field.defaultValue
+                      : ""
+              }
+              onChange={(e) => {
+                if (!isVariable) {
+                  setCommandParams({ ...commandParams, [field.name]: e.target.value });
+                }
+              }}
+              isDisabled={isVariable}
+              placeholder={isVariable ? "Using variable" : "Select an option"}>
+              {(field.options ?? []).map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </Select>
+            <Select
+              width="180px"
+              value={variableName}
+              onChange={(e) => handleVariableSelect(field.name, e.target.value)}>
+              <option value="">No Variable</option>
+              {fetchedVariables?.map((variable) => (
+                <option key={variable.id} value={variable.name}>
+                  {variable.name}
+                </option>
+              ))}
+            </Select>
+          </HStack>
+        );
       default:
         return (
           <HStack width="100%">

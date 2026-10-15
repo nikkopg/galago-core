@@ -243,6 +243,24 @@ export default function Page() {
                   handleInputChange(field.name, field.type, e.target.value, parentField)
                 }
               />
+            ) : field.type === "select" ? (
+              <Select
+                placeholder="Select an option"
+                value={String(
+                  (parentField
+                    ? (formValues[parentField] as Record<string, AtomicFormValues>)?.[field.name] ||
+                      ""
+                    : formValues[field.name]) || "",
+                )}
+                onChange={(e) =>
+                  handleInputChange(field.name, field.type, e.target.value, parentField)
+                }>
+                {(field.options ?? []).map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </Select>
             ) : field.type === "text" ? (
               <Input
                 type="string"
