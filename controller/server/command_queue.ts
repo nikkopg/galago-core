@@ -57,6 +57,10 @@ export class CommandQueue {
   // The run-state poller tied to the current tool-step bracket (D-11). Its
   // lifecycle is start()ed/stop()ed right alongside _runningStep below.
   private readonly _runStateMonitor = new RunStateMonitor();
+  // The queueId of the running step whose operator Abort the tool accepted.
+  // Set only from toolControl and consumed by the busy-loop catch when that
+  // step ends. In memory only, like _runningStep (D-01).
+  private _abortAcceptedQueueId?: number;
 
   // Message handling state variables
   private _isWaitingForInput: boolean = false;
@@ -422,10 +426,13 @@ export class CommandQueue {
 
   // Sends an operator's Pause/Resume/Abort straight to the running step's
   // tool. Reached only through the commandQueue.toolControl tRPC mutation.
-  // Decides whether to send using only the running-step snapshot and the
+  // Deciding whether to send uses only the running-step snapshot and the
   // runControl capability map (D-04) — never a run-state read, a tool poll
   // result or a reply field. Touches nothing belonging to the queue's own
-  // busy-loop or modal bookkeeping.
+  // busy-loop or modal bookkeeping. The tool's reply is read only after
+  // sending, and its only effect on queue bookkeeping is recording an
+  // accepted abort, so that step leaves the queue instead of being re-run by
+  // startNext.
   async toolControl(
     action: string,
     params: Record<string, unknown> = {},
@@ -501,7 +508,33 @@ export class CommandQueue {
       details,
     });
 
+    if (action === "abort" && result.ok) {
+      try {
+        await this._recordAcceptedAbort(step!);
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        await logAction({
+          level: "warning",
+          action: "Aborted Step Dequeue Failed",
+          details: `${baseDetails} error=${errorMessage}`,
+        });
+        // The instrument accepted the abort, so the operator must never be
+        // told it failed: fall through and return the tool's own result.
+      }
+    }
+
     return result;
+  }
+
+  // Records that the tool accepted an operator Abort of `step`, so the
+  // busy-loop catch can dequeue it instead of letting startNext re-run it.
+  // The identity check against _runningStep is the first statement with no
+  // await before it: if the step is still running, this just sets the
+  // marker the busy loop will read.
+  private async _recordAcceptedAbort(step: Readonly<RunningStep>): Promise<void> {
+    if (this._runningStep === step) {
+      this._abortAcceptedQueueId = step.queueId;
+    }
   }
 
   async skipCommand(commandId: number) {
@@ -795,6 +828,9 @@ export class CommandQueue {
         this.stop(); // stop the queue when there are no more commands available!!
         return;
       }
+      // Fresh marker per command: a stale value from a prior step must never
+      // match a queueId that gotoCommand re-queued.
+      this._abortAcceptedQueueId = undefined;
 
       try {
         logger.info("Executing command:", nextCommand.commandInfo);
@@ -1152,10 +1188,16 @@ export class CommandQueue {
       } catch (e) {
         logger.error("Failed to execute command", e);
 
+        // An accepted operator abort for this exact step must leave the
+        // queue (Phase 2 D-18); any other failure keeps upstream retry.
+        const abortAccepted = this._abortAcceptedQueueId === nextCommand.queueId;
+        this._abortAcceptedQueueId = undefined;
+
         // Mark command as failed in the queue
         await this.commands.fail(
           nextCommand.queueId,
           e instanceof Error ? e : new Error("Unknown error"),
+          { dequeue: abortAccepted },
         );
 
         // Set error state for UI to display
@@ -1165,7 +1207,11 @@ export class CommandQueue {
         logAction({
           level: "error",
           action: "Command Failed",
-          details: `Command failed: ${e instanceof Error ? e.message : e}`,
+          details:
+            `Command failed: ${e instanceof Error ? e.message : e}` +
+            (abortAccepted
+              ? " (operator abort accepted by the tool; removed from the queue, it will not re-run on the next queue start)"
+              : ""),
         });
 
         await this._notifyFailure({

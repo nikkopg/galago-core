@@ -456,6 +456,83 @@ describe("toolControl", () => {
     await loop;
   });
 
+  it("an accepted abort keeps the aborted step out of the next queue start", async () => {
+    await queue.commands.push({
+      runId: "run-1",
+      status: "CREATED",
+      commandInfo: {
+        toolId: "fast-1",
+        toolType: ToolType.fast,
+        command: "transfer",
+        params: {},
+      },
+    } as any);
+    await queue.commands.push({
+      runId: "run-1",
+      status: "CREATED",
+      commandInfo: {
+        toolId: "fast-1",
+        toolType: ToolType.fast,
+        command: "transfer",
+        params: {},
+      },
+    } as any);
+    const [a, b] = await queue.commands.all();
+    const aId = a.queueId;
+    const bId = b.queueId;
+
+    loop = queue._start();
+
+    await vi.waitFor(
+      () => {
+        expect(queue.runningStep?.queueId).toBe(aId);
+      },
+      { timeout: 5000 },
+    );
+
+    const caller = commandQueueRouter.createCaller({});
+    const abortResult = await caller.toolControl({
+      action: "abort",
+      params: { return_liquid: "no" },
+    });
+    expect(abortResult).toMatchObject({ ok: true, response: ResponseCode.SUCCESS });
+    expect(grpc.executeCommand).toHaveBeenCalledWith({ fast: { abort: { return_liquid: "no" } } });
+
+    step.reject(new Error("run aborted at 40%"));
+    await loop;
+
+    expect(queue.state).toBe(ToolStatus.FAILED);
+    expect(queue.commands.find(aId).status).toBe("FAILED");
+    expect((await queue.commands.getPaginated()).map((c) => c.queueId)).toStrictEqual([bId]);
+    const allAfterAbort = await queue.commands.all();
+    expect(allAfterAbort.map((c) => c.queueId)).toContain(aId);
+    expect(allAfterAbort.find((c) => c.queueId === aId)?.status).toBe("FAILED");
+
+    // Restart the queue: the aborted step must not run again.
+    step = deferred<any>();
+    loop = queue._start();
+
+    await vi.waitFor(
+      () => {
+        expect(queue.runningStep?.queueId).toBe(bId);
+      },
+      { timeout: 5000 },
+    );
+
+    const executeCalls = vi.mocked(Tool.executeCommand).mock.calls;
+    const lastExecuteCall = executeCalls[executeCalls.length - 1];
+    expect(lastExecuteCall[0]).toMatchObject({
+      toolId: "fast-1",
+      toolType: ToolType.fast,
+      command: "transfer",
+    });
+
+    step.resolve(undefined);
+    await loop;
+
+    expect(queue.commands.find(aId).status).toBe("FAILED");
+  });
+
   it("clears runningStep when the step fails", async () => {
     await queue.commands.push({
       runId: "run-1",

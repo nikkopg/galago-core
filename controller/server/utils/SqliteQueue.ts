@@ -490,8 +490,23 @@ export default class SqliteQueue {
     }
   }
 
-  async fail(id: number, error: Error): Promise<void> {
-    this._updateItem(id, { status: "FAILED", error });
+  // By default a failed step stays queued, so startNext re-runs it on the
+  // next queue start (upstream retry; the operator can Skip it instead).
+  // options.dequeue is for a step whose failure is an operator abort the
+  // tool accepted, which must leave the queue like complete() and skip() do.
+  async fail(id: number, error: Error, options: { dequeue?: boolean } = {}): Promise<void> {
+    this.db.transaction(() => {
+      this._updateItem(id, { status: "FAILED", error });
+      if (options.dequeue) {
+        this.db
+          .prepare(
+            `
+          DELETE FROM ${this.queueName}_queue WHERE queue_id = ?
+        `,
+          )
+          .run(id);
+      }
+    })();
   }
 
   private _updateItem(id: number, updates: Partial<RunCommand>): StoredRunCommand {
