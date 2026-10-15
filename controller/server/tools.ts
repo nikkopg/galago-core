@@ -7,6 +7,7 @@ import { ToolType } from "gen-interfaces/controller";
 import { PromisifiedGrpcClient, promisifyGrpcClient } from "./utils/promisifyGrpcCall";
 import { setInterval, clearInterval } from "timers";
 import { logAction } from "./logger";
+import { normalizeToolKey } from "./toolKey";
 import { JavaScriptExecutor } from "@/server/scripting/javascript/javascript-executor";
 import { CSharpExecutor } from "@/server/scripting/csharp/csharp-executor";
 import { db } from "@/db/client";
@@ -39,10 +40,6 @@ function getGlobalStore(): Map<string, Tool> {
     me[global_key] = new Map<string, Tool>();
   }
   return me[global_key];
-}
-
-function normalizeToolKey(id: string): string {
-  return (id || "").toLowerCase().replace(/[^a-z0-9]/g, "");
 }
 
 function getToolFromStore(store: Map<string, Tool>, toolId: string): Tool | undefined {
