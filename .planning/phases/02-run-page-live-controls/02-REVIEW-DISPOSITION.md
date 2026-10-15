@@ -6,11 +6,11 @@ findings:
   - id: IN-01
     severity: info
     disposition: open
-    title: "Dead state and legacy debug artifact in `RunsComponent.tsx` (carried forward, unresolved, pre-existing)"
+    title: "Dead state and legacy debug artifact in `RunsComponent.tsx` (carried forward, unresolved, pre-existing, out of this round's file scope)"
   - id: IN-02
     severity: info
     disposition: open
-    title: "`tip_reuse` command field has no enum/select type despite only two valid values (carried forward, unresolved, pre-existing)"
+    title: "`tip_reuse` command field has no enum/select type despite only two valid values (carried forward, unresolved, pre-existing, out of this round's file scope)"
   - id: WR-05
     severity: warning
     disposition: skipped
@@ -41,8 +41,7 @@ findings:
     title: "A failed Stop/Clear-All/Delete-Run follow-up after an accepted abort leaves queue state desynced from instrument state"
 open: 2
 total: 9
-unparsed: 1
-recorded: 2026-10-15T02:49:07.988Z
+recorded: 2026-10-15T04:23:58.735Z
 ---
 
 # Phase 02: Code Review Disposition
