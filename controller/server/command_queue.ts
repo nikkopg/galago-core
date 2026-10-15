@@ -1215,11 +1215,12 @@ export class CommandQueue {
             // the queue will be stopped via stopQueueMutation from the UI
             continue;
           } else if (nextCommand.commandInfo.command === "goto") {
-            const targetIndex = Number(nextCommand.commandInfo.params?.targetIndex);
+            const rawTargetIndex = nextCommand.commandInfo.params?.targetIndex;
+            const targetIndex = Number(rawTargetIndex);
             const runId = nextCommand.commandInfo.params?.runId || nextCommand.runId;
 
             await this.commands.complete(nextCommand.queueId);
-            if (targetIndex !== undefined && runId) {
+            if (rawTargetIndex !== undefined && Number.isInteger(targetIndex) && runId) {
               await this.gotoCommandByRunIndex(runId, targetIndex);
             } else {
               throw new Error(

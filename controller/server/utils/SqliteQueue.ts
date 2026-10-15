@@ -173,7 +173,7 @@ export default class SqliteQueue {
         ...this._deserialize(row.command_data),
       }));
 
-      if (targetIndex < 0 || targetIndex >= commands.length) {
+      if (!Number.isInteger(targetIndex) || targetIndex < 0 || targetIndex >= commands.length) {
         throw new Error(
           `Invalid index ${targetIndex} for run ${runId}. Run has ${commands.length} commands.`,
         );
