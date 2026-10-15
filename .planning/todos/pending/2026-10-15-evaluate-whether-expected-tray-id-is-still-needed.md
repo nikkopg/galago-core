@@ -7,6 +7,9 @@ files:
   - controller/components/tools/constants.ts:329-330
   - vendor/galago-tools/tools/fast/server.py:651-659
   - vendor/galago-tools/tools/fast/server.py:307-322
+audit_acknowledged:
+  milestone: v1
+  at: 2026-10-16
 ---
 
 ## Problem

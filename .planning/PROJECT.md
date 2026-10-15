@@ -14,25 +14,26 @@ While an instrument step runs, the operator sees what the instrument is doing an
 recovery action themselves: the web app never pauses, resumes or aborts an instrument on its own,
 and never pre-selects a physical decision for the operator.
 
-## Current Milestone: v1 Live Run Control (queue & run page)
+## Current State
 
-**Goal:** From the run page, the operator can pause, resume and abort a running controllable step,
-an instrument-initiated pause becomes a prompt with the instrument's reason, and Stop never leaves
-an instrument run untracked.
+**Shipped:** v1 Live Run Control (queue & run page) — 2026-10-16 (Phases 1-2, 11 plans; tag `v1`).
+From the run page the operator can pause, resume and abort a running F.A.S.T. step with explicit,
+confirmed, non-defaulted decisions; an instrument pause opens a `tool_paused` prompt with the
+reason; Stop, Clear All and deleting the running run abort the instrument first. A tool-page Run
+Recovery card handles untracked runs. Archive: `milestones/v1-ROADMAP.md`,
+`milestones/v1-REQUIREMENTS.md`.
 
-**Governing design:** galago-tools `docs/specs/2026-10-12-galago-live-run-control-design.md`
-(decisions D1-D6 in §11; §6.3 and §6.6 carry the research corrections about the queue's blocking
-modals and the auto-confirming `StopRunModal`).
+**Governing design:** galago-tools `docs/specs/2026-10-12-galago-live-run-control-design.md`.
+**Companion milestone:** galago-tools "F.A.S.T. Live Run Control (adapter & rollout)" — deploys both
+and runs the supervised live acceptance.
 
-**Companion milestone:** galago-tools `.planning/` — "F.A.S.T. Live Run Control (adapter &
-rollout)". It provides `StatusReply.run_state` and the control commands; its final phase deploys
-both and runs the supervised live acceptance.
+## Next Milestone Goals
 
-**Target features:**
-- `commandQueue.toolControl` tRPC path to the running step's tool, with a running-step accessor
-- Generic `runControl` capability per tool type (F.A.S.T. first), separate from `commandFields`
-- `commandQueue.runState` query (2 s polling) and a heartbeat that retries instead of stopping
-- Run-page control bar, `tool_paused` modal, D4 Stop confirmation, step-editor cleanup
+Not yet defined — start with `/gsd-new-milestone`. Candidates carried forward:
+- F.A.S.T. plate-list dropdowns for source/dest plates (pending todo)
+- Decide whether `expected_tray_id` is still needed (pending todo)
+- 02-REVIEW-DISPOSITION.md advisories WR-01..WR-04, IN-01 (queue edge cases, `tip_reuse` default)
+- F5 / F3 debt (non-idempotent `transfer` re-run; run UI hides tool errors) if brought into scope
 
 ## Requirements
 
@@ -44,11 +45,11 @@ both and runs the supervised live acceptance.
   from the galago-tools fork via the `vendor/galago-tools` submodule
 - ✓ Production compose builds from local source with the SQLite volume, `GRPC_HOST` and
   `TOOLBOX_PORT` (`318ec7f`); deployed as `galago-web` on forb01 (`:3010`)
-- ✓ QUE-01..QUE-06: `commandQueue.toolControl` (operator Pause/Resume/Abort sent directly to the
+- ✓ QUE-01..QUE-06 — v1: `commandQueue.toolControl` (operator Pause/Resume/Abort sent directly to the
   running step's tool, fail-closed `"yes"`/`"no"` decisions), the generic `runControl` map
   (`server/runControl.ts`), the `commandQueue.runState` query backed by a 2 s server-side poller, a
   heartbeat that keeps retrying, and interfaces regenerated from galago-tools `cb7886d` — Phase 1
-- ✓ UI-01..UI-08: run-page control bar (state, percent, Pause/Resume/Abort as hints, never gates),
+- ✓ UI-01..UI-08 — v1: run-page control bar (state, percent, Pause/Resume/Abort as hints, never gates),
   one shared confirmation with non-defaulted yes/no decisions and a single confirmed-send path, the
   `tool_paused` prompt (reason, plain-language detail, start time; never touches the queue's modal
   plumbing), Stop/Clear All/delete-run routed through a no-timer abort-first dialog, fast
@@ -57,9 +58,8 @@ both and runs the supervised live acceptance.
 
 ### Active
 
-None — all v1 milestone requirements (QUE-*, UI-*) are validated. Open follow-ups: review WR-05
-(whether "The instrument head will move." should show for a soft Pause), the WR-07 follow-up toast
-wording, and the `toolKey.ts` header overclaim (see Phase 2 `02-REVIEW-DISPOSITION.md`).
+None — v1 requirements (QUE-*, UI-*) are validated. Next milestone's requirements are defined by
+`/gsd-new-milestone`; see Next Milestone Goals for carried-forward candidates.
 
 ### Out of Scope
 
@@ -82,7 +82,7 @@ wording, and the `toolKey.ts` header overclaim (see Phase 2 `02-REVIEW-DISPOSITI
 - **Build:** `.dockerignore` keeps host `controller/node_modules` out of the image (host-built
   native modules broke `better-sqlite3`).
 - **Gate:** `tsc --noEmit` in `controller/` (0 errors) plus the Vitest unit suite
-  (`npm run test:unit`, 244 tests as of the Phase 2 re-verification); `bin/make test` runs both, with `prettier --check`.
+  (`npm run test:unit`, 244 tests at v1 close); `bin/make test` runs both, with `prettier --check`.
   `test/staticScan.test.ts` pins the UI-08 invariants (single send path, no timers, no state checks).
 - **Live control (Phase 1):** `CommandQueue.runningStep` (in-memory, set only around a tool step),
   `toolControl`, `runState`/`RunStateMonitor` (`server/runState.ts`), and `Tool.controlCommand`.
@@ -106,7 +106,7 @@ wording, and the `toolKey.ts` header overclaim (see Phase 2 `02-REVIEW-DISPOSITI
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Plan the Galago side per repo (galago-core: queue + UI; galago-tools: adapter + rollout) | Clearer separation; each repo plans the code it changes | — Pending |
+| Plan the Galago side per repo (galago-core: queue + UI; galago-tools: adapter + rollout) | Clearer separation; each repo plans the code it changes | ✓ Good — v1 shipped against galago-tools `cb7886d` without cross-repo churn |
 | D2 2 s run-state polling; D3 abort/resume out of the step editor; D4 Stop asks abort or cancel; D6 generic `runControl` | Settled 2026-10-12 | ✓ D2 and D6 shipped in Phase 1; D3 and D4 shipped in Phase 2 |
 | `tool_paused` reads its own `runState` query, not the queue's modal state | The queue's modals block the busy loop; a pause happens inside an in-flight step | ✓ `runState` shipped independent of `modalState` (Phase 1); the prompt shipped in Phase 2 |
 | Running step tracked in memory, not read back from SQLite `STARTED` rows | After a restart no step is running, so no control bar appears (design §8) | ✓ Phase 1 |
@@ -114,6 +114,8 @@ wording, and the `toolKey.ts` header overclaim (see Phase 2 `02-REVIEW-DISPOSITI
 | Accept the residual control race (step ends during the gRPC round trip) | galago-core may not check instrument state (D-04); the F.A.S.T. core's state gates refuse invalid actions | ✓ Accepted in Phase 1 UAT, 2026-10-13 |
 | Prove UI-08 with pure-logic tests plus static source scans, no jsdom/RTL | No new UI test dependencies (D-24); rendered behaviour went to UAT | ✓ Phase 2 (13 scan tests; UAT 9/9) |
 | Stop, Clear All and deleting the running run abort first, then act on the queue only after the abort is accepted | Stop must never leave an instrument run untracked; research showed clearing dropped a running step | ✓ Phase 2 |
+| Busy-loop catch treats a step row already removed by Clear All/delete-run as handled | Follow-up can win the race against the step's rejection (audit INT-01) | ✓ Quick task t9e |
+| Use quick tasks for post-phase fixes instead of inserting decimal phases | Small, test-backed queue fixes (f48, h0q, o44, t9e) | ✓ Good — but leaves earlier phase verifications stale; re-verify after |
 
 ## Evolution
 
@@ -133,4 +135,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-10-16 after Phase 2 re-verification*
+*Last updated: 2026-10-16 after v1 milestone*

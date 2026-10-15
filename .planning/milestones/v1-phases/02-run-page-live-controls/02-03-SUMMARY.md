@@ -12,7 +12,7 @@ requires:
 provides:
   - stopInterception.ts (shouldInterceptQueueStop, shouldInterceptRunDelete, STOP_MODAL_COPY, stopModalBody, InstrumentStopRequest, buildStopRequest)
   - InstrumentStopModal.tsx (no-timer, no-default Stop confirmation wrapping RunControlConfirmModal)
-  - "Pause queue" / Clear All / per-run delete interception wired into QueueStatuscomponent.tsx and RunsComponent.tsx
+  - '"Pause queue" / Clear All / per-run delete interception wired into QueueStatuscomponent.tsx and RunsComponent.tsx'
 affects: [02-06]
 
 actuals:

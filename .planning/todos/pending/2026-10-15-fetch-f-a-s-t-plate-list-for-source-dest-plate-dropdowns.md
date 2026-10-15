@@ -10,6 +10,9 @@ files:
   - controller/pages/tools/[id].tsx
   - vendor/galago-tools/interfaces/tools/grpc_interfaces/fast.proto
   - vendor/galago-tools/tools/fast/server.py:203-206
+audit_acknowledged:
+  milestone: v1
+  at: 2026-10-16
 ---
 
 ## Problem
