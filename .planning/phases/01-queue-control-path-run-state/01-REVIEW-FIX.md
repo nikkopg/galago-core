@@ -1,118 +1,88 @@
 ---
 phase: 01-queue-control-path-run-state
-fixed_at: 2026-10-13T03:29:33Z
+fixed_at: 2026-10-15T11:32:00Z
 review_path: .planning/phases/01-queue-control-path-run-state/01-REVIEW.md
 iteration: 1
-findings_in_scope: 3
-fixed: 3
+findings_in_scope: 1
+fixed: 1
 skipped: 0
 status: all_fixed
 ---
 
 # Phase 01: Code Review Fix Report
 
-**Fixed at:** 2026-10-13T03:29:33Z
+**Fixed at:** 2026-10-15T11:32:00Z
 **Source review:** .planning/phases/01-queue-control-path-run-state/01-REVIEW.md
 **Iteration:** 1
 
 **Summary:**
-- Findings in scope: 3 (fix_scope: critical_warning — WR-01, WR-02, WR-03; IN-01 excluded by scope)
-- Fixed: 3
+- Findings in scope: 1 (fix_scope: critical_warning — WR-01; IN-01 and IN-02 excluded by scope,
+  since this REVIEW.md cycle reported 0 critical, 1 warning, 2 info findings)
+- Fixed: 1
 - Skipped: 0
 
-**Verification environment:** All fixes were verified and tested inside an isolated git worktree
-(`.claude/worktrees/rf-01-2177233-1791861610`, branch `gsd-reviewfix/01-2177233`) created from
-`feat/fast-tool`, per the fixer's worktree-isolation protocol. `npm install`, `npx tsc --noEmit`,
-and the full `vitest` suite were all run from inside that worktree (with `controller/node_modules`
-installed fresh there). The worktree's commits were fast-forwarded onto `feat/fast-tool` and the
-worktree removed after all three commits landed, so the numbers below are reproducible by checking
-out `feat/fast-tool` in the main repo and re-running `npm --prefix controller run test:unit` /
-`npm --prefix controller test`.
+This report replaces the 2026-10-13 `01-REVIEW-FIX.md`, which fixed the prior review cycle's
+WR-01/WR-02/WR-03 findings (now closed and not re-raised by the current `01-REVIEW.md`, dated
+2026-10-15T11:18:04Z). The current review cycle found one new in-scope finding, reproduced below.
+
+**Verification environment:** Fixes were edited and committed inside an isolated git worktree
+(`.claude/worktrees/rf-01-1270568-1792063698`, branch `gsd-reviewfix/01-1270568`) created from
+`feat/fast-tool`, per the fixer's worktree-isolation protocol. Since the worktree has no
+`controller/node_modules` of its own, a symlink to the main checkout's
+`controller/node_modules` (`/home/formulatrix/data/nikko/galago-core/controller/node_modules`)
+was created for the duration of verification and removed immediately afterward (plain `unlink`,
+not a recursive delete, so the main checkout's real `node_modules` directory was never touched).
+`npx tsc --noEmit -p tsconfig.json` and `npm --prefix controller run test:unit` (235 tests, 14
+files, all passing) were both run from inside the worktree against this symlink. The worktree's
+commit was fast-forwarded onto `feat/fast-tool` and the worktree removed after the commit landed,
+so the numbers below are reproducible by checking out `feat/fast-tool` in the main repo and
+re-running `npm --prefix controller run test:unit`.
 
 ## Fixed Issues
 
-### WR-01: `toolControl` never re-validates that the captured running step is still current
+### WR-01: A "goto" step with a missing `targetIndex` silently re-queues the *entire* run instead of throwing
 
-**Files modified:** `controller/server/command_queue.ts`, `controller/test/toolControl.test.ts`
-**Commit:** `62e505c`
-**Applied fix:** Added an identity re-check (`if (this._runningStep !== step)`) immediately before
-`tool.controlCommand(...)` is dispatched, right after the existing tool-lookup check. On mismatch it
-refuses with the same `PRECONDITION_FAILED` shape and `logAction` pattern used by the other
-`toolControl` refusals ("no running step", "tool not connected"), rather than silently sending a
-control command to a step the operator no longer intended to target. This preserves D-04 — the new
-check compares only the running-step record's identity (`this._runningStep !== step`), never any
-tool/run state — and does not touch the busy loop or the `_messageResolve`/modal flow.
+**Files modified:** `controller/server/command_queue.ts`, `controller/server/utils/SqliteQueue.ts`
+**Commit:** `7c1d01b`
+**Applied fix:** Matched the REVIEW.md suggestion exactly, since the source files were unchanged
+from the reviewer's cited context.
 
-Added a new regression test, `toolControl > refuses when the running step moves on before dispatch
-(WR-01 race guard)`, using the existing `installFakeTool`/`deferred` fakes from
-`controller/test/helpers/fakeTool.ts`. Because the vulnerable window in the real control flow is
-fully synchronous (no `await` separates the step snapshot from the new check), the test reproduces
-"the step changed while/before the control request was dispatched" by giving `Tool.lookup` — the
-last synchronous call before the new check — a one-time mock implementation whose side effect
-mutates the queue's private `_runningStep` record (simulating the busy loop having moved on to a
-different step on the same tool) before calling through to the real lookup. The test asserts the
-call is refused with `PRECONDITION_FAILED` and that `grpc.executeCommand` is never called.
-Before applying the fix, this test fails (`promise resolved { ok: true, ... } instead of rejecting`);
-with the fix in place it, and all 11 other pre-existing `toolControl.test.ts` cases, pass.
+- `controller/server/command_queue.ts` (goto Tool Box command handling): captured the raw
+  `params?.targetIndex` value before coercion, and changed the guard from
+  `targetIndex !== undefined` (always true once `Number(undefined)` produces `NaN`, since
+  `NaN !== undefined`) to `rawTargetIndex !== undefined && Number.isInteger(targetIndex) && runId`.
+  A goto step with a missing or non-numeric `targetIndex` now falls through to the `else` branch
+  and throws `"Goto command requires either targetId or both targetIndex and runId"` instead of
+  silently calling `gotoCommandByRunIndex(runId, NaN)`.
+- `controller/server/utils/SqliteQueue.ts` (`gotoCommandByIndex`, defense in depth): added
+  `!Number.isInteger(targetIndex) ||` to the existing bounds check
+  (`targetIndex < 0 || targetIndex >= commands.length`), both of which evaluate to `false` for
+  `NaN` and would otherwise let `commands.slice(NaN)` silently requeue the entire run (per
+  `Array.prototype.slice` treating `NaN` as `0`). Any non-integer `targetIndex` now throws
+  `"Invalid index ... for run ..."` even if a future caller bypasses the
+  `command_queue.ts` guard.
 
-### WR-02: `RunStateMonitor`'s in-flight guard can be cleared by a stale poll from a previous generation
-
-**Files modified:** `controller/server/runState.ts`, `controller/test/runState.test.ts`
-**Commit:** `42fd1af`
-**Applied fix:** `_poll`'s `finally` block now only clears `this.inFlight` when the completing poll's
-captured `generation` still matches `this.generation`:
-```ts
-} finally {
-  if (generation === this.generation) {
-    this.inFlight = false;
-  }
-}
-```
-This stops a stale, superseded-generation poll's response from clearing the flag while a genuinely
-outstanding current-generation poll is still in flight, restoring the "at most one call in flight at
-a time" invariant (D-11) for the live generation. `stop()`'s own direct `this.inFlight = false` still
-handles the legitimate stop/start boundary case, so a `stop()` can never leave `inFlight` stuck. This
-is a read-only polling path (D-14 untouched — still only `getStatus` is called; no instrument-state
-check or command is added).
-
-Added a new regression test, `RunStateMonitor > a stale poll from a superseded generation does not
-clear inFlight for a still-outstanding current-generation poll (WR-02)`, modeled on the existing
-"discards a result that lands after stop" test's two-deferred-promise pattern. It starts poll A (left
-outstanding), calls `start()` again to bump the generation and start poll B's own call (also left
-outstanding), resolves poll A's stale response first, then asserts the next scheduled interval tick
-for the live generation does **not** issue a second concurrent `getStatus` call while poll B's own
-call is still pending. Before applying the fix, this test fails (`expected "spy" to be called 2
-times, but got 3 times` — the extra, bug-induced concurrent call); with the fix, it and all 34 other
-pre-existing `runState.test.ts` cases pass.
-
-### WR-03: The new vitest suite is not wired into the CI test gate
-
-**Files modified:** `bin/make`
-**Commit:** `003e500`
-**Applied fix:** Added `npm run test:unit` to `test_ts()` alongside the existing `tsc --build --clean
-&& npm run test` step, exactly as suggested in the review:
-```sh
-test_ts() {
-  echo "Runnning Node Tests"
-  (cd controller && npx prettier . --check && npx tsc --build --clean && npm run test && npm run test:unit) &&
-  build_prod
-}
-```
-CI (`.github/workflows/main.yml` → `./bin/make test` → `test_ts()`) now runs the full vitest suite
-(including the two new regression tests above) as part of the existing automated test gate, not just
-`tsc --noEmit`. No changes were needed to `.github/workflows/main.yml` itself — it already invokes
-`./bin/make test` unconditionally. Verified with `bash -n bin/make` (syntax check) and by running
-`test_ts()`'s updated command sequence manually (`npx tsc --noEmit && npm run test:unit`), both of
-which pass.
+Verified: re-read both edited regions (Tier 1); `npx tsc --noEmit -p tsconfig.json` reported zero
+errors project-wide, including both modified files (Tier 2); the full `test:unit` suite (235
+tests across 14 files, including `sqliteQueue.test.ts`, `toolControl.test.ts`, `queueRestart.test.ts`
+and `runState.test.ts`, which the current review cycle's findings are drawn from) passed with no
+regressions.
 
 ## Skipped Issues
 
-None — all three in-scope findings (WR-01, WR-02, WR-03) were fixed. IN-01
-(`RunStateMonitor.snapshot()` returns a shallow copy) was out of scope for this run
-(`fix_scope: critical_warning` excludes Info-level findings) and was not attempted.
+None — the one in-scope finding (WR-01) was fixed and verified.
+
+**Findings excluded by scope** (`fix_scope: critical_warning`, not attempted by this agent):
+
+- **IN-01** (carried forward): `RunStateMonitor.snapshot()` in `controller/server/runState.ts:168-170`
+  returns a shallow copy — latent, no current caller mutates the nested fields.
+- **IN-02**: `recoverInterruptedSteps` in `controller/server/utils/SqliteQueue.ts:564-605` can emit a
+  duplicate, materially-empty log entry if more than one `STARTED` row for the same run is ever
+  orphaned simultaneously — a diagnostic/log-noise gap, not a correctness bug, requiring a data
+  anomaly that should not occur under normal single-busy-loop operation.
 
 ---
 
-_Fixed: 2026-10-13T03:29:33Z_
+_Fixed: 2026-10-15T11:32:00Z_
 _Fixer: Claude (gsd-code-fixer)_
 _Iteration: 1_
