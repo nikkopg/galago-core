@@ -5,7 +5,7 @@ titles: json
 findings:
   - id: WR-01
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "A \"goto\" step with a missing `targetIndex` silently re-queues the *entire* run instead of throwing"
   - id: IN-02
     severity: info
@@ -23,17 +23,17 @@ findings:
     severity: info
     disposition: open
     title: "`RunStateMonitor.snapshot()` returns a shallow copy"
-open: 3
+open: 2
 total: 5
 unparsed: 1
-recorded: 2026-10-15T11:19:32.226Z
+recorded: 2026-10-15T11:32:50.515Z
 ---
 
 # Phase 01: Code Review Disposition
 
 | Finding | Severity | Disposition | Source |
 |---------|----------|-------------|--------|
-| WR-01 | warning | open | - |
+| WR-01 | warning | fixed | 01-REVIEW-FIX.md |
 | IN-02 | info | open | - |
 | WR-02 | warning | fixed | 01-REVIEW-FIX.md (not in the current review) |
 | WR-03 | warning | fixed | 01-REVIEW-FIX.md (not in the current review) |
