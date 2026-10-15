@@ -5,8 +5,12 @@ titles: json
 findings:
   - id: WR-01
     severity: warning
-    disposition: fixed
-    title: "`toolControl` never re-validates that the captured running step is still current"
+    disposition: open
+    title: "A \"goto\" step with a missing `targetIndex` silently re-queues the *entire* run instead of throwing"
+  - id: IN-02
+    severity: info
+    disposition: open
+    title: "`recoverInterruptedSteps` can double-process a run if more than one of its rows is left `STARTED`"
   - id: WR-02
     severity: warning
     disposition: fixed
@@ -19,17 +23,18 @@ findings:
     severity: info
     disposition: open
     title: "`RunStateMonitor.snapshot()` returns a shallow copy"
-open: 1
-total: 4
+open: 3
+total: 5
 unparsed: 1
-recorded: 2026-10-13T07:48:57.438Z
+recorded: 2026-10-15T11:19:32.226Z
 ---
 
 # Phase 01: Code Review Disposition
 
 | Finding | Severity | Disposition | Source |
 |---------|----------|-------------|--------|
-| WR-01 | warning | fixed | 01-REVIEW-FIX.md (not in the current review) |
+| WR-01 | warning | open | - |
+| IN-02 | info | open | - |
 | WR-02 | warning | fixed | 01-REVIEW-FIX.md (not in the current review) |
 | WR-03 | warning | fixed | 01-REVIEW-FIX.md (not in the current review) |
 | IN-01 | info | open | - (not in the current review) |
