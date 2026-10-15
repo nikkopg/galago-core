@@ -533,6 +533,102 @@ describe("toolControl", () => {
     expect(queue.commands.find(aId).status).toBe("FAILED");
   });
 
+  it("a step failure without an accepted abort stays queued and re-runs first", async () => {
+    await queue.commands.push({
+      runId: "run-1",
+      status: "CREATED",
+      commandInfo: {
+        toolId: "fast-1",
+        toolType: ToolType.fast,
+        command: "transfer",
+        params: {},
+      },
+    } as any);
+    await queue.commands.push({
+      runId: "run-1",
+      status: "CREATED",
+      commandInfo: {
+        toolId: "fast-1",
+        toolType: ToolType.fast,
+        command: "transfer",
+        params: {},
+      },
+    } as any);
+    const [a, b] = await queue.commands.all();
+
+    loop = queue._start();
+
+    await vi.waitFor(
+      () => {
+        expect(queue.runningStep?.queueId).toBe(a.queueId);
+      },
+      { timeout: 5000 },
+    );
+
+    step.reject(new Error("tool step failed"));
+    await loop;
+
+    expect((await queue.commands.getPaginated()).map((c) => c.queueId)).toStrictEqual([
+      a.queueId,
+      b.queueId,
+    ]);
+    expect((await queue.commands.startNext()) as any).toMatchObject({ queueId: a.queueId });
+  });
+
+  it("a refused abort does not remove the step", async () => {
+    await queue.commands.push({
+      runId: "run-1",
+      status: "CREATED",
+      commandInfo: {
+        toolId: "fast-1",
+        toolType: ToolType.fast,
+        command: "transfer",
+        params: {},
+      },
+    } as any);
+    await queue.commands.push({
+      runId: "run-1",
+      status: "CREATED",
+      commandInfo: {
+        toolId: "fast-1",
+        toolType: ToolType.fast,
+        command: "transfer",
+        params: {},
+      },
+    } as any);
+    const [a, b] = await queue.commands.all();
+
+    loop = queue._start();
+
+    await vi.waitFor(
+      () => {
+        expect(queue.runningStep?.queueId).toBe(a.queueId);
+      },
+      { timeout: 5000 },
+    );
+
+    grpc.executeCommand.mockResolvedValueOnce({
+      response: ResponseCode.NOT_READY,
+      error_message: "instrument not ready",
+    });
+
+    const caller = commandQueueRouter.createCaller({});
+    const abortResult = await caller.toolControl({
+      action: "abort",
+      params: { return_liquid: "yes" },
+    });
+    expect(abortResult).toMatchObject({ ok: false });
+
+    step.reject(new Error("tool step failed"));
+    await loop;
+
+    expect((await queue.commands.getPaginated()).map((c) => c.queueId)).toStrictEqual([
+      a.queueId,
+      b.queueId,
+    ]);
+    expect((await queue.commands.startNext()) as any).toMatchObject({ queueId: a.queueId });
+  });
+
   it("clears runningStep when the step fails", async () => {
     await queue.commands.push({
       runId: "run-1",
