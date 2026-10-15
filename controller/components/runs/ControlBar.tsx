@@ -86,7 +86,7 @@ export const ControlBar: React.FC<{ envelope: RunStateEnvelope | undefined }> = 
     showBar && envelope.runState?.state === "paused"
       ? "orange"
       : showBar && envelope.runState?.state === "running"
-        ? "green"
+        ? "teal"
         : "gray";
   const unknownWarning =
     unknownSince !== null ? `Run state unknown since ${formatClock(unknownSince.since)}` : null;
@@ -94,24 +94,26 @@ export const ControlBar: React.FC<{ envelope: RunStateEnvelope | undefined }> = 
   return (
     <>
       {showBar ? (
-        <Card bg={cardBg} shadow="md" key={envelope.queueId}>
+        <Card bg={cardBg} shadow="md" key={envelope.queueId} mb={2}>
           <CardBody>
             <VStack spacing={4} align="stretch">
               <Heading size="md" noOfLines={2}>
                 {envelope.toolId} · {toolDisplayName(envelope.toolType)} — {envelope.command}
               </Heading>
-              <HStack spacing={2} align="center">
-                <Badge fontSize="md" colorScheme={badgeColorScheme}>
-                  {envelope.runState?.state ?? "unknown"}
-                </Badge>
+              <VStack spacing={2} align="stretch">
+                <HStack spacing={2} align="center">
+                  <Badge fontSize="lg" px={3} py={1} colorScheme={badgeColorScheme}>
+                    {envelope.runState?.state ?? "unknown"}
+                  </Badge>
+                  {percent !== null ? <Text fontSize="sm">{percent}%</Text> : null}
+                </HStack>
                 <Progress
-                  flex={1}
+                  width="100%"
                   value={percent ?? undefined}
                   isIndeterminate={percent === null}
                   colorScheme="teal"
                 />
-                {percent !== null ? <Text fontSize="sm">{percent}%</Text> : null}
-              </HStack>
+              </VStack>
               {unknownSince !== null ? (
                 <Alert status="warning">
                   <AlertIcon />
