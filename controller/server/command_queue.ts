@@ -63,6 +63,14 @@ export class CommandQueue {
   // other queued step of the same run_id), instead of letting startNext
   // re-run any of them. In memory only, like _runningStep (D-01).
   private _abortAcceptedQueueId?: number;
+  // The frozen snapshot of the latest attempt whose own failure was recorded
+  // without an accepted abort. This is the per-attempt token for a late
+  // abort reply (T-01-08, layer b): the late-reply branch of
+  // _recordAcceptedAbort only acts when this still identically equals the
+  // step the reply is for. Cleared on every new attempt and by any operator
+  // queue action that supersedes a pending stale reply (_start, gotoCommand,
+  // gotoCommandByRunIndex), and consumed (cleared) on use.
+  private _failedAttempt?: Readonly<RunningStep>;
 
   // Message handling state variables
   private _isWaitingForInput: boolean = false;
@@ -433,8 +441,9 @@ export class CommandQueue {
   // result or a reply field. Touches nothing belonging to the queue's own
   // busy-loop or modal bookkeeping. The tool's reply is read only after
   // sending, and its only effect on queue bookkeeping is recording an
-  // accepted abort, so that step leaves the queue instead of being re-run by
-  // startNext.
+  // accepted abort (T-01-08's three-layer gate in _recordAcceptedAbort), so
+  // that step and the rest of its run leave the queue instead of being
+  // re-run by startNext.
   async toolControl(
     action: string,
     params: Record<string, unknown> = {},
@@ -517,7 +526,7 @@ export class CommandQueue {
         const errorMessage = error instanceof Error ? error.message : String(error);
         await logAction({
           level: "warning",
-          action: "Aborted Step Dequeue Failed",
+          action: "Aborted Run Dequeue Failed",
           details: `${baseDetails} error=${errorMessage}`,
         });
         // The instrument accepted the abort, so the operator must never be
@@ -528,26 +537,61 @@ export class CommandQueue {
     return result;
   }
 
-  // Records that the tool accepted an operator Abort of `step`, so the
-  // busy-loop catch can dequeue it instead of letting startNext re-run it.
-  // The identity check against _runningStep is the first statement with no
-  // await before it: if the step is still running, this just sets the
-  // marker the busy loop will read. If it is not, the busy loop's finally
-  // and catch already recorded the step's outcome (they run synchronously
-  // in the same continuation as executeCommand settling), so this reaches
-  // into SqliteQueue directly to dequeue it — a no-op if it already
-  // completed or was deleted.
+  // Records that the tool accepted an operator Abort of `step`, so the step
+  // and the rest of its run leave the queue instead of being re-run by
+  // startNext. T-01-08's three-layer gate, evaluated with no await between
+  // layers (a) and (b):
+  //   (a) `_runningStep === step`, the first statement with no await before
+  //       it: the step is still running, so this just sets the marker the
+  //       busy-loop catch will read when it ends.
+  //   (b) `_failedAttempt === step`: the step already ended, and the aborted
+  //       attempt's frozen snapshot is still the latest attempt whose own
+  //       failure was recorded without an abort — no restart, goto or new
+  //       attempt has happened since. Anything else (the reply is for an
+  //       attempt that is no longer current) is logged and skipped.
+  //   (c) SqliteQueue.dequeueFailedRun re-checks, in one transaction, that
+  //       the row exists, run_id matches, status is FAILED and it is still
+  //       queued. `false` means the row changed since the attempt ended
+  //       (e.g. Skip or Clear), which is also logged and skipped.
   private async _recordAcceptedAbort(step: Readonly<RunningStep>): Promise<void> {
     if (this._runningStep === step) {
       this._abortAcceptedQueueId = step.queueId;
       return;
     }
 
-    await this.commands.dequeue(step.queueId);
+    if (this._failedAttempt !== step) {
+      logAction({
+        level: "warning",
+        action: "Aborted Run Dequeue Skipped",
+        details:
+          `queueId=${step.queueId} runId=${step.runId} toolId=${step.toolId} ` +
+          `reason=the aborted attempt is no longer the latest ended attempt ` +
+          `(it completed, or the queue was restarted or re-queued since)`,
+      });
+      return;
+    }
+
+    this._failedAttempt = undefined;
+    const removed = await this.commands.dequeueFailedRun(step.queueId, step.runId);
+
+    if (removed === false) {
+      logAction({
+        level: "warning",
+        action: "Aborted Run Dequeue Skipped",
+        details:
+          `queueId=${step.queueId} runId=${step.runId} toolId=${step.toolId} ` +
+          `reason=the step's queue row changed since the aborted attempt ended`,
+      });
+      return;
+    }
+
     logAction({
       level: "info",
-      action: "Aborted Step Dequeued",
-      details: `queueId=${step.queueId} runId=${step.runId} toolId=${step.toolId} reason=operator abort accepted after the step ended`,
+      action: "Aborted Run Dequeued",
+      details:
+        `queueId=${step.queueId} runId=${step.runId} toolId=${step.toolId} ` +
+        `removed=${removed.length ? removed.join(",") : "none"} ` +
+        `reason=operator abort accepted after the step ended`,
     });
   }
 
@@ -643,6 +687,8 @@ export class CommandQueue {
   }
 
   async gotoCommand(commandId: number) {
+    // An operator re-queue supersedes any pending stale abort reply (T-01-08).
+    this._failedAttempt = undefined;
     try {
       await this.commands.gotoCommand(commandId);
 
@@ -665,6 +711,8 @@ export class CommandQueue {
 
   // Add this method to CommandQueue class
   async gotoCommandByRunIndex(runId: string, index: number): Promise<boolean> {
+    // An operator re-queue supersedes any pending stale abort reply (T-01-08).
+    this._failedAttempt = undefined;
     try {
       await this.commands.gotoCommandByIndex(runId, index);
 
@@ -771,6 +819,8 @@ export class CommandQueue {
   slackNotificationsEnabled: boolean = true;
 
   async _start() {
+    // A restart supersedes any pending stale abort reply (T-01-08).
+    this._failedAttempt = undefined;
     logAction({
       level: "info",
       action: "Queue Started",
@@ -845,6 +895,13 @@ export class CommandQueue {
       // Fresh marker per command: a stale value from a prior step must never
       // match a queueId that gotoCommand re-queued.
       this._abortAcceptedQueueId = undefined;
+      // Cleared next to the marker above: a new attempt invalidates any
+      // previous attempt's late-reply token (T-01-08, layer b).
+      this._failedAttempt = undefined;
+      // Holds this iteration's frozen running-step snapshot, so the catch
+      // below can set it as the per-attempt late-reply token even though
+      // _runningStep itself is cleared in the dispatch try's finally.
+      let attempt: Readonly<RunningStep> | undefined;
 
       try {
         logger.info("Executing command:", nextCommand.commandInfo);
@@ -1177,7 +1234,7 @@ export class CommandQueue {
         }
 
         // Regular command, send to Tool
-        this._runningStep = Object.freeze({
+        attempt = Object.freeze({
           queueId: nextCommand.queueId,
           runId: nextCommand.runId,
           toolId: nextCommand.commandInfo.toolId,
@@ -1185,6 +1242,7 @@ export class CommandQueue {
           command: nextCommand.commandInfo.command,
           startedAt: Date.now(),
         });
+        this._runningStep = attempt;
         this._runStateMonitor.start(this._runningStep);
         try {
           await this.executeCommand(nextCommand);
@@ -1207,6 +1265,10 @@ export class CommandQueue {
         // failure keeps upstream retry.
         const abortAccepted = this._abortAcceptedQueueId === nextCommand.queueId;
         this._abortAcceptedQueueId = undefined;
+        // Synchronously, before the first await: a late abort reply can
+        // land during the fail call's await below, so the per-attempt
+        // late-reply token (T-01-08, layer b) must already be in place.
+        this._failedAttempt = abortAccepted ? undefined : attempt;
 
         const err = e instanceof Error ? e : new Error("Unknown error");
 

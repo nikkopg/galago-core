@@ -555,18 +555,49 @@ export default class SqliteQueue {
     })();
   }
 
-  // Removes a step from the run order without changing its record. Used
-  // when an operator abort is accepted after the step already ended: a
-  // no-op for an id that is not queued or does not exist (no find call, no
-  // throw).
-  async dequeue(id: number): Promise<void> {
-    this.db
-      .prepare(
+  // Gated late-reply removal (T-01-08): removes `id` from the run order and
+  // dequeues the rest of its run only if the row still exists, run_id
+  // matches, status is FAILED and it is still queued. Returns false and
+  // changes nothing otherwise — a re-queue (gotoCommand, gotoCommandByIndex),
+  // a restart or a second attempt all supersede a pending stale reply.
+  // Fully synchronous inside its transaction: no await between the gate
+  // check and the delete, so the check and the mutation are atomic with
+  // respect to other JS continuations.
+  async dequeueFailedRun(id: number, runId: string): Promise<number[] | false> {
+    const db = this.db;
+    return db.transaction(() => {
+      const row = db
+        .prepare(
+          `
+        SELECT run_id, status FROM ${this.queueName}_commands WHERE queue_id = ?
+      `,
+        )
+        .get(id) as { run_id: string; status: string } | undefined;
+
+      if (!row || row.run_id !== runId || row.status !== "FAILED") {
+        return false;
+      }
+
+      const inQueue = db
+        .prepare(
+          `
+        SELECT queue_id FROM ${this.queueName}_queue WHERE queue_id = ?
+      `,
+        )
+        .get(id);
+
+      if (!inQueue) {
+        return false;
+      }
+
+      db.prepare(
         `
-      DELETE FROM ${this.queueName}_queue WHERE queue_id = ?
-    `,
-      )
-      .run(id);
+        DELETE FROM ${this.queueName}_queue WHERE queue_id = ?
+      `,
+      ).run(id);
+
+      return this._dequeueRunRemainder(runId);
+    })();
   }
 
   private _updateItem(id: number, updates: Partial<RunCommand>): StoredRunCommand {

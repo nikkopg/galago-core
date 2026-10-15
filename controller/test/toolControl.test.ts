@@ -641,33 +641,19 @@ describe("toolControl", () => {
   });
 
   it("an abort accepted after the step already ended still removes it", async () => {
-    await queue.commands.push({
-      runId: "run-1",
-      status: "CREATED",
-      commandInfo: {
-        toolId: "fast-1",
-        toolType: ToolType.fast,
-        command: "transfer",
-        params: {},
-      },
-    } as any);
-    await queue.commands.push({
-      runId: "run-1",
-      status: "CREATED",
-      commandInfo: {
-        toolId: "fast-1",
-        toolType: ToolType.fast,
-        command: "transfer",
-        params: {},
-      },
-    } as any);
-    const [a, b] = await queue.commands.all();
+    await pushLabeledStep("run-1", "a1");
+    await pushLabeledStep("run-1", "a2");
+    await pushLabeledStep("run-2", "b1");
+    const [a1, a2, b1] = await queue.commands.all();
+    const aId = a1.queueId;
+    const a2Id = a2.queueId;
+    const bId = b1.queueId;
 
     loop = queue._start();
 
     await vi.waitFor(
       () => {
-        expect(queue.runningStep?.queueId).toBe(a.queueId);
+        expect(queue.runningStep?.queueId).toBe(aId);
       },
       { timeout: 5000 },
     );
@@ -693,17 +679,163 @@ describe("toolControl", () => {
     // The step's own failure was already recorded; the abort reply has not
     // arrived yet, so the step is still at the head of the queue.
     expect((await queue.commands.getPaginated()).map((c) => c.queueId)).toStrictEqual([
-      a.queueId,
-      b.queueId,
+      aId,
+      a2Id,
+      bId,
     ]);
 
     abortReply.resolve({ response: ResponseCode.SUCCESS });
     const abortResult = await abortCall;
     expect(abortResult).toMatchObject({ ok: true });
 
-    expect((await queue.commands.getPaginated()).map((c) => c.queueId)).toStrictEqual([b.queueId]);
-    expect(queue.commands.find(a.queueId).status).toBe("FAILED");
-    expect((await queue.commands.startNext()) as any).toMatchObject({ queueId: b.queueId });
+    expect((await queue.commands.getPaginated()).map((c) => c.queueId)).toStrictEqual([bId]);
+    expect(queue.commands.find(aId).status).toBe("FAILED");
+    expect(queue.commands.find(a2Id).status).toBe("SKIPPED");
+    expect((await queue.commands.startNext()) as any).toMatchObject({ queueId: bId });
+
+    const dequeueLogs = vi
+      .mocked(logAction)
+      .mock.calls.map(([call]) => call as { level: string; action: string; details: string })
+      .filter((call) => call.action === "Aborted Run Dequeued");
+    expect(dequeueLogs.length).toBeGreaterThan(0);
+    expect(dequeueLogs[dequeueLogs.length - 1].details).toContain(`queueId=${aId}`);
+  });
+
+  it("a stale abort reply does not remove a step re-queued with gotoCommand (T-01-08)", async () => {
+    await pushLabeledStep("run-1", "a1");
+    await pushLabeledStep("run-1", "a2");
+    await pushLabeledStep("run-2", "b1");
+    const [a1, a2, b1] = await queue.commands.all();
+    const aId = a1.queueId;
+    const a2Id = a2.queueId;
+    const bId = b1.queueId;
+
+    loop = queue._start();
+
+    await vi.waitFor(
+      () => {
+        expect(queue.runningStep?.queueId).toBe(aId);
+      },
+      { timeout: 5000 },
+    );
+
+    const abortReply = deferred<any>();
+    grpc.executeCommand.mockImplementationOnce(() => abortReply.promise);
+
+    const caller = commandQueueRouter.createCaller({});
+    const abortCall = caller.toolControl({ action: "abort", params: { return_liquid: "yes" } });
+
+    await vi.waitFor(
+      () => {
+        expect(grpc.executeCommand).toHaveBeenCalledWith({
+          fast: { abort: { return_liquid: "yes" } },
+        });
+      },
+      { timeout: 5000 },
+    );
+
+    step.reject(new Error("tool step failed"));
+    await loop;
+
+    // a1 is still queued (FAILED but not yet removed), so gotoCommand takes
+    // the in-queue reorder branch: it only reorders and leaves the status
+    // alone, isolating the in-memory layer from the DB layer.
+    await queue.gotoCommand(aId);
+
+    expect(queue.commands.find(aId).status).toBe("FAILED");
+
+    abortReply.resolve({ response: ResponseCode.SUCCESS });
+    const abortResult = await abortCall;
+    expect(abortResult).toMatchObject({ ok: true });
+
+    expect((await queue.commands.getPaginated()).map((c) => c.queueId)).toStrictEqual([
+      aId,
+      a2Id,
+      bId,
+    ]);
+    expect(queue.commands.find(aId).status).toBe("FAILED");
+    expect(queue.commands.find(a2Id).status).toBe("CREATED");
+    expect((await queue.commands.startNext()) as any).toMatchObject({ queueId: aId });
+
+    const skippedLogs = vi
+      .mocked(logAction)
+      .mock.calls.map(([call]) => call as { level: string; action: string; details: string })
+      .filter((call) => call.action === "Aborted Run Dequeue Skipped");
+    expect(skippedLogs.length).toBeGreaterThan(0);
+  });
+
+  it("a stale abort reply does not remove a re-queued attempt that is running again (T-01-08)", async () => {
+    await pushLabeledStep("run-1", "a1");
+    await pushLabeledStep("run-1", "a2");
+    await pushLabeledStep("run-2", "b1");
+    const [a1, a2, b1] = await queue.commands.all();
+    const aId = a1.queueId;
+    const a2Id = a2.queueId;
+    const bId = b1.queueId;
+
+    loop = queue._start();
+
+    await vi.waitFor(
+      () => {
+        expect(queue.runningStep?.queueId).toBe(aId);
+      },
+      { timeout: 5000 },
+    );
+
+    const abortReply = deferred<any>();
+    grpc.executeCommand.mockImplementationOnce(() => abortReply.promise);
+
+    const caller = commandQueueRouter.createCaller({});
+    const abortCall = caller.toolControl({ action: "abort", params: { return_liquid: "yes" } });
+
+    await vi.waitFor(
+      () => {
+        expect(grpc.executeCommand).toHaveBeenCalledWith({
+          fast: { abort: { return_liquid: "yes" } },
+        });
+      },
+      { timeout: 5000 },
+    );
+
+    step.reject(new Error("tool step failed"));
+    await loop;
+
+    await queue.gotoCommandByRunIndex("run-1", 0);
+
+    step = deferred<any>();
+    loop = queue._start();
+
+    await vi.waitFor(
+      () => {
+        expect(queue.runningStep?.queueId).toBe(aId);
+      },
+      { timeout: 5000 },
+    );
+
+    // Resolve the stale reply while a1 is running again as a new attempt.
+    abortReply.resolve({ response: ResponseCode.SUCCESS });
+    const abortResult = await abortCall;
+    expect(abortResult).toMatchObject({ ok: true });
+
+    expect(queue.runningStep?.queueId).toBe(aId);
+    expect(queue.commands.find(aId).status).toBe("STARTED");
+    const paginatedDuringRerun = (await queue.commands.getPaginated()).map((c) => c.queueId);
+    expect(paginatedDuringRerun).toContain(aId);
+    expect(paginatedDuringRerun).toContain(a2Id);
+    expect(paginatedDuringRerun).toContain(bId);
+
+    step.reject(new Error("tool step failed again"));
+    await loop;
+
+    // Plain retry: the stale reply neither removed rows nor marked the new
+    // attempt, so a1 fails on its own merit and stays queued for retry.
+    expect((await queue.commands.getPaginated()).map((c) => c.queueId)).toStrictEqual([
+      aId,
+      a2Id,
+      bId,
+    ]);
+    expect(queue.commands.find(aId).status).toBe("FAILED");
+    expect(queue.commands.find(a2Id).status).toBe("CREATED");
   });
 
   it("clears runningStep when the step fails", async () => {
