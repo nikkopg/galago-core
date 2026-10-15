@@ -79,7 +79,6 @@ export const RunsComponent: React.FC = () => {
   // User Form Modal state
   const [isUserFormModalOpen, setIsUserFormModalOpen] = useState(false);
   const [currentForm, setCurrentForm] = useState<Form | null>(null);
-  const [_userFormError, setUserFormError] = useState<string | null>(null);
 
   // Unified message state
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -137,10 +136,8 @@ export const RunsComponent: React.FC = () => {
   useEffect(() => {
     if (formQuery.data && messageData.type === "user_form") {
       setCurrentForm(formQuery.data);
-      setUserFormError(null);
     } else if (formQuery.error && messageData.type === "user_form") {
-      console.error("❌ Failed to load form:", formQuery.error);
-      setUserFormError(`Failed to load form: ${formQuery.error.message}`);
+      console.error("Failed to load form:", formQuery.error);
       setCurrentForm(null);
     }
   }, [formQuery.data, formQuery.error, messageData.type]);
@@ -192,7 +189,6 @@ export const RunsComponent: React.FC = () => {
     // Reset form state when message type changes
     if (message.type !== "user_form") {
       setCurrentForm(null);
-      setUserFormError(null);
     }
   }, [modalStateQuery.data]);
 
@@ -201,7 +197,9 @@ export const RunsComponent: React.FC = () => {
   };
 
   const handleUserFormSubmit = (_formData: Record<string, any>) => {
-    // TODO: Handle form submission - for now just resume
+    // Form data is not persisted anywhere; submitting currently just resumes
+    // the queue, the same as handleUserFormCancel below. Revisit if the
+    // collected form data needs to be forwarded to the backend.
     resumeMutation.mutate();
     setIsUserFormModalOpen(false);
     setCurrentForm(null);
