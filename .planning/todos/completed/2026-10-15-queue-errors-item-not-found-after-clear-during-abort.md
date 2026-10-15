@@ -31,3 +31,20 @@ no longer exists. Log it as "step removed by operator while running" instead of
 "Command Failed", and don't set the queue's FAILED/error state for that case. Add a test: start a
 step, run `clearAll()` while the tool call is pending, have the tool call reject, then check that
 nothing throws and no bogus error state is left.
+
+## Resolution
+
+2026-10-15, quick task 261015-t9e. `SqliteQueue.fail` and `failAndDequeueRun` now resolve to
+`false` (instead of throwing) when the row no longer exists, decided inside the same transaction
+via a new private `_hasItem` existence check — no error-message matching. The busy-loop catch
+checks that return value and, when the row was removed, logs "Step Removed While Running"
+(warning, with the step's own error text), sets the queue OFFLINE and breaks, without setting a
+queue error, marking FAILED, or notifying failure. This closes audit gap INT-01 (FLOW-d) as well,
+since the same race (Clear All / delete-run landing before the step's tool call ends) is what
+that gap described. Covering tests: `sqliteQueue.test.ts` ("failAndDequeueRun resolves to false
+and changes nothing when the step's row was removed", "fail resolves to true for an existing row,
+and to false changing nothing once the row was removed"), `stopInterception.test.ts` (describe
+"Clear All / delete run during a controllable step (INT-01)"), and `toolControl.test.ts` ("a plain
+step failure after Clear All removed the running step leaves no queue error", "a step that
+succeeds after Clear All removed it leaves no queue error", "a late abort reply after Clear All
+removed the step changes nothing and still returns ok").

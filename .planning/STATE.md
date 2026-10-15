@@ -5,10 +5,10 @@ milestone_name: Live Run Control (queue & run page)
 current_phase: 01
 status: completed
 stopped_at: Phase 01 complete — all phases complete
-last_updated: "2026-10-15T13:03:59.251Z"
+last_updated: "2026-10-15T14:34:37.145Z"
 last_activity: 2026-10-15
 last_activity_desc: Phase 01 complete
-state_head: 99e3986081ba0e0b56b16a59835636b033b358d1
+state_head: 5839b406dedcae8338b1155f4aa0e7537d5ffa87
 progress:
   total_phases: 2
   completed_phases: 1
@@ -32,7 +32,7 @@ decides every recovery action; the web app never acts on its own or pre-selects 
 Phase: 01
 Plan: Not started
 Status: All phases complete
-Last activity: 2026-10-15 — Phase 01 complete
+Last activity: 2026-10-15 - Completed quick task 261015-t9e: busy-loop tolerates a step row removed by Clear All/delete-run (closes audit INT-01)
 
 Progress: [█████░░░░░] 50%
 
@@ -102,7 +102,6 @@ Recent decisions affecting current work:
 
 - [2026-10-15] [ui] Evaluate whether expected_tray_id is still needed — [todo file](.planning/todos/pending/2026-10-15-evaluate-whether-expected-tray-id-is-still-needed.md) — Needs TBD. Decide before removing anything:.
 - [2026-10-15] [ui] Fetch F.A.S.T. plate list for source/dest plate dropdowns — [todo file](.planning/todos/pending/2026-10-15-fetch-f-a-s-t-plate-list-for-source-dest-plate-dropdowns.md) — Needs TBD. A likely shape:.
-- [2026-10-15] [api] Queue errors "Item N not found" after clear during abort — [todo file](.planning/todos/pending/2026-10-15-queue-errors-item-not-found-after-clear-during-abort.md)
 
 ### Blockers/Concerns
 
@@ -121,6 +120,7 @@ Recent decisions affecting current work:
 | 261015-f48 | fix pausePrompt describeWrongDetectionEntry: render detectedPlateID -1 (no plate detected) as "none", add unit test | 2026-10-15 | e6b0e97 | [261015-f48-fix-pauseprompt-describewrongdetectionen](./quick/261015-f48-fix-pauseprompt-describewrongdetectionen/) |
 | 261015-h0q | fix SqliteQueue: an operator-aborted (FAILED) command must not be re-run by startNext on the next queue start; add unit test | 2026-10-15 | e18a177 | [261015-h0q-fix-sqlitequeue-an-operator-aborted-fail](./quick/261015-h0q-fix-sqlitequeue-an-operator-aborted-fail/) |
 | 261015-o44 | fix queue: on an accepted operator abort, dequeue the aborted run's remaining steps; never re-dispatch an orphaned STARTED step after a restart; gate the late-abort dequeue to the exact attempt (closes T-01-08); add tests | 2026-10-15 | 534ebd7 | [261015-o44-fix-queue-dequeue-an-aborted-run-s-remai](./quick/261015-o44-fix-queue-dequeue-an-aborted-run-s-remai/) |
+| 261015-t9e | Busy-loop catch: treat a step row removed by Clear All/delete-run as already handled (abort and plain-failure paths) instead of throwing 'Item N not found'; add a test racing the follow-up against the step rejection | 2026-10-15 | 5839b40 | [261015-t9e-busy-loop-catch-treat-a-step-row-removed](./quick/261015-t9e-busy-loop-catch-treat-a-step-row-removed/) |
 
 ## Deferred Items
 
