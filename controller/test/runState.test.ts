@@ -303,6 +303,26 @@ describe("RunStateMonitor", () => {
     expect(getStatus).toHaveBeenCalledTimes(2);
   });
 
+  it("snapshot is a deep copy that callers cannot use to mutate monitor state", async () => {
+    const getStatus = vi
+      .fn()
+      .mockResolvedValue(statusReplyWith({ state: "running", percent: 10, pause: null }));
+    const monitor = new RunStateMonitor({ lookupTool: () => ({ grpc: { getStatus } }) });
+
+    monitor.start(makeStep());
+    await vi.advanceTimersByTimeAsync(0);
+
+    const first: any = monitor.snapshot();
+    first.runState.percent = 99;
+    first.runState.state = "mutated";
+
+    expect(monitor.snapshot()).toMatchObject({
+      runState: { state: "running", percent: 10 },
+    });
+
+    monitor.stop();
+  });
+
   it("shows unknown on a failed poll and keeps the last good runState", async () => {
     const getStatus = vi
       .fn()

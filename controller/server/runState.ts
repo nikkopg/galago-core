@@ -166,7 +166,8 @@ export class RunStateMonitor {
   }
 
   snapshot(): RunStateEnvelope {
-    return { ...this.envelope };
+    // Deep copy: runState/pause must not alias the monitor's internal state.
+    return structuredClone(this.envelope);
   }
 
   private async _poll(step: Readonly<RunningStep>, generation: number): Promise<void> {
