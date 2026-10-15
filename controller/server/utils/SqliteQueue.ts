@@ -494,9 +494,16 @@ export default class SqliteQueue {
   // start (upstream retry; the operator can Skip it instead). A step whose
   // failure is an operator abort the tool accepted uses failAndDequeueRun
   // instead, which also removes it and the rest of its run from the queue.
-  async fail(id: number, error: Error): Promise<void> {
-    this.db.transaction(() => {
+  // Resolves to true when the row was updated. Resolves to false and changes
+  // nothing when the operator removed the row (Clear All or a run delete)
+  // while the step ran; a failed row still stays queued for upstream retry.
+  async fail(id: number, error: Error): Promise<boolean> {
+    return this.db.transaction(() => {
+      if (!this._hasItem(id)) {
+        return false;
+      }
       this._updateItem(id, { status: "FAILED", error });
+      return true;
     })();
   }
 

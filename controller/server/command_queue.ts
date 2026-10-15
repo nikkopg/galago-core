@@ -1351,7 +1351,10 @@ export class CommandQueue {
           }
         } else {
           // Mark command as failed in the queue
-          await this.commands.fail(nextCommand.queueId, err);
+          const updated = await this.commands.fail(nextCommand.queueId, err);
+          if (!updated) {
+            rowRemoved = true;
+          }
         }
 
         // The operator removed this step's row (Clear All or a run delete)

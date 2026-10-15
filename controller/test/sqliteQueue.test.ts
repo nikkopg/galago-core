@@ -87,6 +87,41 @@ describe("SqliteQueue", () => {
     expect(queue.find(aId).status).toBe("STARTED");
   });
 
+  it("fail resolves to true for an existing row, and to false changing nothing once the row was removed", async () => {
+    const { aId, bId } = await pushTwo();
+
+    const started = await queue.startNext();
+    expect((started as any).queueId).toBe(aId);
+
+    const result = await queue.fail(aId, new Error("boom"));
+    expect(result).toBe(true);
+    expect(queue.find(aId).status).toBe("FAILED");
+    expect((await queue.getPaginated()).map((c) => c.queueId)).toStrictEqual([aId, bId]);
+
+    // Drain the still-queued rows above so the next startNext reaches the
+    // fresh rows pushed below.
+    const drainedA = await queue.startNext();
+    await queue.complete((drainedA as any).queueId);
+    const drainedB = await queue.startNext();
+    await queue.complete((drainedB as any).queueId);
+
+    // On another run's started row, clearByRunId(thatRun) removes only that
+    // run's rows; the remaining run's row is unchanged (status and queue
+    // membership).
+    const { aId: cId, bId: otherRunBId } = await pushRunPair("run-c", "run-c-other");
+    const startedC = await queue.startNext();
+    expect((startedC as any).queueId).toBe(cId);
+    expect(queue.find(cId).status).toBe("STARTED");
+    const otherRunBefore = queue.find(otherRunBId);
+
+    await queue.clearByRunId("run-c");
+
+    const removed = await queue.fail(cId, new Error("boom again"));
+    expect(removed).toBe(false);
+    expect(queue.find(otherRunBId).status).toBe(otherRunBefore.status);
+    expect((await queue.getPaginated()).map((c) => c.queueId)).toContain(otherRunBId);
+  });
+
   it("failAndDequeueRun fails the step and dequeues the rest of its run", async () => {
     const { aId, a2Id, bId } = await pushThree();
 
