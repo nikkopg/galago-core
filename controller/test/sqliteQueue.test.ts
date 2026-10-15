@@ -190,6 +190,59 @@ describe("SqliteQueue", () => {
     return { aId: a1.queueId, a2Id: a2.queueId, bId: b1.queueId };
   }
 
+  it("failAndDequeueRun resolves to false and changes nothing when the step's row was removed", async () => {
+    // (i) clearByRunId removes the running step's row; the other run's step
+    // stays queued, CREATED and untouched.
+    {
+      const { aId, bId } = await pushThree();
+
+      const started = await queue.startNext();
+      expect((started as any).queueId).toBe(aId);
+
+      await queue.clearByRunId("run-1");
+
+      const removed = await queue.failAndDequeueRun(aId, new Error("aborted"));
+      expect(removed).toBe(false);
+
+      const all = await queue.all();
+      expect(all.map((c) => c.queueId)).toStrictEqual([bId]);
+      expect(queue.find(bId).status).toBe("CREATED");
+
+      const paginated = await queue.getPaginated();
+      expect(paginated.map((c) => c.queueId)).toStrictEqual([bId]);
+    }
+
+    // Drain bId (still CREATED and queued from part (i)) so the next
+    // startNext reaches the fresh row pushed below.
+    await queue.startNext();
+    await queue.complete((await queue.all()).find((c) => c.runId === "run-2")!.queueId);
+
+    // (ii) Clear All on a fresh started row.
+    {
+      await queue.push({
+        runId: "run-3",
+        status: "CREATED",
+        commandInfo: {
+          toolId: "fast-1",
+          toolType: ToolType.fast,
+          command: "transfer",
+          params: {},
+        },
+      } as any);
+      const freshRow = (await queue.all()).find((c) => c.runId === "run-3")!;
+
+      const started = await queue.startNext();
+      expect((started as any).queueId).toBe(freshRow.queueId);
+
+      await queue.clearAll();
+
+      const removed = await queue.failAndDequeueRun(freshRow.queueId, new Error("aborted"));
+      expect(removed).toBe(false);
+
+      expect(await queue.all()).toStrictEqual([]);
+    }
+  });
+
   it("dequeueFailedRun removes a failed step from the queue without changing its record", async () => {
     const { aId, a2Id, bId } = await pushThree();
 

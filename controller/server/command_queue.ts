@@ -1332,20 +1332,47 @@ export class CommandQueue {
 
         const err = e instanceof Error ? e : new Error("Unknown error");
 
+        let rowRemoved = false;
+
         if (abortAccepted) {
           const removed = await this.commands.failAndDequeueRun(nextCommand.queueId, err);
-          logAction({
-            level: "info",
-            action: "Aborted Run Dequeued",
-            details:
-              `queueId=${nextCommand.queueId} runId=${nextCommand.runId} ` +
-              `toolId=${nextCommand.commandInfo?.toolId} ` +
-              `removed=${removed.length ? removed.join(",") : "none"} ` +
-              `reason=operator abort accepted while the step ran`,
-          });
+          if (removed === false) {
+            rowRemoved = true;
+          } else {
+            logAction({
+              level: "info",
+              action: "Aborted Run Dequeued",
+              details:
+                `queueId=${nextCommand.queueId} runId=${nextCommand.runId} ` +
+                `toolId=${nextCommand.commandInfo?.toolId} ` +
+                `removed=${removed.length ? removed.join(",") : "none"} ` +
+                `reason=operator abort accepted while the step ran`,
+            });
+          }
         } else {
           // Mark command as failed in the queue
           await this.commands.fail(nextCommand.queueId, err);
+        }
+
+        // The operator removed this step's row (Clear All or a run delete)
+        // while it ran. That removal is the handling: Clear All already
+        // clears the queue error, and OFFLINE (not READY) means enqueueRun
+        // cannot auto-dispatch what is left, same as the sibling
+        // Pause-queue/stop flow (D-18). No queue error is set and nothing
+        // else runs until the operator presses Run again.
+        if (rowRemoved) {
+          logAction({
+            level: "warning",
+            action: "Step Removed While Running",
+            details:
+              `queueId=${nextCommand.queueId} runId=${nextCommand.runId} ` +
+              `toolId=${nextCommand.commandInfo?.toolId} abortAccepted=${abortAccepted} ` +
+              `stepError=${err.message} ` +
+              `reason=the step's queue row was removed by the operator (Clear All or run delete) ` +
+              `while it ran; nothing was recorded and no queue error was set`,
+          });
+          this._setState(ToolStatus.OFFLINE);
+          break;
         }
 
         // Set error state for UI to display

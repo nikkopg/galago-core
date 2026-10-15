@@ -540,11 +540,15 @@ export default class SqliteQueue {
   // Fails `id` and, in the same transaction, removes the rest of its run
   // from the queue (CREATED rows become SKIPPED; other statuses are just
   // dequeued). Used when an operator abort is accepted while the step ran.
-  // Throws `Item ${id} not found` exactly as fail does if the row is
-  // missing. Returns the queueIds of the run's other steps it removed.
-  async failAndDequeueRun(id: number, error: Error): Promise<number[]> {
+  // Resolves to false and changes nothing when the row no longer exists (the
+  // operator removed it with Clear All or a run delete while the step ran).
+  // Otherwise returns the queueIds of the run's other steps it removed.
+  async failAndDequeueRun(id: number, error: Error): Promise<number[] | false> {
     const db = this.db;
     return db.transaction(() => {
+      if (!this._hasItem(id)) {
+        return false;
+      }
       const updated = this._updateItem(id, { status: "FAILED", error });
       db.prepare(
         `
@@ -654,6 +658,19 @@ export default class SqliteQueue {
 
       return this._dequeueRunRemainder(runId);
     })();
+  }
+
+  // Existence check only: never deserializes command_data and never calls
+  // find, so it carries no risk of throwing the not-found error itself.
+  private _hasItem(id: number): boolean {
+    const row = this.db
+      .prepare(
+        `
+      SELECT 1 FROM ${this.queueName}_commands WHERE queue_id = ?
+    `,
+      )
+      .get(id);
+    return row !== undefined;
   }
 
   private _updateItem(id: number, updates: Partial<RunCommand>): StoredRunCommand {

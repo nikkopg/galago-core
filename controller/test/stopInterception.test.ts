@@ -14,6 +14,7 @@ import {
   STOP_MODAL_COPY,
 } from "@/components/runs/stopInterception";
 import type { RunStateEnvelope } from "@/server/runState";
+import { logAction } from "@/server/logger";
 
 function statusReplyWith(run_state: unknown): any {
   return { uptime: 1, status: ToolStatus.BUSY, run_state };
@@ -187,6 +188,247 @@ describe("pause queue during a controllable step", () => {
       expect(result.followUp).toBe("skipped");
       expect(stop).not.toHaveBeenCalled();
       expect(queue.state).toBe(ToolStatus.BUSY);
+    } finally {
+      if (!step.isSettled()) {
+        step.resolve(undefined);
+      }
+      if (loop) {
+        await loop;
+      }
+      await new Promise((resolve) => setImmediate(resolve));
+      await removeFakeTool("fast-1");
+      delete (globalThis as any)["__global_command_queue_key"];
+      vi.restoreAllMocks();
+    }
+  });
+});
+
+describe("Clear All / delete run during a controllable step (INT-01)", () => {
+  it("an accepted abort whose Clear All follow-up finishes before the step rejects leaves no queue error", async () => {
+    const queue = new CommandQueue({} as any);
+    queue.slackNotificationsEnabled = false;
+    (globalThis as any)["__global_command_queue_key"] = queue;
+
+    const fake = installFakeTool("fast-1", ToolType.fast);
+    const grpc: FakeGrpc = fake.grpc;
+    grpc.executeCommand.mockResolvedValue({ response: ResponseCode.SUCCESS, return_reply: true });
+    grpc.getStatus.mockResolvedValue(
+      statusReplyWith({ state: "running", percent: 40, pause: null }),
+    );
+
+    const step = deferred<any>();
+    vi.spyOn(Tool, "executeCommand").mockImplementation(() => step.promise);
+
+    let loop: Promise<void> | undefined;
+
+    try {
+      await queue.commands.push({
+        runId: "run-1",
+        status: "CREATED",
+        commandInfo: {
+          toolId: "fast-1",
+          toolType: ToolType.fast,
+          command: "transfer",
+          params: {},
+        },
+      } as any);
+      loop = queue._start();
+
+      await vi.waitFor(
+        () => {
+          expect(queue.runningStep).toBeDefined();
+        },
+        { timeout: 5000 },
+      );
+
+      const caller = commandQueueRouter.createCaller({});
+
+      await vi.waitFor(
+        async () => {
+          const snapshot: any = await caller.runState();
+          expect(snapshot.status).toBe("ok");
+        },
+        { timeout: 5000 },
+      );
+
+      const envelope: RunStateEnvelope = await caller.runState();
+      expect(shouldInterceptQueueStop(envelope)).toBe(true);
+      const queueId = queue.runningStep!.queueId;
+
+      const sender = createConfirmedSender({
+        sendRunning: (i) => caller.toolControl(i) as any,
+        notify: { accepted: vi.fn(), refused: vi.fn() },
+      });
+
+      const result = await runAfterAccepted(
+        () =>
+          sender.send({
+            target: { kind: "running" },
+            toolType: "fast",
+            action: "abort",
+            decisions: { return_liquid: "yes" },
+          }),
+        () => caller.clearAll(),
+      );
+
+      expect(result.followUp).toBe("done");
+      expect(step.isSettled()).toBe(false);
+      expect(await queue.commands.all()).toStrictEqual([]);
+
+      step.reject(new Error("run aborted at 40%"));
+      await loop;
+
+      expect(queue.state).toBe(ToolStatus.OFFLINE);
+      expect(queue.error).toBeUndefined();
+      expect(await caller.getError()).toBeNull();
+      expect(Tool.executeCommand).toHaveBeenCalledTimes(1);
+
+      const logs = vi
+        .mocked(logAction)
+        .mock.calls.map(([call]) => call as { level: string; action: string; details: string });
+      const removedLogs = logs.filter((l) => l.action === "Step Removed While Running");
+      expect(removedLogs).toHaveLength(1);
+      expect(removedLogs[0].details).toContain(`queueId=${queueId}`);
+      expect(removedLogs[0].details).toContain("abortAccepted=true");
+      expect(removedLogs[0].details).toContain("run aborted at 40%");
+
+      expect(logs.some((l) => l.action === "Command Failed")).toBe(false);
+      expect(logs.some((l) => l.action === "Queue failed to start")).toBe(false);
+      expect(logs.some((l) => l.action === "Aborted Run Dequeued")).toBe(false);
+      expect(logs.some((l) => /Item \d+ not found/.test(l.details))).toBe(false);
+    } finally {
+      if (!step.isSettled()) {
+        step.resolve(undefined);
+      }
+      if (loop) {
+        await loop;
+      }
+      await new Promise((resolve) => setImmediate(resolve));
+      await removeFakeTool("fast-1");
+      delete (globalThis as any)["__global_command_queue_key"];
+      vi.restoreAllMocks();
+    }
+  });
+
+  it("an accepted abort whose delete-run follow-up finishes before the step rejects leaves the other run queued and undispatched", async () => {
+    const queue = new CommandQueue({} as any);
+    queue.slackNotificationsEnabled = false;
+    (globalThis as any)["__global_command_queue_key"] = queue;
+
+    const fake = installFakeTool("fast-1", ToolType.fast);
+    const grpc: FakeGrpc = fake.grpc;
+    grpc.executeCommand.mockResolvedValue({ response: ResponseCode.SUCCESS, return_reply: true });
+    grpc.getStatus.mockResolvedValue(
+      statusReplyWith({ state: "running", percent: 40, pause: null }),
+    );
+
+    const step = deferred<any>();
+    vi.spyOn(Tool, "executeCommand").mockImplementation(() => step.promise);
+
+    let loop: Promise<void> | undefined;
+
+    try {
+      await queue.commands.push({
+        runId: "run-1",
+        status: "CREATED",
+        commandInfo: {
+          toolId: "fast-1",
+          toolType: ToolType.fast,
+          command: "transfer",
+          params: {},
+        },
+      } as any);
+      await queue.commands.push({
+        runId: "run-1",
+        status: "CREATED",
+        commandInfo: {
+          toolId: "fast-1",
+          toolType: ToolType.fast,
+          command: "transfer",
+          params: {},
+        },
+      } as any);
+      await queue.commands.push({
+        runId: "run-2",
+        status: "CREATED",
+        commandInfo: {
+          toolId: "fast-1",
+          toolType: ToolType.fast,
+          command: "transfer",
+          params: {},
+        },
+      } as any);
+      const [, , b1] = await queue.commands.all();
+      const bId = b1.queueId;
+
+      loop = queue._start();
+
+      await vi.waitFor(
+        () => {
+          expect(queue.runningStep).toBeDefined();
+        },
+        { timeout: 5000 },
+      );
+
+      const caller = commandQueueRouter.createCaller({});
+
+      await vi.waitFor(
+        async () => {
+          const snapshot: any = await caller.runState();
+          expect(snapshot.status).toBe("ok");
+        },
+        { timeout: 5000 },
+      );
+
+      const envelope: RunStateEnvelope = await caller.runState();
+      expect(shouldInterceptRunDelete(envelope, "run-1")).toBe(true);
+      const queueId = queue.runningStep!.queueId;
+
+      const sender = createConfirmedSender({
+        sendRunning: (i) => caller.toolControl(i) as any,
+        notify: { accepted: vi.fn(), refused: vi.fn() },
+      });
+
+      const result = await runAfterAccepted(
+        () =>
+          sender.send({
+            target: { kind: "running" },
+            toolType: "fast",
+            action: "abort",
+            decisions: { return_liquid: "yes" },
+          }),
+        () => caller.clearByRunId("run-1"),
+      );
+
+      expect(result.followUp).toBe("done");
+      expect(step.isSettled()).toBe(false);
+
+      step.reject(new Error("run aborted at 40%"));
+      await loop;
+
+      expect(queue.state).toBe(ToolStatus.OFFLINE);
+      expect(queue.error).toBeUndefined();
+      expect(await caller.getError()).toBeNull();
+      expect(Tool.executeCommand).toHaveBeenCalledTimes(1);
+
+      const all = await queue.commands.all();
+      expect(all.map((c) => c.queueId)).toStrictEqual([bId]);
+      expect(queue.commands.find(bId).status).toBe("CREATED");
+      expect((await queue.commands.getPaginated()).map((c) => c.queueId)).toStrictEqual([bId]);
+
+      const logs = vi
+        .mocked(logAction)
+        .mock.calls.map(([call]) => call as { level: string; action: string; details: string });
+      const removedLogs = logs.filter((l) => l.action === "Step Removed While Running");
+      expect(removedLogs).toHaveLength(1);
+      expect(removedLogs[0].details).toContain(`queueId=${queueId}`);
+      expect(removedLogs[0].details).toContain("abortAccepted=true");
+      expect(removedLogs[0].details).toContain("run aborted at 40%");
+
+      expect(logs.some((l) => l.action === "Command Failed")).toBe(false);
+      expect(logs.some((l) => l.action === "Queue failed to start")).toBe(false);
+      expect(logs.some((l) => l.action === "Aborted Run Dequeued")).toBe(false);
+      expect(logs.some((l) => /Item \d+ not found/.test(l.details))).toBe(false);
     } finally {
       if (!step.isSettled()) {
         step.resolve(undefined);
