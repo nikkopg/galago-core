@@ -5,10 +5,10 @@ milestone_name: Live Run Control (queue & run page)
 current_phase: 2
 status: completed
 stopped_at: Phase 2 complete — all phases complete
-last_updated: "2026-10-15T03:14:31.885Z"
+last_updated: "2026-10-15T04:00:07.595Z"
 last_activity: 2026-10-15
 last_activity_desc: Phase 2 complete
-state_head: 9bc0436fb7bb414086ab89258df237ebe92caa1b
+state_head: e6b0e9765c28168a7d004c9d78ae4188db48e1d8
 progress:
   total_phases: 2
   completed_phases: 1
@@ -32,9 +32,9 @@ decides every recovery action; the web app never acts on its own or pre-selects 
 Phase: 2
 Plan: Not started
 Status: All phases complete
-Last activity: 2026-10-15 — Phase 2 complete
+Last activity: 2026-10-15 - Completed quick task 261015-f48: fix pausePrompt describeWrongDetectionEntry: render detectedPlateID -1 (no plate detected) as "none", add unit test
 
-Progress: [██████████] 100%
+Progress: [█████░░░░░] 50%
 
 ## Performance Metrics
 
@@ -106,11 +106,17 @@ None yet.
 
 - [Phase 1]: IN-01 still open (info): `RunStateMonitor.snapshot()` returns a shallow copy; consumers
   must not mutate the nested `runState`/`pause` objects (Phase 2 consumers comply).
-- [Phase 2]: Review follow-ups open (non-blocking): WR-05 — confirm whether "The instrument head will
-  move." should show for a soft Pause; WR-07 follow-up toast runs two sentences together; the
-  `toolKey.ts` header overstates "single source of truth" (`server/tools.ts` keeps its own copy).
+- [Phase 2]: Review follow-up open (non-blocking): WR-05 — confirm whether "The instrument head will
+  move." should show for a soft Pause. (WR-07 follow-up toast and the WR-06 `server/tools.ts` copy
+  were fixed in `142a7e9` / `949e7c7`.)
 - [Phase 2]: The real F.A.S.T. may still hold a paused run from the 2026-10-14 09:33 WrongPlateType
   test; clear it (Run Recovery → Abort, or on the instrument) before the next real run.
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 261015-f48 | fix pausePrompt describeWrongDetectionEntry: render detectedPlateID -1 (no plate detected) as "none", add unit test | 2026-10-15 | e6b0e97 | [261015-f48-fix-pauseprompt-describewrongdetectionen](./quick/261015-f48-fix-pauseprompt-describewrongdetectionen/) |
 
 ## Deferred Items
 
