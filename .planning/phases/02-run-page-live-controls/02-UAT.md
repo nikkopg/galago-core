@@ -3,7 +3,7 @@ status: complete
 phase: 02-run-page-live-controls
 source: [02-VERIFICATION.md]
 started: 2026-10-13T21:16:40Z
-updated: 2026-10-15T02:43:41.390Z
+updated: 2026-10-15T03:01:29.840Z
 ---
 
 ## Current Test
@@ -49,10 +49,15 @@ expected: A persistent, closable 'Action refused' toast appears carrying the cor
 result: pass
 note: "Refusal half verified on the Test 2 UNRECOGNIZED_COMMAND toast (persistent, closable, sent once per log). Transport-error half not exercised (would require stopping the tool server mid-run)."
 
+### 9. With no run in progress, stop the F.A.S.T. tool server (port 40001), then on the F.A.S.T. tool page use Run Recovery → Abort (pick Return liquid) and confirm
+expected: A persistent, closable 'Action refused' toast appears carrying the connection error; nothing is retried and the bar does not change optimistically (transport-error half of Test 8, added from re-verification 2026-10-15)
+result: pass
+note: "galago-web log 2026-10-15 03:00:52 Tool Recovery Control Failed: abort {return_liquid: yes} transport error 14 UNAVAILABLE ECONNREFUSED 172.17.0.1:40001 — single attempt, no retry; user saw the Action refused toast."
+
 ## Summary
 
-total: 8
-passed: 8
+total: 9
+passed: 9
 issues: 0
 pending: 0
 skipped: 0
