@@ -304,4 +304,24 @@ describe("SqliteQueue", () => {
     const second = queue.recoverInterruptedSteps(new Error("interrupted"));
     expect(second).toStrictEqual([]);
   });
+
+  it("recoverInterruptedSteps reports a run once when more than one of its rows was left STARTED", async () => {
+    const { aId, a2Id, bId } = await pushThree();
+    (queue as any)._updateItem(aId, { status: "STARTED" });
+    (queue as any)._updateItem(a2Id, { status: "STARTED" });
+
+    const recovered = queue.recoverInterruptedSteps(new Error("interrupted"));
+    expect(recovered).toStrictEqual([
+      { queueId: aId, runId: "run-1", toolId: "fast-1", remainder: [a2Id] },
+    ]);
+
+    expect(queue.find(aId).status).toBe("FAILED");
+    expect(queue.find(a2Id).status).toBe("FAILED");
+    expect(queue.find(bId).status).toBe("CREATED");
+
+    const paginated = await queue.getPaginated();
+    expect(paginated.map((c) => c.queueId)).toStrictEqual([bId]);
+
+    expect(queue.recoverInterruptedSteps(new Error("interrupted"))).toStrictEqual([]);
+  });
 });

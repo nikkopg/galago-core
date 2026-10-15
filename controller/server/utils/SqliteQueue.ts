@@ -580,6 +580,10 @@ export default class SqliteQueue {
         toolId?: string;
         remainder: number[];
       }> = [];
+      // A run is reported once: a later orphan of the same run was already
+      // dequeued (and listed) by the first one's remainder, but is still
+      // STARTED, so it is failed here without a second, empty result.
+      const reportedRunIds = new Set<string>();
 
       for (const row of rows) {
         const item = this.find(row.queue_id);
@@ -591,6 +595,9 @@ export default class SqliteQueue {
         `,
           )
           .run(row.queue_id);
+
+        if (updated.runId && reportedRunIds.has(updated.runId)) continue;
+        if (updated.runId) reportedRunIds.add(updated.runId);
 
         results.push({
           queueId: row.queue_id,
