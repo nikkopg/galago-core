@@ -629,6 +629,72 @@ describe("toolControl", () => {
     expect((await queue.commands.startNext()) as any).toMatchObject({ queueId: a.queueId });
   });
 
+  it("an abort accepted after the step already ended still removes it", async () => {
+    await queue.commands.push({
+      runId: "run-1",
+      status: "CREATED",
+      commandInfo: {
+        toolId: "fast-1",
+        toolType: ToolType.fast,
+        command: "transfer",
+        params: {},
+      },
+    } as any);
+    await queue.commands.push({
+      runId: "run-1",
+      status: "CREATED",
+      commandInfo: {
+        toolId: "fast-1",
+        toolType: ToolType.fast,
+        command: "transfer",
+        params: {},
+      },
+    } as any);
+    const [a, b] = await queue.commands.all();
+
+    loop = queue._start();
+
+    await vi.waitFor(
+      () => {
+        expect(queue.runningStep?.queueId).toBe(a.queueId);
+      },
+      { timeout: 5000 },
+    );
+
+    const abortReply = deferred<any>();
+    grpc.executeCommand.mockImplementationOnce(() => abortReply.promise);
+
+    const caller = commandQueueRouter.createCaller({});
+    const abortCall = caller.toolControl({ action: "abort", params: { return_liquid: "yes" } });
+
+    await vi.waitFor(
+      () => {
+        expect(grpc.executeCommand).toHaveBeenCalledWith({
+          fast: { abort: { return_liquid: "yes" } },
+        });
+      },
+      { timeout: 5000 },
+    );
+
+    step.reject(new Error("tool step failed"));
+    await loop;
+
+    // The step's own failure was already recorded; the abort reply has not
+    // arrived yet, so the step is still at the head of the queue.
+    expect((await queue.commands.getPaginated()).map((c) => c.queueId)).toStrictEqual([
+      a.queueId,
+      b.queueId,
+    ]);
+
+    abortReply.resolve({ response: ResponseCode.SUCCESS });
+    const abortResult = await abortCall;
+    expect(abortResult).toMatchObject({ ok: true });
+
+    expect((await queue.commands.getPaginated()).map((c) => c.queueId)).toStrictEqual([b.queueId]);
+    expect(queue.commands.find(a.queueId).status).toBe("FAILED");
+    expect((await queue.commands.startNext()) as any).toMatchObject({ queueId: b.queueId });
+  });
+
   it("clears runningStep when the step fails", async () => {
     await queue.commands.push({
       runId: "run-1",

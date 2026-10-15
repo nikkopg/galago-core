@@ -509,6 +509,20 @@ export default class SqliteQueue {
     })();
   }
 
+  // Removes a step from the run order without changing its record. Used
+  // when an operator abort is accepted after the step already ended: a
+  // no-op for an id that is not queued or does not exist (no find call, no
+  // throw).
+  async dequeue(id: number): Promise<void> {
+    this.db
+      .prepare(
+        `
+      DELETE FROM ${this.queueName}_queue WHERE queue_id = ?
+    `,
+      )
+      .run(id);
+  }
+
   private _updateItem(id: number, updates: Partial<RunCommand>): StoredRunCommand {
     const item = this.find(id);
     if (!item) {

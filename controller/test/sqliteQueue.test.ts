@@ -63,7 +63,7 @@ describe("SqliteQueue", () => {
     const failedRecord = queue.find(aId);
     expect(failedRecord.status).toBe("FAILED");
     expect(failedRecord.failedAt).toBeDefined();
-    expect(failedRecord.error?.message).toBe("aborted");
+    expect((failedRecord.error as Error)?.message).toBe("aborted");
 
     const all = await queue.all();
     expect(all.map((c) => c.queueId)).toContain(aId);
@@ -76,5 +76,27 @@ describe("SqliteQueue", () => {
 
     await queue.complete(bId);
     expect(await queue.startNext()).toBe(false);
+  });
+
+  it("dequeue removes a failed step from the queue without changing its record", async () => {
+    const { aId, bId } = await pushTwo();
+
+    const started = await queue.startNext();
+    expect((started as any).queueId).toBe(aId);
+
+    await queue.fail(aId, new Error("boom"));
+    const failedAtBeforeDequeue = queue.find(aId).failedAt;
+
+    await queue.dequeue(aId);
+
+    const record = queue.find(aId);
+    expect(record.status).toBe("FAILED");
+    expect(record.failedAt).toStrictEqual(failedAtBeforeDequeue);
+
+    const next = await queue.startNext();
+    expect((next as any).queueId).toBe(bId);
+
+    await expect(queue.dequeue(aId)).resolves.not.toThrow();
+    await expect(queue.dequeue(99999)).resolves.not.toThrow();
   });
 });

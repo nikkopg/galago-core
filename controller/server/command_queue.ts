@@ -530,11 +530,23 @@ export class CommandQueue {
   // busy-loop catch can dequeue it instead of letting startNext re-run it.
   // The identity check against _runningStep is the first statement with no
   // await before it: if the step is still running, this just sets the
-  // marker the busy loop will read.
+  // marker the busy loop will read. If it is not, the busy loop's finally
+  // and catch already recorded the step's outcome (they run synchronously
+  // in the same continuation as executeCommand settling), so this reaches
+  // into SqliteQueue directly to dequeue it — a no-op if it already
+  // completed or was deleted.
   private async _recordAcceptedAbort(step: Readonly<RunningStep>): Promise<void> {
     if (this._runningStep === step) {
       this._abortAcceptedQueueId = step.queueId;
+      return;
     }
+
+    await this.commands.dequeue(step.queueId);
+    logAction({
+      level: "info",
+      action: "Aborted Step Dequeued",
+      details: `queueId=${step.queueId} runId=${step.runId} toolId=${step.toolId} reason=operator abort accepted after the step ended`,
+    });
   }
 
   async skipCommand(commandId: number) {
