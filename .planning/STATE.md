@@ -5,10 +5,10 @@ milestone_name: Live Run Control (queue & run page)
 current_phase: 2
 status: completed
 stopped_at: Phase 2 complete — all phases complete
-last_updated: "2026-10-15T05:37:41.298Z"
+last_updated: "2026-10-15T10:59:42.191Z"
 last_activity: 2026-10-15
 last_activity_desc: Phase 2 complete
-state_head: e18a177e05f452e6bfb9e165e5c1746cacaf979e
+state_head: 534ebd7b44344d675a9f4e4cddd3244a6ac591f4
 progress:
   total_phases: 2
   completed_phases: 1
@@ -32,7 +32,7 @@ decides every recovery action; the web app never acts on its own or pre-selects 
 Phase: 2
 Plan: Not started
 Status: All phases complete
-Last activity: 2026-10-15 - Completed quick task 261015-h0q: fix SqliteQueue: an operator-aborted (FAILED) command must not be re-run by startNext on the next queue start; add unit test
+Last activity: 2026-10-15 - Completed quick task 261015-o44: fix queue: on an accepted operator abort, dequeue the aborted run's remaining steps; never re-dispatch an orphaned STARTED step after a restart; gate the late-abort dequeue to the exact attempt (closes T-01-08); add tests
 
 Progress: [█████░░░░░] 50%
 
@@ -120,6 +120,7 @@ Recent decisions affecting current work:
 |---|-------------|------|--------|-----------|
 | 261015-f48 | fix pausePrompt describeWrongDetectionEntry: render detectedPlateID -1 (no plate detected) as "none", add unit test | 2026-10-15 | e6b0e97 | [261015-f48-fix-pauseprompt-describewrongdetectionen](./quick/261015-f48-fix-pauseprompt-describewrongdetectionen/) |
 | 261015-h0q | fix SqliteQueue: an operator-aborted (FAILED) command must not be re-run by startNext on the next queue start; add unit test | 2026-10-15 | e18a177 | [261015-h0q-fix-sqlitequeue-an-operator-aborted-fail](./quick/261015-h0q-fix-sqlitequeue-an-operator-aborted-fail/) |
+| 261015-o44 | fix queue: on an accepted operator abort, dequeue the aborted run's remaining steps; never re-dispatch an orphaned STARTED step after a restart; gate the late-abort dequeue to the exact attempt (closes T-01-08); add tests | 2026-10-15 | 534ebd7 | [261015-o44-fix-queue-dequeue-an-aborted-run-s-remai](./quick/261015-o44-fix-queue-dequeue-an-aborted-run-s-remai/) |
 
 ## Deferred Items
 
