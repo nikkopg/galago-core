@@ -3,13 +3,12 @@ gsd_state_version: "1.0"
 milestone: v1
 milestone_name: Live Run Control (queue & run page)
 current_phase: 2
-current_phase_name: Run Page Live Controls
-status: verifying
-stopped_at: Completed 02-06-PLAN.md
-last_updated: "2026-10-13T20:42:27.248Z"
-last_activity: 2026-10-13
-last_activity_desc: Phase 2 execution started
-state_head: a4c0531143dba4b69eea80731a1a4777ce73d28f
+status: completed
+stopped_at: Phase 2 complete — all phases complete
+last_updated: "2026-10-15T03:14:31.885Z"
+last_activity: 2026-10-15
+last_activity_desc: Phase 2 complete
+state_head: 9bc0436fb7bb414086ab89258df237ebe92caa1b
 progress:
   total_phases: 2
   completed_phases: 1
@@ -22,25 +21,25 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-10-13)
+See: .planning/PROJECT.md (updated 2026-10-15)
 
 **Core value:** While an instrument step runs, the operator sees what the instrument is doing and
 decides every recovery action; the web app never acts on its own or pre-selects a physical decision.
-**Current focus:** Phase 2 — Run Page Live Controls
+**Current focus:** Milestone v1 complete — audit and close the milestone
 
 ## Current Position
 
-Phase: 2 (Run Page Live Controls) — EXECUTING
-Plan: 6 of 6
-Status: Phase complete — ready for verification
-Last activity: 2026-10-13 — Phase 2 execution started
+Phase: 2
+Plan: Not started
+Status: All phases complete
+Last activity: 2026-10-15 — Phase 2 complete
 
-Progress: [█████░░░░░] 50%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 5
+- Total plans completed: 11
 - Average duration: -
 - Total execution time: 0 hours
 
@@ -49,6 +48,7 @@ Progress: [█████░░░░░] 50%
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01 | 5 | - | - |
+| 2 | 6 | - | - |
 
 **Recent Trend:**
 - Last 5 plans: none yet
@@ -104,13 +104,13 @@ None yet.
 
 ### Blockers/Concerns
 
-- [Phase 1]: Residual race accepted in UAT: a control command sent while a step ends during the
-  gRPC round trip can reach the next step on the same tool; the F.A.S.T. core's state gates protect.
-  Phase 2's control bar should show refusals and never update optimistically.
-- [Phase 1]: IN-01 still open (info): `RunStateMonitor.snapshot()` returns a shallow copy, so Phase 2
-  consumers must not mutate the nested `runState`/`pause` objects.
-- [Phase 2]: Never reuse `StopRunModal` (auto-confirms after 5 s) or the `UIMessage` plumbing
-  (resolves the step) for live control.
+- [Phase 1]: IN-01 still open (info): `RunStateMonitor.snapshot()` returns a shallow copy; consumers
+  must not mutate the nested `runState`/`pause` objects (Phase 2 consumers comply).
+- [Phase 2]: Review follow-ups open (non-blocking): WR-05 — confirm whether "The instrument head will
+  move." should show for a soft Pause; WR-07 follow-up toast runs two sentences together; the
+  `toolKey.ts` header overstates "single source of truth" (`server/tools.ts` keeps its own copy).
+- [Phase 2]: The real F.A.S.T. may still hold a paused run from the 2026-10-14 09:33 WrongPlateType
+  test; clear it (Run Recovery → Abort, or on the instrument) before the next real run.
 
 ## Deferred Items
 
@@ -122,6 +122,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-13T20:42:27.208Z
-Stopped at: Completed 02-06-PLAN.md
+Last session: 2026-10-15T03:15:11.000Z
+Stopped at: Phase 2 complete (UAT 9/9, verification passed) — milestone v1 ready to audit
 Resume file: None

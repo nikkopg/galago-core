@@ -48,10 +48,18 @@ both and runs the supervised live acceptance.
   running step's tool, fail-closed `"yes"`/`"no"` decisions), the generic `runControl` map
   (`server/runControl.ts`), the `commandQueue.runState` query backed by a 2 s server-side poller, a
   heartbeat that keeps retrying, and interfaces regenerated from galago-tools `cb7886d` — Phase 1
+- ✓ UI-01..UI-08: run-page control bar (state, percent, Pause/Resume/Abort as hints, never gates),
+  one shared confirmation with non-defaulted yes/no decisions and a single confirmed-send path, the
+  `tool_paused` prompt (reason, plain-language detail, start time; never touches the queue's modal
+  plumbing), Stop/Clear All/delete-run routed through a no-timer abort-first dialog, fast
+  abort/resume removed from the step editor, and a tool-page Run Recovery card backed by
+  `tool.recoveryControl` — Phase 2 (UAT 9/9 against the redeployed galago-tools, 2026-10-15)
 
 ### Active
 
-See `.planning/REQUIREMENTS.md` (QUE-*, UI-*).
+None — all v1 milestone requirements (QUE-*, UI-*) are validated. Open follow-ups: review WR-05
+(whether "The instrument head will move." should show for a soft Pause), the WR-07 follow-up toast
+wording, and the `toolKey.ts` header overclaim (see Phase 2 `02-REVIEW-DISPOSITION.md`).
 
 ### Out of Scope
 
@@ -74,9 +82,16 @@ See `.planning/REQUIREMENTS.md` (QUE-*, UI-*).
 - **Build:** `.dockerignore` keeps host `controller/node_modules` out of the image (host-built
   native modules broke `better-sqlite3`).
 - **Gate:** `tsc --noEmit` in `controller/` (0 errors) plus the Vitest unit suite
-  (`npm run test:unit`, 92 tests as of Phase 1); `bin/make test` runs both, with `prettier --check`.
+  (`npm run test:unit`, 211 tests as of Phase 2); `bin/make test` runs both, with `prettier --check`.
+  `test/staticScan.test.ts` pins the UI-08 invariants (single send path, no timers, no state checks).
 - **Live control (Phase 1):** `CommandQueue.runningStep` (in-memory, set only around a tool step),
   `toolControl`, `runState`/`RunStateMonitor` (`server/runState.ts`), and `Tool.controlCommand`.
+- **Run-page control (Phase 2):** `hooks/useRunControl.ts` (the only `runState` reader and control
+  mutation user), `components/runs/controlDecision.ts` (pure decision/send gate), `ControlBar`,
+  `RunControlConfirmModal`, `ToolPausedModal`, `InstrumentStopModal`, `stopInterception.ts`,
+  `server/recoveryControl.ts` + `tool.recoveryControl`, `components/tools/RunRecoverySection.tsx`.
+- **Live-test caveat:** a simulated F.A.S.T. accepts every control command and ignores Abort, so
+  abort-ends-the-step and real refusals only show against a real instrument.
 - **Research:** `.planning/research/` (copied from the fast-mcp planning, 2026-10-12; cross-repo).
 
 ## Constraints
@@ -92,11 +107,13 @@ See `.planning/REQUIREMENTS.md` (QUE-*, UI-*).
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
 | Plan the Galago side per repo (galago-core: queue + UI; galago-tools: adapter + rollout) | Clearer separation; each repo plans the code it changes | — Pending |
-| D2 2 s run-state polling; D3 abort/resume out of the step editor; D4 Stop asks abort or cancel; D6 generic `runControl` | Settled 2026-10-12 | ✓ D2 and D6 shipped in Phase 1; D3 and D4 are Phase 2 |
-| `tool_paused` reads its own `runState` query, not the queue's modal state | The queue's modals block the busy loop; a pause happens inside an in-flight step | ✓ `runState` shipped independent of `modalState` (Phase 1); the prompt itself is Phase 2 |
+| D2 2 s run-state polling; D3 abort/resume out of the step editor; D4 Stop asks abort or cancel; D6 generic `runControl` | Settled 2026-10-12 | ✓ D2 and D6 shipped in Phase 1; D3 and D4 shipped in Phase 2 |
+| `tool_paused` reads its own `runState` query, not the queue's modal state | The queue's modals block the busy loop; a pause happens inside an in-flight step | ✓ `runState` shipped independent of `modalState` (Phase 1); the prompt shipped in Phase 2 |
 | Running step tracked in memory, not read back from SQLite `STARTED` rows | After a restart no step is running, so no control bar appears (design §8) | ✓ Phase 1 |
 | Vitest 2.1.9 for server unit tests (human-approved package set A) | It supports the Docker builder's node 22.11; `tsc` stays the type gate | ✓ Phase 1 |
 | Accept the residual control race (step ends during the gRPC round trip) | galago-core may not check instrument state (D-04); the F.A.S.T. core's state gates refuse invalid actions | ✓ Accepted in Phase 1 UAT, 2026-10-13 |
+| Prove UI-08 with pure-logic tests plus static source scans, no jsdom/RTL | No new UI test dependencies (D-24); rendered behaviour went to UAT | ✓ Phase 2 (13 scan tests; UAT 9/9) |
+| Stop, Clear All and deleting the running run abort first, then act on the queue only after the abort is accepted | Stop must never leave an instrument run untracked; research showed clearing dropped a running step | ✓ Phase 2 |
 
 ## Evolution
 
@@ -116,4 +133,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-10-13 after Phase 1*
+*Last updated: 2026-10-15 after Phase 2*

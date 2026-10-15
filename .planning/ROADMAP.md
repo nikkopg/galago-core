@@ -16,7 +16,7 @@ leaves an instrument run untracked. Governing design: galago-tools
 
 - [x] **Phase 1: Queue Control Path & Run State** - tRPC control path to the running step's tool, a (completed 2026-10-13)
   generic `runControl` capability, a `runState` query and a heartbeat that retries.
-- [ ] **Phase 2: Run Page Live Controls** - Control bar, `tool_paused` prompt, Stop confirmation and
+- [x] **Phase 2: Run Page Live Controls** - Control bar, `tool_paused` prompt, Stop confirmation and (completed 2026-10-15)
   step-editor cleanup, with every decision explicit and confirmed.
 
 ## Phase Details
@@ -62,7 +62,7 @@ confirmed decisions, and is prompted when the instrument pauses itself.
      Resume/Abort.
   5. Tests show no code path sends a control action without an operator's confirmed choice, and
      galago-core holds no instrument-state check.
-**Plans**: 6/6 plans executed
+**Plans**: 6/6 plans complete
 **Wave 1**
 - [x] 02-01-PLAN.md — Control bar and the shared confirmed-send path (tracer: confirmed Pause end to end)
 - [x] 02-04-PLAN.md — tool.recoveryControl mutation and fast abort/resume removed from the step editor
