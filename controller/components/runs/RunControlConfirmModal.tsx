@@ -47,8 +47,8 @@ function followUpFailureToast(message: string | undefined): void {
   persistentErrorToast(
     "Instrument aborted, but the queue did not update",
     `The instrument accepted the abort, but recording it in the queue failed${
-      message ? `: ${message}` : "."
-    } This step may still show as running here even though the instrument has stopped — verify the instrument directly and do not rely on this page's status for it until resolved. This was not retried automatically.`,
+      message ? ` (${message})` : ""
+    }. This step may still show as running here even though the instrument has stopped — verify the instrument directly and do not rely on this page's status for it until resolved. This was not retried automatically.`,
   );
 }
 
