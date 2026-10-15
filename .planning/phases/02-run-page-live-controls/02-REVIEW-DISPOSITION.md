@@ -3,10 +3,26 @@ phase: 02
 review: 02-REVIEW.md
 titles: json
 findings:
+  - id: WR-01
+    severity: warning
+    disposition: open
+    title: "`goto` targetIndex validation still accepts `null`/`\"\"` as index 0"
+  - id: WR-02
+    severity: warning
+    disposition: open
+    title: "An abort accepted mid-step that then actually succeeds leaves the rest of the run queued, untouched and untested"
+  - id: WR-03
+    severity: warning
+    disposition: open
+    title: "`RunStateMonitor.snapshot()`'s new `structuredClone` can throw where the old shallow copy never could"
+  - id: WR-04
+    severity: warning
+    disposition: open
+    title: "\"Step Removed While Running\" conflates a successful completion with a generic DB not-found error"
   - id: IN-01
     severity: info
-    disposition: fixed
-    title: "Dead state and legacy debug artifact in `RunsComponent.tsx` (carried forward, unresolved, pre-existing, out of this round's file scope)"
+    disposition: open
+    title: "F.A.S.T. `tip_reuse` select field has no default value"
   - id: IN-02
     severity: info
     disposition: fixed
@@ -15,22 +31,6 @@ findings:
     severity: warning
     disposition: fixed
     title: "`HEAD_MOVES_NOTE` is shown unconditionally, including for Pause"
-  - id: WR-01
-    severity: warning
-    disposition: fixed
-    title: "Unsound type assertion can build a stop request with `toolType: undefined`"
-  - id: WR-02
-    severity: warning
-    disposition: fixed
-    title: "Two independent confirm modals can be open at once with no mutual exclusion"
-  - id: WR-03
-    severity: warning
-    disposition: fixed
-    title: "Confirm-modal remount key doesn't disambiguate by request identity"
-  - id: WR-04
-    severity: warning
-    disposition: fixed
-    title: "`stopModalBody` hardcodes the `return_liquid` decision key"
   - id: WR-06
     severity: warning
     disposition: fixed
@@ -39,22 +39,22 @@ findings:
     severity: warning
     disposition: fixed
     title: "A failed Stop/Clear-All/Delete-Run follow-up after an accepted abort leaves queue state desynced from instrument state"
-open: 0
+open: 5
 total: 9
-recorded: 2026-10-15T04:53:59.028Z
+recorded: 2026-10-15T22:39:53.598Z
 ---
 
 # Phase 02: Code Review Disposition
 
 | Finding | Severity | Disposition | Source |
 |---------|----------|-------------|--------|
-| IN-01 | info | fixed | 02-REVIEW-FIX.md |
-| IN-02 | info | fixed | 02-REVIEW-FIX.md |
-| WR-05 | warning | fixed | 02-REVIEW-FIX.md |
-| WR-01 | warning | fixed | 02-REVIEW-FIX.md (not in the current review) |
-| WR-02 | warning | fixed | 02-REVIEW-FIX.md (not in the current review) |
-| WR-03 | warning | fixed | 02-REVIEW-FIX.md (not in the current review) |
-| WR-04 | warning | fixed | 02-REVIEW-FIX.md (not in the current review) |
+| WR-01 | warning | open | - |
+| WR-02 | warning | open | - |
+| WR-03 | warning | open | - |
+| WR-04 | warning | open | - |
+| IN-01 | info | open | - |
+| IN-02 | info | fixed | 02-REVIEW-FIX.md (not in the current review) |
+| WR-05 | warning | fixed | 02-REVIEW-FIX.md (not in the current review) |
 | WR-06 | warning | fixed | 02-REVIEW-FIX.md (not in the current review) |
 | WR-07 | warning | fixed | 02-REVIEW-FIX.md (not in the current review) |
 
