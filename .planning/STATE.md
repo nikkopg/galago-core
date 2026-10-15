@@ -2,19 +2,19 @@
 gsd_state_version: "1.0"
 milestone: v1
 milestone_name: Live Run Control (queue & run page)
-current_phase: 01
+current_phase: 02
 status: completed
-stopped_at: Phase 01 complete — all phases complete
-last_updated: "2026-10-15T14:34:37.145Z"
-last_activity: 2026-10-15
-last_activity_desc: Phase 01 complete
-state_head: 5839b406dedcae8338b1155f4aa0e7537d5ffa87
+stopped_at: Phase 02 complete — all phases complete
+last_updated: "2026-10-15T22:48:56.293Z"
+last_activity: 2026-10-16
+last_activity_desc: Phase 02 complete
+state_head: 716ef68c6cb4916ba992a6d13b09b7f6fe7f59ea
 progress:
   total_phases: 2
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 11
   completed_plans: 11
-  percent: 50
+  percent: 100
 ---
 
 # Project State
@@ -29,12 +29,12 @@ decides every recovery action; the web app never acts on its own or pre-selects 
 
 ## Current Position
 
-Phase: 01
+Phase: 02
 Plan: Not started
 Status: All phases complete
-Last activity: 2026-10-15 - Completed quick task 261015-t9e: busy-loop tolerates a step row removed by Clear All/delete-run (closes audit INT-01)
+Last activity: 2026-10-16 — Phase 02 re-verified after quick tasks h0q/o44/t9e (UAT 9/9, verification passed, 244 tests) and marked complete
 
-Progress: [█████░░░░░] 50%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -48,7 +48,7 @@ Progress: [█████░░░░░] 50%
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01 | 5 | - | - |
-| 2 | 6 | - | - |
+| 02 | 6 | - | - |
 
 **Recent Trend:**
 - Last 5 plans: none yet
@@ -105,11 +105,14 @@ Recent decisions affecting current work:
 
 ### Blockers/Concerns
 
-- [Phase 1]: IN-01 still open (info): `RunStateMonitor.snapshot()` returns a shallow copy; consumers
-  must not mutate the nested `runState`/`pause` objects (Phase 2 consumers comply).
-- [Phase 2]: All code review findings closed (WR-01..WR-07, IN-01, IN-02). WR-05 (`d400c42`)
-  supersedes D-08: the "head will move" note is now per-action (`runControlMovesHead`), hidden for
-  the F.A.S.T. soft Pause.
+- [Phase 2]: Re-review on 2026-10-16 (`02-REVIEW.md`, diff since 3cfb240) left 4 warnings and 1 info
+  open in `02-REVIEW-DISPOSITION.md`: WR-01 `goto` accepts null/"" targetIndex as 0; WR-02 an
+  accepted abort whose step then resolves does not dequeue the rest of the run; WR-03
+  `RunStateMonitor.snapshot()` `structuredClone` can throw on a non-cloneable `pause.detail`;
+  WR-04 `complete()` has no `_hasItem` guard, so the Clear All race logs "Item N not found";
+  IN-01 `tip_reuse` select has no default value. Advisory; none violates a Phase 2 must-have.
+- [Phase 2]: WR-05 (`d400c42`) supersedes D-08: the "head will move" note is now per-action
+  (`runControlMovesHead`), hidden for the F.A.S.T. soft Pause.
 - [Phase 2]: The real F.A.S.T. may still hold a paused run from the 2026-10-14 09:33 WrongPlateType
   test; clear it (Run Recovery → Abort, or on the instrument) before the next real run.
 
@@ -132,6 +135,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-15T03:15:11.000Z
-Stopped at: Phase 01 complete — all phases complete
+Last session: 2026-10-16
+Stopped at: Phase 02 complete — all phases complete, ready to complete milestone v1
 Resume file: None

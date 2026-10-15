@@ -82,7 +82,7 @@ wording, and the `toolKey.ts` header overclaim (see Phase 2 `02-REVIEW-DISPOSITI
 - **Build:** `.dockerignore` keeps host `controller/node_modules` out of the image (host-built
   native modules broke `better-sqlite3`).
 - **Gate:** `tsc --noEmit` in `controller/` (0 errors) plus the Vitest unit suite
-  (`npm run test:unit`, 211 tests as of Phase 2); `bin/make test` runs both, with `prettier --check`.
+  (`npm run test:unit`, 244 tests as of the Phase 2 re-verification); `bin/make test` runs both, with `prettier --check`.
   `test/staticScan.test.ts` pins the UI-08 invariants (single send path, no timers, no state checks).
 - **Live control (Phase 1):** `CommandQueue.runningStep` (in-memory, set only around a tool step),
   `toolControl`, `runState`/`RunStateMonitor` (`server/runState.ts`), and `Tool.controlCommand`.
@@ -133,4 +133,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-10-15 after Phase 2*
+*Last updated: 2026-10-16 after Phase 2 re-verification*
