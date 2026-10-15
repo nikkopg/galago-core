@@ -1,119 +1,178 @@
 ---
 phase: 01-queue-control-path-run-state
-reviewed: 2026-10-13T14:50:00Z
+reviewed: 2026-10-15T11:18:04Z
 depth: standard
-files_reviewed: 6
+files_reviewed: 10
 files_reviewed_list:
-  - bin/make
   - controller/server/command_queue.ts
+  - controller/server/utils/SqliteQueue.ts
+  - controller/server/runControl.ts
   - controller/server/runState.ts
   - controller/server/tools.ts
-  - controller/test/runState.test.ts
+  - controller/test/queueRestart.test.ts
+  - controller/test/sqliteQueue.test.ts
   - controller/test/toolControl.test.ts
+  - controller/test/runControl.test.ts
+  - controller/test/runState.test.ts
 findings:
   critical: 0
-  warning: 0
-  info: 1
-  total: 1
+  warning: 1
+  info: 2
+  total: 3
 status: issues_found
 ---
 
-# Phase 01: Code Review Report (incremental re-review)
+# Phase 01: Code Review Report
 
-**Reviewed:** 2026-10-13T14:50:00Z
+**Reviewed:** 2026-10-15T11:18:04Z
 **Depth:** standard
-**Files Reviewed:** 6
-**Status:** issues_found (1 carried-forward Info item; all prior Warnings fixed and verified)
+**Files Reviewed:** 10
+**Status:** issues_found
 
 ## Summary
 
-This is a follow-up review of the fixes applied in `01-REVIEW-FIX.md` (commits `62e505c`,
-`42fd1af`, `003e500`) against the original `01-REVIEW.md` findings (WR-01, WR-02, WR-03). Scope was
-`git diff 46052e0` for the six listed files.
+This review replaces the 2026-10-13 `01-REVIEW.md` (whose WR-01/WR-02/WR-03 findings were
+fixed and verified, and are not re-raised here) and targets everything that landed since
+`25c75ab`, i.e. quick tasks `261015-h0q` (4b575ed, 5598347, e18a177) and `261015-o44` (662bb12,
+7627bf6, 38b5d17): the accepted-abort run-wide dequeue, the T-01-08 three-layer late-abort-reply
+gate (`_runningStep` identity → `_failedAttempt` token → `SqliteQueue.dequeueFailedRun`), and
+restart-orphan recovery (`recoverInterruptedSteps`).
 
-All three fixes were independently verified by reading the actual diff hunks (not just trusting the
-fix report) and by running the real test suite:
+I traced the full state machine by hand against every test in `toolControl.test.ts`,
+`sqliteQueue.test.ts`, `queueRestart.test.ts` and `runState.test.ts`, specifically hunting for:
+(a) a window where a stale abort reply, a restart, or a re-queue could act on the wrong attempt;
+(b) a non-atomic read/mutate pair inside `SqliteQueue`'s transactions; (c) an error path that
+could leave the queue stuck rather than failing closed; (d) a test that would still pass if the
+gate it names were removed.
 
-- **WR-01 (`command_queue.ts:467-475`)** — The identity re-check `if (this._runningStep !== step)`
-  is inserted exactly where it needs to be: after the tool-lookup/"not connected" check and before
-  the `await tool.controlCommand(...)` network call. It compares only the frozen `RunningStep`
-  object's identity — no instrument/run-state read is involved, preserving D-04. This narrows the
-  race window (it still can't fully close it, since there's no gRPC cancellation — the remaining
-  window is the actual network round trip of `controlCommand`, which was already true of the
-  original fix recommendation and is not a new gap introduced here) but correctly converts "silently
-  send to the wrong step" into a logged, fail-closed `PRECONDITION_FAILED` refusal for the
-  synchronous portion of the race.
-  The companion test (`toolControl.test.ts`, "refuses when the running step moves on before
-  dispatch") exercises the fix for real: it mocks `Tool.lookup` — the last synchronous call made
-  before the new check — to mutate the queue's private `_runningStep` to a *new, frozen* object with
-  different identity (but the same `toolId`) as its side effect, then lets the real lookup proceed.
-  This reproduces "the busy loop moved on to a new step on the same tool" without relying on real
-  timing, and correctly asserts `PRECONDITION_FAILED` plus `grpc.executeCommand` never being called.
-  Traced through the surrounding code to confirm `_runningStep` is reassigned to a brand-new
-  `Object.freeze({...})` on every step (`command_queue.ts` busy loop), so the identity check is
-  meaningful rather than vacuously true.
+I could not find a defect in any of those four areas for the reviewed diff. The three-layer gate
+is closed correctly by **object-identity** comparisons (`_runningStep === step`,
+`_failedAttempt === step`) rather than by `queueId` alone, which is what actually prevents a
+re-queued/re-run attempt of the *same row* from being confused with the attempt a stale reply
+targets — I specifically tried to construct a counter-example around attempt reuse on the same
+`queue_id` (restart retry, `gotoCommand`, `gotoCommandByRunIndex`) and in every case the identity
+check (not the numeric `queueId`) is what correctly closes the window; `_abortAcceptedQueueId`
+(the one field that *is* a bare number, not an object) is provably safe because it is only ever
+set from inside the same busy-loop iteration whose catch reads it, and is reset at the top of
+every iteration before dispatch. `SqliteQueue`'s new methods (`failAndDequeueRun`,
+`dequeueFailedRun`, `recoverInterruptedSteps`, `_dequeueRunRemainder`) each execute entirely
+inside one `db.transaction()` call with no `await` in between the gate check and the mutation,
+and `_dequeueRunRemainder` is only ever invoked after the caller has already removed the row's own
+`queue` entry, so there is no double-counting. The known, out-of-scope "Item N not found" gap
+(Clear All racing an in-flight abort) was not re-verified and is not re-reported here per the
+task's instruction.
 
-- **WR-02 (`runState.ts:191-200`)** — `_poll`'s `finally` block now only clears `this.inFlight` when
-  `generation === this.generation`, matching the suggested fix verbatim. Manually traced the new
-  regression test ("a stale poll from a superseded generation does not clear inFlight...")
-  instruction-by-instruction against `start()`/`stop()`/`_poll()`: poll A is left outstanding at
-  generation 2, `start(stepB)` bumps to generation 4 (via `stop()`'s internal `+1` then `start()`'s
-  own `+1`) and issues poll B's own outstanding call; when poll A's stale response resolves first,
-  its `finally` now correctly leaves `inFlight` untouched because `2 !== 4`, so the next interval
-  tick for the live generation does *not* fire a second concurrent `getStatus` call — which is
-  exactly the invariant D-11 requires and exactly what would fail under the old unconditional
-  `finally { this.inFlight = false }`. This is a read-only polling path; the fix does not add or
-  change any command-sending behavior, preserving D-14.
+While reading the full files (not just the diff hunks), I found one pre-existing, unrelated
+correctness bug in `command_queue.ts`'s "goto" Tool Box command handling (not part of this phase's
+diff — present since the initial commit) that is worth flagging given the file was in scope, and
+confirmed that the prior review's carried-forward Info item (`RunStateMonitor.snapshot()`'s
+shallow copy) is still present, unchanged.
 
-- **WR-03 (`bin/make:36-40`)** — `test_ts()` now runs `npm run test:unit` (vitest) after `npm run
-  test` (tsc) and before `build_prod`, in the same `&&` chain so a vitest failure now fails the
-  build. Confirmed `controller/package.json`'s `test:unit` script is `vitest run`, matching the
-  invocation used by CI once `./bin/make test` runs. No changes were needed to
-  `.github/workflows/main.yml` since it already calls `./bin/make test` unconditionally.
+## Warnings
 
-- **Prettier-only commit (`55422e2`)** — Confirmed via `git diff` that the only non-test-file hunk
-  outside `command_queue.ts`/`runState.ts`/`bin/make` touches `tools.ts`, and it is purely
-  whitespace: `controlCommand`'s signature is reformatted from multi-line to single-line with no
-  change to parameter names, types, or body. No logic changes anywhere in `tools.ts`.
+### WR-01: A "goto" step with a missing `targetIndex` silently re-queues the *entire* run instead of throwing
 
-Ran the full affected suite directly (`npm run test:unit -- toolControl runState` under Node
-v24.14.1): **47/47 tests pass** (12 in `toolControl.test.ts`, 35 in `runState.test.ts`), including
-both new regression tests, confirming the fixes are live in the working tree and not just described
-in the fix report.
+**File:** `controller/server/command_queue.ts:1218-1222`, `controller/server/utils/SqliteQueue.ts:176-183`
 
-None of the four safety invariants called out for this re-review were weakened by these changes:
-operator-only control sends still route exclusively through `CommandQueue.toolControl` →
-`Tool.controlCommand`; `validateControlRequest`'s exact `"yes"`/`"no"` decision matching is untouched
-(not part of this diff); `RunStateMonitor` still only ever calls `tool.grpc.getStatus(...)` (no
-instrument-state check or command was added for either fix); and the busy loop / modal
-(`_isWaitingForInput`, `_currentMessage`, `_messageResolve`) code is completely untouched by this
-diff.
+**Issue:** The built-in "goto" Tool Box command does:
 
-The three Warnings from the original review (WR-01, WR-02, WR-03) are **fixed and verified** — they
-are not re-reported below. One previously-logged Info item remains unaddressed by design (excluded
-from the prior fix pass's scope) and is carried forward here unchanged.
+```ts
+const targetIndex = Number(nextCommand.commandInfo.params?.targetIndex);
+const runId = nextCommand.commandInfo.params?.runId || nextCommand.runId;
+
+await this.commands.complete(nextCommand.queueId);
+if (targetIndex !== undefined && runId) {
+  await this.gotoCommandByRunIndex(runId, targetIndex);
+} else {
+  throw new Error("Goto command requires either targetId or both targetIndex and runId");
+}
+```
+
+`Number(undefined)` is `NaN`, and `NaN !== undefined` is `true` — so a goto step whose
+`params.targetIndex` key is absent (not merely empty-string; `Number("")` is `0`, which is fine)
+never reaches the `else` branch, even though the comment/error message implies it should. It
+proceeds to `gotoCommandByRunIndex(runId, NaN)`, which calls
+`SqliteQueue.gotoCommandByIndex(runId, NaN)`. That method's own bounds check,
+`if (targetIndex < 0 || targetIndex >= commands.length)`, is also bypassed: every numeric
+comparison against `NaN` is `false`, so neither branch of the `||` trips. Execution falls through
+to `commands.slice(targetIndex)`, and `Array.prototype.slice(NaN)` is specified to treat `NaN` as
+`0` — i.e. the *entire* run's command list is requeued from the front, silently, instead of the
+intended "Invalid index" error (or the top-level "Goto command requires..." error).
+
+Verified in Node:
+```
+Number(undefined)              // NaN
+Number(undefined) !== undefined // true  (the guard never trips)
+NaN < 0, NaN >= 5               // false, false (bounds check bypassed)
+[1,2,3,4,5].slice(NaN)          // [1,2,3,4,5]  (same as slice(0))
+```
+
+This is not part of the reviewed diff (confirmed via `git log -S"targetIndex"`, present since the
+initial commit) and the UI form for a "goto" step (`controller/components/tools/constants.ts:99-102`)
+sets `defaultValue: 0`, so it is unlikely to be hit through the normal step-builder UI today.
+However, galago-core drives a physical lab-automation robot, and anything other than the UI
+builder that can produce a "goto" command without an explicit `targetIndex` (an imported/
+hand-authored protocol, a future API, a bug in a different call site) would cause an entire
+already-executed run to silently restart from its first step instead of failing loudly — a
+real-world re-execution of physical actions, not just a logic error.
+
+**Fix:**
+```ts
+const rawTargetIndex = nextCommand.commandInfo.params?.targetIndex;
+const targetIndex = Number(rawTargetIndex);
+const runId = nextCommand.commandInfo.params?.runId || nextCommand.runId;
+
+await this.commands.complete(nextCommand.queueId);
+if (rawTargetIndex !== undefined && Number.isInteger(targetIndex) && runId) {
+  await this.gotoCommandByRunIndex(runId, targetIndex);
+} else {
+  throw new Error("Goto command requires either targetId or both targetIndex and runId");
+}
+```
+and, defensively, in `SqliteQueue.gotoCommandByIndex`:
+```ts
+if (!Number.isInteger(targetIndex) || targetIndex < 0 || targetIndex >= commands.length) {
+  throw new Error(`Invalid index ${targetIndex} for run ${runId}. Run has ${commands.length} commands.`);
+}
+```
 
 ## Info
 
 ### IN-01 (carried forward, still unfixed): `RunStateMonitor.snapshot()` returns a shallow copy
 
-**File:** `controller/server/runState.ts:166-168`
+**File:** `controller/server/runState.ts:168-170`
 
-**Issue:** `snapshot()` still does `return { ...this.envelope };` — only the top-level envelope
-object is copied; `runState`, `runState.pause`, and `runState.pause.detail` remain shared references
-with the monitor's internal state. A caller that mutates `commandQueue.runState.runState.pause` (or
-deep-mutates it while serializing elsewhere) would corrupt the monitor's cached value for all other
-readers, defeating the "N readers, one poll" cache design. No current caller does this (the tRPC
-`runState` query only reads), so this remains latent rather than currently triggered. Verified
-unchanged by diffing current `runState.ts` against the version reviewed in the prior pass — no edits
-were made to `snapshot()` by this round's fixes.
+**Issue:** Unchanged since the last review. `snapshot()` still does `return { ...this.envelope };`
+— only the top-level envelope is copied; `runState`, `runState.pause`, and `runState.pause.detail`
+remain shared references with the monitor's internal state. No current caller mutates these (the
+tRPC `runState` query only reads), so this remains latent. Re-verified by reading the current file:
+the method body is byte-for-byte the same as when this was first logged.
 
-**Fix:** Either document that the returned envelope (and its nested fields) must be treated as
-immutable by all consumers, or deep-clone (`structuredClone(this.envelope)`) if a stronger guarantee
-is wanted before this is consumed by more call sites in a later phase.
+**Fix:** Document the returned envelope (and nested fields) as caller-immutable, or
+`structuredClone(this.envelope)` if a stronger guarantee is wanted before more call sites consume it.
+
+### IN-02: `recoverInterruptedSteps` can double-process a run if more than one of its rows is left `STARTED`
+
+**File:** `controller/server/utils/SqliteQueue.ts:564-605`
+
+**Issue:** `recoverInterruptedSteps` snapshots every `STARTED` row up front (`rows`), then iterates
+it, calling `_dequeueRunRemainder(updated.runId)` per row. `_dequeueRunRemainder` dequeues *every*
+currently-queued row of that `run_id`, not just rows positioned after the one being processed, and
+leaves a non-`CREATED` row's status alone while still removing it from `<q>_queue`. If two orphaned
+`STARTED` rows ever belonged to the same run (not possible under normal single-busy-loop operation,
+where only one step is ever `STARTED` at a time, but not defended against here), processing the
+first row's remainder would dequeue the second row too — then the loop's next iteration (over the
+original, pre-fetched `rows` snapshot) still visits that second row, marks it `FAILED` anyway (which
+is the correct end state), but emits a second, materially-empty `remainder: []` result/log entry for
+what is really one incident. Final DB state converges correctly either way; this is a diagnostic/
+log-noise gap, not a correctness bug, and requires a data anomaly that shouldn't occur today.
+
+**Fix:** Either skip rows in the snapshot whose `queue_id` no longer exists in `<q>_queue` by the
+time they're reached in the loop (re-check before processing), or de-duplicate by `run_id` before
+iterating so each run's orphan(s) are reported once.
 
 ---
 
-_Reviewed: 2026-10-13T14:50:00Z_
+_Reviewed: 2026-10-15T11:18:04Z_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
