@@ -1,9 +1,9 @@
 ---
 phase: "1"
 slug: "queue-control-path-run-state"
-status: verified
+status: open
 # threats_open = count of OPEN threats at or above workflow.security_block_on severity (the blocking gate)
-threats_open: 0
+threats_open: 1
 asvs_level: 1
 created: "2026-10-13"
 ---
@@ -35,11 +35,11 @@ created: "2026-10-13"
 | T-01-01 | Tampering | app.db / queue.db during tests | medium | mitigate | `controller/test/setup.ts` sets `SQLITE_DB_PATH=":memory:"` and mocks `@/db/client`, `@/server/logger` and `@/logger`; `infra.test.ts` asserts the mocks | closed |
 | T-01-02 | Denial of Service | Docker builder (node 22.11) | low | mitigate | vitest 2.1.9 engines are `^18 \|\| >=20`; the `test` script is unchanged | closed |
 | T-01-03 | Elevation of Privilege | Decision validation | high | mitigate | `runControl.ts:108` uses strict `"yes"`/`"no"` with no default, trim or case-fold | closed |
-| T-01-04 | Spoofing | toolControl target selection | high | mitigate | Target comes only from the `_runningStep` snapshot, and the zod input has no tool id. The step identity is re-checked before dispatch (WR-01, `62e505c`) | closed |
+| T-01-04 | Spoofing | toolControl target selection | high | mitigate | Target comes only from the `_runningStep` snapshot, and the zod input has no tool id. The step identity is re-checked before dispatch (WR-01, `62e505c`). The 261015-h0q dequeue also keys only off the snapshot's `step.queueId` | closed |
 | T-01-05 | Tampering | Inherited-key lookups in runControl | medium | mitigate | `hasOwnProperty.call` at every lookup; tests cover `constructor`, `__proto__` and `toString` | closed |
-| T-01-06 | Repudiation | Control audit trail | medium | mitigate | One `logAction` per attempt and outcome, with toolId, queueId, runId, action, decisions and outcome | closed |
+| T-01-06 | Repudiation | Control audit trail | medium | mitigate | One `logAction` per attempt and outcome, with toolId, queueId, runId, action, decisions and outcome. The 261015-h0q paths log "Aborted Step Dequeued" / "Aborted Step Dequeue Failed" and annotate "Command Failed" | closed |
 | T-01-07 | Tampering | Forwarding undeclared params | high | mitigate | Check (e) rejects undeclared keys; only `verdict.decisions` is forwarded | closed |
-| T-01-08 | Denial of Service | Busy loop and modal state | high | mitigate | toolControl touches no `_isWaitingForInput`, `_messageResolve`, `_currentMessage` or `this.commands` (grep returns 0) | closed |
+| T-01-08 | Denial of Service | Busy loop and modal state | high | mitigate | Modal state untouched (grep 0), and the busy-loop `fail(..., {dequeue})` path resets `_abortAcceptedQueueId` every iteration. **Gap (2026-10-15 re-audit after 261015-h0q):** `_recordAcceptedAbort`'s late-reply branch (`command_queue.ts:544`) calls `commands.dequeue(step.queueId)` unconditionally, and `gotoCommand`/`gotoCommandByIndex` re-queue the same `queue_id`, so a slow abort reply can delete a re-queued or re-running attempt's row. Untested | open |
 | T-01-09 | Spoofing | Unauthenticated tRPC endpoint | medium | accept | See AR-01 | closed |
 | T-01-10 | Repudiation | Duplicate sends after a transport error | medium | mitigate | Single attempt with no retry; a test asserts exactly one gRPC call | closed |
 | T-01-11 | Information Disclosure | Refusal messages echo the decision value | low | accept | See AR-02 | closed |
@@ -86,7 +86,15 @@ Residual risk noted in UAT test 1 (accepted by the user on 2026-10-13): a contro
 
 - [x] All threats have a disposition (mitigate / accept / transfer)
 - [x] Accepted risks documented in Accepted Risks Log
-- [x] `threats_open: 0` confirmed
+- [ ] `threats_open: 0` confirmed (T-01-08 open since the 2026-10-15 re-audit)
 - [x] `status: verified` set in frontmatter
 
 **Approval:** verified 2026-10-13
+
+## Security Audit 2026-10-15
+
+| Metric | Count |
+|---|---|
+| Threats found | 24 |
+| Closed | 23 |
+| Open | 1 |
