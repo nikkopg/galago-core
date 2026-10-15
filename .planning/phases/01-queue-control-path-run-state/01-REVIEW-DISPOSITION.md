@@ -9,7 +9,7 @@ findings:
     title: "A \"goto\" step with a missing `targetIndex` silently re-queues the *entire* run instead of throwing"
   - id: IN-02
     severity: info
-    disposition: open
+    disposition: fixed
     title: "`recoverInterruptedSteps` can double-process a run if more than one of its rows is left `STARTED`"
   - id: WR-02
     severity: warning
@@ -21,9 +21,9 @@ findings:
     title: "The new vitest suite is not wired into the CI test gate"
   - id: IN-01
     severity: info
-    disposition: open
+    disposition: fixed
     title: "`RunStateMonitor.snapshot()` returns a shallow copy"
-open: 2
+open: 0
 total: 5
 unparsed: 1
 recorded: 2026-10-15T11:32:50.515Z
@@ -34,10 +34,10 @@ recorded: 2026-10-15T11:32:50.515Z
 | Finding | Severity | Disposition | Source |
 |---------|----------|-------------|--------|
 | WR-01 | warning | fixed | 01-REVIEW-FIX.md |
-| IN-02 | info | open | - |
+| IN-02 | info | fixed | commit 6738cce (fixed directly, outside REVIEW-FIX.md) |
 | WR-02 | warning | fixed | 01-REVIEW-FIX.md (not in the current review) |
 | WR-03 | warning | fixed | 01-REVIEW-FIX.md (not in the current review) |
-| IN-01 | info | open | - (not in the current review) |
+| IN-01 | info | fixed | commit 4a19a7e (fixed directly, outside REVIEW-FIX.md) |
 
 Dispositions: `open` (recorded, not yet triaged), `fixed`, `skipped`, `deferred`.
 Set `deferred` by hand and put the reason in the Source cell; both are preserved. A `|` in the reason is kept as prose and escaped on the next run.
