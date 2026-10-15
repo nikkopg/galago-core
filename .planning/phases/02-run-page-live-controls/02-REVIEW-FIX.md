@@ -1,133 +1,86 @@
 ---
 phase: 02-run-page-live-controls
-fixed_at: 2026-10-15T04:22:00Z
+fixed_at: 2026-10-15T05:00:00Z
 review_path: .planning/phases/02-run-page-live-controls/02-REVIEW.md
-iteration: 1
-findings_in_scope: 2
-fixed: 1
-skipped: 1
-status: partial
+iteration: 2
+findings_in_scope: 3
+fixed: 3
+skipped: 0
+status: all_fixed
 ---
 
 # Phase 2: Code Review Fix Report
 
-**Fixed at:** 2026-10-15T04:22:00Z
+**Fixed at:** 2026-10-15T05:00:00Z
 **Source review:** .planning/phases/02-run-page-live-controls/02-REVIEW.md
-**Iteration:** 1
+**Iteration:** 2
 
 **Summary:**
-- Findings in scope (`fix_scope: all`): 2 — `IN-01` and `IN-02`, both carried forward from the prior
-  review round and not re-verified in the 2026-10-15 incremental re-review (that round's file scope
-  was limited to `git diff bc817674 HEAD -- controller`, which did not touch either file). Both were
-  re-verified against current source as the first step of this pass, per the orchestrator's
-  instruction, rather than being patched blind.
-- Fixed: 1 (`IN-01`)
-- Skipped: 1 (`IN-02` — genuinely out of scope for a review-fix pass, not a failed fix attempt)
-- Also carried forward and re-documented for continuity (not counted in `findings_in_scope`,
-  matching the prior `02-REVIEW-FIX.md`'s precedent): `WR-05`, which the orchestrator explicitly
-  instructed to leave untouched pending a product/instrument-behavior decision.
-
-**Isolation:** All edits and commits were made in an isolated git worktree
-(`.claude/worktrees/rf-02-807178-1792037882`, branch `gsd-reviewfix/02-807178`) created from
-`feat/fast-tool`, per `workflow.use_worktrees` (default `true`, no override present in
-`.planning/config.json`). The worktree was fast-forward-merged into `feat/fast-tool`
-(`3cfb240..16318a8`, clean fast-forward) and cleanly torn down (temp branch deleted, recovery
-sentinel removed) after the fix was committed. For `tsc`/prettier verification inside the worktree
-(which has no `node_modules` by design), a plain symlink `controller/node_modules ->
-<main-repo>/controller/node_modules` was created for the duration of verification and removed
-before teardown — on Linux this is a true symlink (not a Windows junction/reparse point), so
-removing it only unlinks the pointer and never touches the real `node_modules` contents (confirmed:
-462 entries before and after). The unrelated pre-existing uncommitted changes in the main checkout
-(`.gitignore`, `.planning/config.json`, `.dockerignore`, `.graphifyignore`, `.planning/graphs/`,
-`.planning/state.json`) were never staged or touched.
+- Findings in scope: 3 — `IN-01`, `IN-02`, `WR-05`. Iteration 1 (`16318a8`) fixed IN-01 and
+  skipped IN-02 (needed a new field type) and WR-05 (needed a product decision). On 2026-10-15 the
+  user asked for both to be fixed and chose a per-action head-movement flag for WR-05, so this
+  iteration fixes them.
+- Fixed: 3
+- Skipped: 0
+- **Supersedes D-08's blanket rule** ("All actions move the head, so the copy says so", 02-CONTEXT.md):
+  the head-moves note is now driven by a per-action declaration, and the F.A.S.T. soft Pause does
+  not show it.
 
 ## Fixed Issues
 
 ### IN-01: Dead state and legacy debug artifact in `RunsComponent.tsx` (carried forward, unresolved, pre-existing, out of this round's file scope)
 
 **Files modified:** `controller/components/runs/RunsComponent.tsx`
-**Commit:** `16318a8`
-**Re-verification:** Re-read the current file before touching anything. Confirmed all three
-sub-issues still reproduced exactly as described: `_userFormError` was set via `setUserFormError(...)`
-at three call sites but never read anywhere in the component or passed to a consumer; the
-emoji-prefixed `console.error("❌ Failed to load form:", ...)` was still present; the untracked
-`// TODO: Handle form submission - for now just resume` comment was still present verbatim.
-**Applied fix:**
-- **Dead state:** Checked `UserFormModal.tsx`'s props (`isOpen`, `form`, `onSubmit`, `onCancel` —
-  no error prop exists) and its render body. Found that `UserFormModal` already renders its own
-  `Alert status="error"` ("Form Not Found") whenever its `form` prop is `null` — which is exactly
-  the state `RunsComponent` already puts it in on a form-load failure (`setCurrentForm(null)`).
-  Since `_userFormError` was never read and the modal already has an equivalent error-rendering
-  path that fires under the same condition, wiring a new error prop into `UserFormModal` would have
-  duplicated existing behavior while adding new surface area. Per the orchestrator's guidance
-  ("remove the dead state" branch, since the modal doesn't already accept/render a dedicated error
-  prop), removed the `_userFormError` state and its three `setUserFormError(...)` call sites. No
-  visible behavior changes — the state was write-only before removal.
-- **Logging convention:** Checked sibling `console.error` calls in the same file family
-  (`UserFormModal.tsx:81` `"Error reading file:"`, `UserFormModal.tsx:322` `"Error updating mapped
-  variables:"`) — both are plain, unprefixed `console.error(label, error)` calls. Replaced the
-  emoji-prefixed line with `console.error("Failed to load form:", formQuery.error);` to match.
-- **TODO:** Per instruction, did not change submission behavior. Reworded the comment to accurately
-  describe current behavior instead of implying unfinished work with no detail: "Form data is not
-  persisted anywhere; submitting currently just resumes the queue, the same as
-  handleUserFormCancel below. Revisit if the collected form data needs to be forwarded to the
-  backend."
-**Verification:** Tier 2 — `npx tsc --noEmit` (no errors referencing this file), `npx prettier
---check` (passes). Full gates re-run after the fast-forward (see Verification section below).
-
-## Skipped Issues
+**Commit:** `16318a8` (iteration 1)
+**Applied fix:** Removed the write-only `_userFormError` state (`UserFormModal` already shows its own
+"Form Not Found" alert when `form` is null); replaced the emoji-prefixed `console.error` with the
+plain `console.error("Failed to load form:", ...)` style used by sibling calls; reworded the TODO
+into an accurate comment (submitting just resumes the queue; form data is not persisted). No
+behavior change.
 
 ### IN-02: `tip_reuse` command field has no enum/select type despite only two valid values (carried forward, unresolved, pre-existing, out of this round's file scope)
 
-**File:** `controller/components/tools/constants.ts:328`
-**Reason:** Re-verified against current source: `commandFields.fast.transfer` still declares
-`{ name: "tip_reuse", type: "text" }` with a comment noting only `"fresh"`/`"reuse"` are valid, and
-the finding still reproduces exactly as described — not already resolved. However, checked the
-field-type system before attempting a fix: `controller/components/tools/types.ts`'s `FieldType`
-union is `"text" | "number" | "text_array" | "boolean" | Field[]` — no enum/select-like type exists.
-Checked the two renderers that switch on `field.type`
-(`controller/components/protocols/AddToolCommandModal.tsx:216` and `:466`,
-`controller/components/tools/advanced/teach_pendant/features/sequences/CommandModal.tsx:239`) —
-both only handle `number`, `boolean`, `text_array`, falling through to a text input otherwise.
-Making `tip_reuse` render as a constrained choice would require adding a new field type across the
-type definitions and both form renderers, which is feature work extending the field-type system,
-not a scoped code-review fix. Skipped per the orchestrator's explicit instruction to skip rather
-than add a new field type.
-**Original issue:** Free-text field accepts arbitrary strings despite only two values being valid
-(`"fresh"`/`"reuse"`), so a typo is not caught until the instrument rejects the command.
+**Files modified:** `controller/components/tools/types.ts`, `controller/components/tools/constants.ts`,
+`controller/components/protocols/AddToolCommandModal.tsx`, `controller/pages/tools/[id].tsx`,
+`controller/test/commandFields.test.ts` (new)
+**Commit:** `957636d`
+**Applied fix:** `Field` gains a `"select"` type with an `options` list (`FieldType` updated to
+match). `commandFields.fast.transfer.tip_reuse` is now `{ type: "select", options: ["fresh", "reuse"] }`
+— exactly the values the F.A.S.T. adapter accepts (`fast_mcp` `_TIP_REUSE_MODES`, confirmed by
+`vendor/galago-tools/tools/tests/fast_test.py` "one of fresh, reuse"). Both renderers that show
+F.A.S.T. fields render it as a dropdown: the protocol `AddToolCommandModal` (with the existing
+variable picker) and the tool page command form. Nothing is preselected; an untouched field still
+saves `""` as before. The teach-pendant `CommandModal` is PF400-only and was not changed.
+**Tests:** `test/commandFields.test.ts` asserts the tip_reuse declaration and that every select
+field has a non-empty, duplicate-free options list.
 
-### WR-05 (carried forward, not counted in `findings_in_scope` — pre-existing product-decision
-block, documented here for continuity only)
+### WR-05: `HEAD_MOVES_NOTE` is shown unconditionally, including for Pause
 
-**File:** `controller/components/runs/controlDecision.ts:17`,
-`controller/components/runs/RunControlConfirmModal.tsx:231`
-**Reason:** Per the orchestrator's explicit instruction, left untouched this pass. Deliberately
-skipped pending a product/instrument-behavior decision (first recorded in the prior
-`02-REVIEW-FIX.md`); no code in this round's diff touches it. `HEAD_MOVES_NOTE = "The instrument
-head will move."` still renders unconditionally for every control action, including Pause. This
-needs a decision from whoever owns instrument-core/firmware behavior for the F.A.S.T. (and any
-future `runControl` tool type), not a code-only fix from this fixer. Per the "do not alter
-instrument/control safety behavior" constraint for this pass, no auto-resolution or pre-selected
-decision was applied.
+**Files modified:** `controller/server/runControl.ts`, `controller/components/runs/controlDecision.ts`,
+`controller/components/runs/RunControlConfirmModal.tsx`, `controller/test/runControl.test.ts`,
+`controller/test/controlDecision.test.ts`
+**Commit:** `d400c42`
+**Applied fix:** Added `runControlMovesHead` (deep-frozen, beside `runControl` so the action specs
+stay "decision name -> kind") with F.A.S.T. `pause: false`, `resume: true`, `abort: true`, and
+`actionMovesHead(toolType, action)`, which returns false only for an explicit own-property `false`.
+Undeclared tool types, undeclared actions and inherited names (`constructor`, `__proto__`, …) all
+return true, so the copy fails toward warning. `controlDecision.headMovesNote()` returns
+`HEAD_MOVES_NOTE` or null, and `RunControlConfirmModal` renders the note only when non-null. No
+decision, gate or send path changed.
+**Tests:** `runControl.test.ts` (map shape, frozen, key parity with `runControl.fast`, safe
+defaults) and `controlDecision.test.ts` (note omitted for F.A.S.T. pause, shown for resume/abort
+and for undeclared tool/action).
 
 ## Verification
 
-- `npm --prefix controller run test:unit` (`vitest run`): **213/213 tests passed** (11 test files),
-  run in the main checkout after the worktree was fast-forward-merged and torn down.
-- `npm --prefix controller test` (`tsc --noEmit`): **clean, no errors.**
-- `npx prettier --config .prettierrc --check` on the one touched file
-  (`controller/components/runs/RunsComponent.tsx`): **passes — "All matched files use Prettier code
-  style!"**
-
-All three gates were run in the **main checkout** (`/home/formulatrix/data/nikko/galago-core`)
-after the fast-forward from the isolated worktree; the per-fix `tsc`/prettier check during
-verification (before commit) ran inside the worktree via a temporary `node_modules` symlink to the
-main checkout's dependencies (removed before teardown — a true Linux symlink, not a reparse point,
-so removal never touched the real `node_modules`). The numbers above are reproducible from the
-current `feat/fast-tool` tree at commit `16318a8`.
+- `npm --prefix controller run test:unit`: **221/221 passed** (12 files).
+- `npm --prefix controller test` (`tsc --noEmit`): clean.
+- `prettier --check` (repo-root `.prettierrc`) on every touched file: passes.
+- `eslint` on the touched UI files: 0 errors; 1 pre-existing warning (`pages/tools/[id].tsx:93`
+  exhaustive-deps, untouched line).
 
 ---
 
-_Fixed: 2026-10-15T04:22:00Z_
-_Fixer: Claude (gsd-code-fixer)_
-_Iteration: 1_
+_Fixed: 2026-10-15T05:00:00Z_
+_Fixer: Claude (orchestrator, user-directed)_
+_Iteration: 2_

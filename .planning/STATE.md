@@ -106,9 +106,9 @@ None yet.
 
 - [Phase 1]: IN-01 still open (info): `RunStateMonitor.snapshot()` returns a shallow copy; consumers
   must not mutate the nested `runState`/`pause` objects (Phase 2 consumers comply).
-- [Phase 2]: Review follow-up open (non-blocking): WR-05 — confirm whether "The instrument head will
-  move." should show for a soft Pause. (WR-07 follow-up toast and the WR-06 `server/tools.ts` copy
-  were fixed in `142a7e9` / `949e7c7`.)
+- [Phase 2]: All code review findings closed (WR-01..WR-07, IN-01, IN-02). WR-05 (`d400c42`)
+  supersedes D-08: the "head will move" note is now per-action (`runControlMovesHead`), hidden for
+  the F.A.S.T. soft Pause.
 - [Phase 2]: The real F.A.S.T. may still hold a paused run from the 2026-10-14 09:33 WrongPlateType
   test; clear it (Run Recovery → Abort, or on the instrument) before the next real run.
 
