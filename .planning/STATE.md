@@ -3,10 +3,10 @@ gsd_state_version: "1.0"
 milestone: v2
 milestone_name: STACK tool support — codegen, operator acknowledge, error visibility, F5
 status: planning
-last_updated: "2026-10-28T13:09:18.836Z"
+last_updated: "2026-10-28T13:37:01.000Z"
 last_activity: 2026-10-28
 progress:
-  total_phases: 0
+  total_phases: 4
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -17,18 +17,20 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-10-16)
+See: .planning/PROJECT.md (updated 2026-10-28)
 
 **Core value:** While an instrument step runs, the operator sees what the instrument is doing and
 decides every recovery action; the web app never acts on its own or pre-selects a physical decision.
-**Current focus:** Planning next milestone (v1 shipped 2026-10-16)
+**Current focus:** Phase 3 — Queue Start Guard & Visibility (milestone v2, STACK tool support)
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-10-28 — Milestone v2 started
+Phase: 3 of 6 (Queue Start Guard & Visibility) — first of 4 phases in v2 (Phases 3-6)
+Plan: — (not yet planned)
+Status: Ready to plan
+Last activity: 2026-10-28 — Roadmap v2 created (4 phases, 17/17 requirements mapped)
+
+Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 
@@ -71,6 +73,14 @@ Last activity: 2026-10-28 — Milestone v2 started
 
 Decisions are logged in PROJECT.md Key Decisions table.
 v1 decisions are archived in `milestones/v1-ROADMAP.md` (Milestone Summary) and PROJECT.md.
+Recent decisions affecting current work:
+
+- [Roadmap v2]: Phase order is F5 (3) → F3 (4) → operator acknowledge (5) → STACK codegen (6), the user's
+  build order; Phases 3 and 4 have no dependency on each other.
+- [Roadmap v2]: Phase 5 is built on string tool types and `"stack" as ToolType` fakes, so it does not wait
+  for `stack.proto`; only Phase 6 is hard-gated on galago-tools Phase 4.
+- [Roadmap v2]: `stack` is NOT added to `runControl`; the acknowledge uses a recovery-only spec plus one
+  operator-only command table (ACK-AND-F3.md §1.2, §2.2).
 
 ### Pending Todos
 
@@ -79,6 +89,9 @@ v1 decisions are archived in `milestones/v1-ROADMAP.md` (Milestone Summary) and 
 
 ### Blockers/Concerns
 
+- [Phase 6]: Hard-gated on galago-tools Phase 4 pushing the frozen `stack.proto` to `feat/stack-tool`
+  (not there yet). A needed `stack.proto` change or a stack-automation-layer gap stops the work and is
+  noted for the user; it is never patched here.
 - [Phase 2]: Re-review on 2026-10-16 (`02-REVIEW.md`, diff since 3cfb240) left 4 warnings and 1 info
   open in `02-REVIEW-DISPOSITION.md`: WR-01 `goto` accepts null/"" targetIndex as 0; WR-02 an
   accepted abort whose step then resolves does not dequeue the rest of the run; WR-03
@@ -106,10 +119,10 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-16
-Stopped at: Milestone v1 archived and tagged
+Last session: 2026-10-28
+Stopped at: Roadmap v2 created; Phase 3 ready to plan
 Resume file: None
 
 ## Operator Next Steps
 
-- Start the next milestone with /gsd-new-milestone
+- Plan Phase 3 with /gsd-plan-phase 3 (or /gsd-discuss-phase 3 first)
