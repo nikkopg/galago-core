@@ -101,8 +101,8 @@ Existing sizes only. Chakra scale: `xs` 12px, `sm` 14px, `md` 16px; the step car
 
 Weights declared for new elements: exactly two, **400 regular** and **700 bold**. The existing
 `AlertDescription fontWeight="medium"` (500) in the banner is left as it is today (pre-existing, not new; do
-not add other weights). No new heading style. Line heights: Chakra defaults (body 1.5); the S3 error text
-uses `lineHeight="short"` is **not** used, keep 1.5 so three clamped lines fit.
+not add other weights). No new heading style. Line heights: Chakra defaults (1.5); do not override
+`lineHeight` on the S3 error text.
 
 ---
 
