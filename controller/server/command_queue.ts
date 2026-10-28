@@ -15,6 +15,11 @@ import { sendEmailMessage, sendSlackMessage } from "@/server/utils/integrationsL
 import { TRPCError } from "@trpc/server";
 import { validateControlRequest } from "./runControl";
 import { RunStateMonitor, type RunStateEnvelope } from "./runState";
+import {
+  describeQueueStart,
+  describeQueueStartReadFailure,
+  type QueueStartSource,
+} from "./queueStartListing";
 
 export type CommandQueueState = ToolStatus;
 
@@ -872,7 +877,17 @@ export class CommandQueue {
 
   slackNotificationsEnabled: boolean = true;
 
-  async _start(source: "operator" | "enqueue" = "operator") {
+  // Synchronous on purpose (research Pitfall 1): no await may sit between the
+  // single-flight guard and the _runningPromise claim in _start.
+  private _describeQueueStart(source: QueueStartSource): string {
+    try {
+      return describeQueueStart(this.commands.queuedRowsSync(), source);
+    } catch (e) {
+      return describeQueueStartReadFailure(source, e);
+    }
+  }
+
+  async _start(source: QueueStartSource = "operator") {
     // Single-flight guard (QUE-07, D-01): the busy loop owns the queue while
     // _runningPromise is set. A second Start (restart router, direct call or the
     // enqueueRun auto-start) must never dispatch the in-flight row again. It only
@@ -890,7 +905,7 @@ export class CommandQueue {
     logAction({
       level: "info",
       action: "Queue Started",
-      details: "Command Queue started by user.",
+      details: this._describeQueueStart(source),
     });
     this._setState(ToolStatus.READY);
     this.error = undefined;

@@ -392,6 +392,27 @@ export default class SqliteQueue {
     }));
   }
 
+  // Synchronous, read-only listing of every queued row in position order. Used to
+  // audit what a Start will run; synchronous so no await sits between the
+  // single-flight guard and the busy-loop claim in CommandQueue._start.
+  queuedRowsSync(): StoredRunCommand[] {
+    const rows = this.db
+      .prepare(
+        `
+      SELECT c.queue_id, c.command_data
+      FROM ${this.queueName}_commands c
+      INNER JOIN ${this.queueName}_queue q ON c.queue_id = q.queue_id
+      ORDER BY q.position ASC
+    `,
+      )
+      .all() as Array<{ queue_id: number; command_data: string }>;
+
+    return rows.map((row) => ({
+      queueId: row.queue_id,
+      ...this._deserialize(row.command_data),
+    }));
+  }
+
   async clearAll(): Promise<void> {
     this.db.transaction(() => {
       this.db.prepare(`DELETE FROM ${this.queueName}_queue`).run();
