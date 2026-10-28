@@ -17,13 +17,13 @@ core gaps are fixed there. Research: `.planning/research/SUMMARY.md` (`F5-ROOT-C
 Research showed F5's Run 1 ran three distinct queued rows (a FAILED retry, a leftover row, the new row),
 not one row three times. The real defect is an unguarded re-entrant `_start()`.
 
-- [ ] **QUE-07**: A Start, restart or enqueue while the busy loop is running never dispatches a row
+- [x] **QUE-07**: A Start, restart or enqueue while the busy loop is running never dispatches a row
   already in flight; the extra start is ignored and audited ("Queue Start Ignored"); a FakeGrpc test
   proves `executeCommand` is called once
 - [ ] **QUE-08**: Before a Start, the operator's Run confirmation shows how many queued rows will run,
   how many are FAILED retries and how many distinct runs they belong to — read-only, no default, no
   timer; the Start logs the queue_ids/run_ids it will run
-- [ ] **QUE-09**: Retry-after-failure and the h0q/o44/t9e behaviours are unchanged; their existing
+- [x] **QUE-09**: Retry-after-failure and the h0q/o44/t9e behaviours are unchanged; their existing
   regression tests stay green unmodified
 
 ### Error visibility (F3, DEP-03b)
@@ -98,9 +98,9 @@ not one row three times. The real defect is an unguarded re-entrant `_start()`.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| QUE-07 | Phase 3 | Pending |
+| QUE-07 | Phase 3 | Complete |
 | QUE-08 | Phase 3 | Pending |
-| QUE-09 | Phase 3 | Pending |
+| QUE-09 | Phase 3 | Complete |
 | ERR-01 | Phase 3 | Pending |
 | ERR-02 | Phase 3 | Pending |
 | ERR-03 | Phase 3 | Pending |

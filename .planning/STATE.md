@@ -5,16 +5,16 @@ milestone_name: STACK tool support — codegen, operator acknowledge, error visi
 current_phase: 3
 current_phase_name: Queue Start Guard & Tool Error Visibility
 status: executing
-stopped_at: Phase 3 UI-SPEC approved
-last_updated: "2026-10-28T14:35:41.686Z"
+stopped_at: Completed 03-01-PLAN.md
+last_updated: "2026-10-28T22:20:55.484Z"
 last_activity: 2026-10-28
-last_activity_desc: Roadmap v2 compressed to 3 phases (17/17 requirements mapped)
-state_head: 10b542957be5eb6fe3dd6cbe2ed2bdfa7ebf1ffc
+last_activity_desc: Phase 3 execution started
+state_head: 5c0c4bfafaae20a9f40a8f3733172750f8bb5874
 progress:
   total_phases: 3
   completed_phases: 0
   total_plans: 6
-  completed_plans: 0
+  completed_plans: 1
   percent: 0
 ---
 
@@ -26,14 +26,14 @@ See: .planning/PROJECT.md (updated 2026-10-28)
 
 **Core value:** While an instrument step runs, the operator sees what the instrument is doing and
 decides every recovery action; the web app never acts on its own or pre-selects a physical decision.
-**Current focus:** Phase 3 — Queue Start Guard & Tool Error Visibility (milestone v2, STACK tool support)
+**Current focus:** Phase 3 — Queue Start Guard & Tool Error Visibility
 
 ## Current Position
 
-Phase: 3 (Queue Start Guard & Tool Error Visibility) — READY TO EXECUTE
-Plan: — (not yet planned)
+Phase: 3 (Queue Start Guard & Tool Error Visibility) — EXECUTING
+Plan: 2 of 6
 Status: Ready to execute
-Last activity: 2026-10-28 — Roadmap v2 compressed to 3 phases (17/17 requirements mapped)
+Last activity: 2026-10-28 — Phase 3 execution started
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -71,6 +71,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 02 P03 | 35 min | 2 tasks | 5 files |
 | Phase 02 P05 | 40 min | 2 tasks | 7 files |
 | Phase 02-run-page-live-controls P06 | 25min | 2 tasks | 1 files |
+| Phase 3 P01 | 30 min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -86,6 +87,8 @@ Recent decisions affecting current work:
   for `stack.proto`; only Phase 5 is hard-gated on galago-tools Phase 4.
 - [Roadmap v2]: `stack` is NOT added to `runControl`; the acknowledge uses a recovery-only spec plus one
   operator-only command table (ACK-AND-F3.md §1.2, §2.2).
+- [Phase 3]: 03-01: single-flight guard is the first statement of CommandQueue._start; an ignored Start logs 'Queue Start Ignored' and changes nothing
+- [Phase 3]: 03-01: Start listing read via synchronous SqliteQueue.queuedRowsSync (no await before the _runningPromise claim), capped at 50 rows
 
 ### Pending Todos
 
@@ -124,9 +127,9 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-28T14:03:44.474Z
-Stopped at: Phase 3 UI-SPEC approved
-Resume file: .planning/phases/03-queue-start-guard-tool-error-visibility/03-UI-SPEC.md
+Last session: 2026-10-28T22:20:55.462Z
+Stopped at: Completed 03-01-PLAN.md
+Resume file: None
 
 ## Operator Next Steps
 

@@ -70,11 +70,11 @@ shown as success.
      galago-web restarted; after the operator dismisses the error banner, the next failure shows it again.
   7. A failed step is never shown as completed, a SUCCESS reply that carries an error message is reported
      as an error, and a run whose failed step was skipped is not shown as plain success.
-**Plans:** 6 plans
+**Plans:** 1/6 plans executed
 
 Plans:
 **Wave 1**
-- [ ] 03-01-PLAN.md — (wave 1, tracer) Single-flight `_start` guard + "Queue Started" listing of what a Start will run (QUE-07, QUE-08, QUE-09)
+- [x] 03-01-PLAN.md — (wave 1, tracer) Single-flight `_start` guard + "Queue Started" listing of what a Start will run (QUE-07, QUE-08, QUE-09)
 - [ ] 03-02-PLAN.md — (wave 1) ERR-01 error-path table over every ResponseCode, committed failing first (ERR-01)
 - [ ] 03-03-PLAN.md — (wave 1) Run confirmation shows queued steps / FAILED retries / runs from the queue-joined query (QUE-08)
 
@@ -183,7 +183,7 @@ Phases execute in numeric order: 3 → 4 → 5 (Phase 5 waits on galago-tools Ph
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 3. Queue Start Guard & Tool Error Visibility | v2 | 0/6 | Planned | - |
+| 3. Queue Start Guard & Tool Error Visibility | v2 | 1/6 | In Progress | - |
 | 4. Operator-only Commands & STACK Acknowledge | v2 | 0/TBD | Not started | - |
 | 5. STACK Codegen & Command Forms | v2 | 0/TBD | Not started (gated on galago-tools Phase 4) | - |
 
