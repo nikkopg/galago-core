@@ -11,6 +11,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { ToolType } from "gen-interfaces/controller";
 import { ResponseCode, ToolStatus } from "gen-interfaces/tools/grpc_interfaces/tool_base";
 import { CommandQueue } from "@/server/command_queue";
+import Tool, { ToolCommandExecutionError } from "@/server/tools";
 import { logAction } from "@/server/logger";
 import { commandQueueRouter } from "@/server/routers/command_queue";
 import { installFakeTool, removeFakeTool, FakeGrpc } from "./helpers/fakeTool";
@@ -222,5 +223,117 @@ describe("errorPath", () => {
       expect(payload.message).toBe(expected.message);
       expect(payload.message.includes(ENCODED_TEXT)).toBe(true);
     });
+  });
+
+  describe("ERR-02 thrown ToolCommandExecutionError instance", () => {
+    it.each(Object.values(ResponseCode))("%s thrown instance carries the real code name", async (code) => {
+      grpc.executeCommand.mockResolvedValueOnce({
+        response: code,
+        error_message: TOOL_TEXT(code),
+        return_reply: true,
+      });
+      const expected = EXPECT[code].withText(TOOL_TEXT(code));
+
+      const err = await Tool.executeCommand({
+        toolId: TOOL_ID,
+        toolType: ToolType.fast,
+        command: COMMAND,
+        params: {},
+      } as any).then(
+        () => null,
+        (e: unknown) => e,
+      );
+
+      expect(err).toBeInstanceOf(ToolCommandExecutionError);
+      expect(err).toMatchObject({
+        code: expected.code,
+        codeString: expected.code,
+        message: expected.message,
+        userFriendlyMessage: expected.message,
+      });
+      expect(expected.code).not.toBe(ResponseCode.SUCCESS);
+    });
+  });
+
+  describe("ERR-04 failure sequence in getError", () => {
+    it("a failure carries a numeric seq that is a safe integer seeded from the clock", async () => {
+      const before = Date.now();
+      newQueue();
+      await runOneReply({
+        response: ResponseCode.INVALID_ARGUMENTS,
+        error_message: "bad plate",
+      });
+      const payload = (await caller().getError()) as any;
+      expect(typeof payload.seq).toBe("number");
+      expect(Number.isSafeInteger(payload.seq)).toBe(true);
+      expect(payload.seq).toBeGreaterThanOrEqual(before + 1);
+    });
+
+    it("two consecutive failures with identical text get seq exactly one apart", async () => {
+      await runOneReply({
+        response: ResponseCode.INVALID_ARGUMENTS,
+        error_message: "same text",
+      });
+      const first = (await caller().getError()) as any;
+      expect(typeof first.seq).toBe("number");
+
+      // The FAILED row stays queued and re-runs first on the next Start.
+      grpc.executeCommand.mockResolvedValueOnce({
+        response: ResponseCode.INVALID_ARGUMENTS,
+        error_message: "same text",
+        return_reply: true,
+      });
+      await drive();
+      const second = (await caller().getError()) as any;
+      expect(second.message).toBe(first.message);
+      expect(typeof second.seq).toBe("number");
+      expect(second.seq - first.seq).toBe(1);
+    });
+
+    it("getError is null after clearError", async () => {
+      await runOneReply({
+        response: ResponseCode.INVALID_ARGUMENTS,
+        error_message: "bad plate",
+      });
+      await expect(caller().getError()).resolves.not.toBeNull();
+      await queue.clearError();
+      await expect(caller().getError()).resolves.toBeNull();
+    });
+
+    it("a non-tool error is a plain object with seq and no code badge", async () => {
+      await pushRow();
+      grpc.executeCommand.mockRejectedValueOnce(new Error("socket hang up"));
+      await drive();
+      const payload = (await caller().getError()) as any;
+      expect(payload).not.toBeInstanceOf(Error);
+      expect(payload).toMatchObject({
+        message: "socket hang up",
+        userFriendlyMessage: "socket hang up",
+        name: "Error",
+      });
+      expect(typeof payload.seq).toBe("number");
+      expect(payload).not.toHaveProperty("codeString");
+      expect(payload).not.toHaveProperty("code");
+    });
+
+    it("a gRPC transport error keeps its numeric code", async () => {
+      await pushRow();
+      grpc.executeCommand.mockRejectedValueOnce(
+        Object.assign(new Error("14 UNAVAILABLE: No connection established"), { code: 14 }),
+      );
+      await drive();
+      const payload = (await caller().getError()) as any;
+      expect(payload).not.toBeInstanceOf(Error);
+      expect(payload).toMatchObject({
+        code: 14,
+        message: "14 UNAVAILABLE: No connection established",
+      });
+      expect(typeof payload.seq).toBe("number");
+    });
+  });
+
+  it("covers every ResponseCode", () => {
+    expect(Object.keys(EXPECT).sort()).toEqual(Object.values(ResponseCode).sort());
+    expect(Object.keys(EXPECT)).toHaveLength(9);
   });
 });
