@@ -872,7 +872,19 @@ export class CommandQueue {
 
   slackNotificationsEnabled: boolean = true;
 
-  async _start() {
+  async _start(source: "operator" | "enqueue" = "operator") {
+    // Single-flight guard (QUE-07, D-01): the busy loop owns the queue while
+    // _runningPromise is set. A second Start (restart router, direct call or the
+    // enqueueRun auto-start) must never dispatch the in-flight row again. It only
+    // logs and returns; it changes no state, no error and no _failedAttempt.
+    if (this._runningPromise) {
+      logAction({
+        level: "warning",
+        action: "Queue Start Ignored",
+        details: `A queue start was ignored because the queue is already running; nothing was dispatched again. source=${source} inFlightQueueId=${this._runningStep?.queueId ?? "unknown"} inFlightRunId=${this._runningStep?.runId ?? "unknown"} state=${this._state}`,
+      });
+      return;
+    }
     // A restart supersedes any pending stale abort reply (T-01-08).
     this._failedAttempt = undefined;
     logAction({
@@ -1429,7 +1441,7 @@ export class CommandQueue {
       await this.commands.push(c);
     }
     if (this.state === ToolStatus.READY) {
-      this._start();
+      this._start("enqueue");
     }
   }
 
