@@ -60,6 +60,27 @@ Task IDs are filled in by the planner; requirement → test mapping is fixed her
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
+**Task mapping (filled by the planner):**
+
+| Requirement / behaviour | Plan-Task |
+|-------------------------|-----------|
+| QUE-07 second / same-tick / pause-then-start / enqueue `_start` | 03-01-T1 (tracer) |
+| QUE-07 `_start` guard-first, no await before claim (static scan) | 03-04-T2 |
+| QUE-08 "Queue Started" listing, recipe A, cap 50, enqueue prefix | 03-01-T2 |
+| QUE-08 `summarizeQueuedStart` / `queuedStartLines` | 03-03-T1 |
+| QUE-08 Run modal wiring + UI-08 scan | 03-03-T2 |
+| QUE-09 protected files unmodified + green | 03-01-T1, 03-01-T2, 03-04-T2, 03-06-T3 |
+| ERR-01 table committed red (D-10) | 03-02-T1, 03-02-T2; turns green in 03-04-T2 |
+| ERR-02 `describeToolReply`, `codeString = String(code)` | 03-04-T1 |
+| ERR-04 `_recordFailure` / `seq` / plain getError payload + scans | 03-04-T2 |
+| ERR-04 `shouldShowErrorBanner` / banner wiring | 03-06-T1, 03-06-T2 |
+| ERR-03 `stepErrorText` + persistence + card wiring | 03-06-T1, 03-06-T2 |
+| ERR-05 SUCCESS+message is ERROR_FROM_TOOL | 03-04-T1 |
+| ERR-05 `deriveRunOutcome` / badge / progress colour | 03-05-T1, 03-05-T2 |
+| ERR-05 check icon COMPLETED-only, outcome never green/teal (scans) | 03-06-T3 |
+
+Wave-1 full-suite gate runs with `--exclude test/errorPath.test.ts` (red by design until 03-04).
+
 ---
 
 ## Wave 0 Requirements
