@@ -3,17 +3,17 @@ gsd_state_version: "1.0"
 milestone: v2
 milestone_name: STACK tool support — codegen, operator acknowledge, error visibility, F5
 current_phase: 3
-current_phase_name: first of 3 phases in v2
-status: planning
+current_phase_name: Queue Start Guard & Tool Error Visibility
+status: executing
 stopped_at: Phase 3 UI-SPEC approved
-last_updated: "2026-10-28T14:03:44.490Z"
+last_updated: "2026-10-28T14:35:41.686Z"
 last_activity: 2026-10-28
 last_activity_desc: Roadmap v2 compressed to 3 phases (17/17 requirements mapped)
-state_head: c55debfbd02b3aa5b804e3cb39eb23edf0dbfbc9
+state_head: 10b542957be5eb6fe3dd6cbe2ed2bdfa7ebf1ffc
 progress:
   total_phases: 3
   completed_phases: 0
-  total_plans: 0
+  total_plans: 6
   completed_plans: 0
   percent: 0
 ---
@@ -30,9 +30,9 @@ decides every recovery action; the web app never acts on its own or pre-selects 
 
 ## Current Position
 
-Phase: 3 of 5 (Queue Start Guard & Tool Error Visibility) — first of 3 phases in v2 (Phases 3-5)
+Phase: 3 (Queue Start Guard & Tool Error Visibility) — READY TO EXECUTE
 Plan: — (not yet planned)
-Status: Ready to plan
+Status: Ready to execute
 Last activity: 2026-10-28 — Roadmap v2 compressed to 3 phases (17/17 requirements mapped)
 
 Progress: [░░░░░░░░░░] 0%

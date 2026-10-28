@@ -73,12 +73,18 @@ shown as success.
 **Plans:** 6 plans
 
 Plans:
+**Wave 1**
 - [ ] 03-01-PLAN.md — (wave 1, tracer) Single-flight `_start` guard + "Queue Started" listing of what a Start will run (QUE-07, QUE-08, QUE-09)
 - [ ] 03-02-PLAN.md — (wave 1) ERR-01 error-path table over every ResponseCode, committed failing first (ERR-01)
 - [ ] 03-03-PLAN.md — (wave 1) Run confirmation shows queued steps / FAILED retries / runs from the queue-joined query (QUE-08)
+
+**Wave 2** *(blocked on Wave 1 completion)*
 - [ ] 03-04-PLAN.md — (wave 2) Server error path: describeToolReply, real code name, SUCCESS+message as error, getError seq (ERR-01, ERR-02, ERR-04, ERR-05)
 - [ ] 03-05-PLAN.md — (wave 2) Run outcome: skipped failure never plain success, orange badge/progress (ERR-05)
+
+**Wave 3** *(blocked on Wave 2 completion)*
 - [ ] 03-06-PLAN.md — (wave 3) Banner re-arm via dismissedSeq, step-card stored error, static scans + phase gate (ERR-03, ERR-04, ERR-05)
+
 **UI hint**: yes
 **Notes**: Merged from the former Phases 3 (F5) and 4 (F3) on 2026-10-28 (user decision): no dependency
 between them, and both edit `command_queue.ts`, the run page, its banner and the Run confirmation, so one
