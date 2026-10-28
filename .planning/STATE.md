@@ -4,17 +4,17 @@ milestone: v2
 milestone_name: STACK tool support — codegen, operator acknowledge, error visibility, F5
 current_phase: 3
 current_phase_name: Queue Start Guard & Tool Error Visibility
-status: executing
-stopped_at: Completed 03-05-PLAN.md
-last_updated: "2026-10-28T22:38:16.982Z"
+status: verifying
+stopped_at: Completed 03-06-PLAN.md
+last_updated: "2026-10-28T22:44:11.040Z"
 last_activity: 2026-10-28
 last_activity_desc: Phase 3 execution started
-state_head: 67cda0b5542c0b49b86963ccf240b45d2e02eb3b
+state_head: 0e48d9514d0dcbc563737c10cc0d1e3a8a6ceabb
 progress:
   total_phases: 3
   completed_phases: 0
   total_plans: 6
-  completed_plans: 5
+  completed_plans: 6
   percent: 0
 ---
 
@@ -32,7 +32,7 @@ decides every recovery action; the web app never acts on its own or pre-selects 
 
 Phase: 3 (Queue Start Guard & Tool Error Visibility) — EXECUTING
 Plan: 6 of 6
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-10-28 — Phase 3 execution started
 
 Progress: [░░░░░░░░░░] 0%
@@ -76,6 +76,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 03 P03 | 3 min | 2 tasks | 4 files |
 | Phase 3 P04 | 15min | 2 tasks | 8 files |
 | Phase 3 P05 | 6 min | 2 tasks | 5 files |
+| Phase 3 P06 | 10 min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -98,6 +99,8 @@ Recent decisions affecting current work:
 - [Phase 3]: 03-04: whitespace-only error_message counts as empty; SUCCESS+message is thrown as ERROR_FROM_TOOL; _failureSeq seeded from Date.now()
 - [Phase 3]: 03-05: RunStatus not widened; COMPLETED_WITH_SKIPPED_FAILURE is a client-only outcome derived from polled rows, FAILED takes precedence over a COMPLETED last row
 - [Phase 3]: 03-05: storedErrorText is the shared reader of a persisted row error so the run outcome and 03-06 step card cannot drift
+- [Phase 3]: 03-06: banner dismiss stores only dismissedSeq (errorSeq of shown payload); never clears, restarts or acts on the queue
+- [Phase 3]: 03-06: step card error text placed between CommandImage and sticky label; skipped-with-error card at full opacity
 
 ### Pending Todos
 
@@ -136,8 +139,8 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-28T22:38:16.957Z
-Stopped at: Completed 03-05-PLAN.md
+Last session: 2026-10-28T22:44:11.014Z
+Stopped at: Completed 03-06-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

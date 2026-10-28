@@ -33,7 +33,7 @@ not one row three times. The real defect is an unguarded re-entrant `_start()`.
 - [x] **ERR-02**: The operator sees the tool's own text for `ERROR_FROM_TOOL`; for other non-SUCCESS
   codes the tool's text is shown next to the generic sentence, not replaced; the logged code name is
   real, not "UNKNOWN"
-- [ ] **ERR-03**: A failed step shows its stored error message on its step card
+- [x] **ERR-03**: A failed step shows its stored error message on its step card
 - [x] **ERR-04**: After a dismiss, the error banner reappears on each new failure (a failure sequence
   number in `getError`)
 - [x] **ERR-05**: No tool error renders as success: a failed step is never shown as completed, and a run
@@ -103,7 +103,7 @@ not one row three times. The real defect is an unguarded re-entrant `_start()`.
 | QUE-09 | Phase 3 | Complete |
 | ERR-01 | Phase 3 | Complete |
 | ERR-02 | Phase 3 | Complete |
-| ERR-03 | Phase 3 | Pending |
+| ERR-03 | Phase 3 | Complete |
 | ERR-04 | Phase 3 | Complete |
 | ERR-05 | Phase 3 | Complete |
 | OPR-01 | Phase 4 | Pending |
