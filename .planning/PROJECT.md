@@ -27,13 +27,32 @@ Recovery card handles untracked runs. Archive: `milestones/v1-ROADMAP.md`,
 **Companion milestone:** galago-tools "F.A.S.T. Live Run Control (adapter & rollout)" — deploys both
 and runs the supervised live acceptance.
 
-## Next Milestone Goals
+## Current Milestone: v2 STACK tool support — codegen, operator acknowledge, error visibility, F5
 
-Not yet defined — start with `/gsd-new-milestone`. Candidates carried forward:
-- F.A.S.T. plate-list dropdowns for source/dest plates (pending todo)
-- Decide whether `expected_tray_id` is still needed (pending todo)
-- 02-REVIEW-DISPOSITION.md advisories WR-01..WR-04, IN-01 (queue edge cases, `tip_reuse` default)
-- F5 / F3 debt (non-idempotent `transfer` re-run; run UI hides tool errors) if brought into scope
+**Goal:** galago-core can send every STACK command, shows every STACK error as an error, gives only the
+operator an audited AcknowledgeFailure, and the root cause of F5 (a queued command executed more than
+once) is fixed.
+
+**Target features (build order):**
+- DEP-03c (F5): root cause of a queued command executed more than once found and fixed (fast-mcp
+  runbook `docs/runbooks/phase5-galago-live-run.md:495-530`); retry-after-failure unchanged
+- DEP-03b (F3): the run UI shows a tool's `ERROR_FROM_TOOL` message; a STACK error never renders as
+  success
+- DEP-03a: operator-only STACK AcknowledgeFailure on the D-20 pattern (`tool.recoveryControl`, Run
+  Recovery card): guid entry, explicit `"yes"` arm-inspected confirmation, audited, no timers, no
+  default; latched guid shown from the error message or the latch-status read; never emitted by a
+  protocol or the queue (the queue refuses a queued `stack.acknowledge_failure`)
+- DEP-02: `vendor/galago-tools` bumped to the frozen `stack.proto` commit (galago-tools Phase 4),
+  `gen-interfaces` regenerated with ts-proto 1.151.1, `commandFields.stack` for every command except
+  `acknowledge_failure` (required strings as `text` fields with no `defaultValue`, no `select`
+  pre-fills); gated on galago-tools Phase 4
+
+**Companion:** galago-tools v2 "STACK Tool & STACK↔F.A.S.T. Handoff" (`feat/stack-tool`), which owns the
+adapter, the GAL-02 runbook protocol and live acceptance (its Phase 7, supervised, user present).
+stack-automation-layer core gaps are fixed there via `/gsd-quick`, never here.
+
+**Carried, not in v2 scope:** F.A.S.T. plate-list dropdowns and `expected_tray_id` (pending todos);
+02-REVIEW-DISPOSITION advisories WR-01..WR-04, IN-01.
 
 ## Requirements
 
@@ -58,15 +77,24 @@ Not yet defined — start with `/gsd-new-milestone`. Candidates carried forward:
 
 ### Active
 
-None — v1 requirements (QUE-*, UI-*) are validated. Next milestone's requirements are defined by
-`/gsd-new-milestone`; see Next Milestone Goals for carried-forward candidates.
+v2 requirements in `.planning/REQUIREMENTS.md`.
+
+- [ ] F5 root cause fixed (queued command never executed twice after success)
+- [ ] F3 tool error visible in the run UI
+- [ ] Operator-only STACK AcknowledgeFailure (recovery card), refused from the queue
+- [ ] STACK codegen and command forms (DEP-02)
 
 ### Out of Scope
 
 - Software-initiated pause/resume/abort (on error, timeout, cancel, restart or reconnect)
 - Hard pause (D5)
-- F5 (the queue re-ran one non-idempotent `transfer` 3 times) and F3 (run UI hides tool errors) —
-  tracked debt, out by user decision (2026-10-12), even though this milestone touches the same files
+- Any code path that acknowledges, cancels, retries or parks the STACK on its own — every recovery
+  action is an operator decision
+- STACK or F.A.S.T. motion from tests — live runs only in galago-tools' supervised Phase 7
+- GAL-02 protocol authoring — a runbook protocol in galago-tools, imported by the operator
+- `stack.proto` changes — frozen for v2 in galago-tools; a needed change stops the work for the user's
+  sign-off
+- stack-automation-layer core fixes — a gap found here stops the work and is fixed there
 - Upstream PRs to `sciencecorp/galago-core`
 
 ## Context
@@ -115,6 +143,8 @@ None — v1 requirements (QUE-*, UI-*) are validated. Next milestone's requireme
 | Prove UI-08 with pure-logic tests plus static source scans, no jsdom/RTL | No new UI test dependencies (D-24); rendered behaviour went to UAT | ✓ Phase 2 (13 scan tests; UAT 9/9) |
 | Stop, Clear All and deleting the running run abort first, then act on the queue only after the abort is accepted | Stop must never leave an instrument run untracked; research showed clearing dropped a running step | ✓ Phase 2 |
 | Busy-loop catch treats a step row already removed by Clear All/delete-run as handled | Follow-up can win the race against the step's rejection (audit INT-01) | ✓ Quick task t9e |
+| v2: pull F5 and F3 into scope (reverses the 2026-10-12 deferral) | The STACK queues a second submit and its errors carry the guid the operator needs; the galago-tools step_key ledger is defence in depth, not the fix | — Pending |
+| v2: skip the 4-researcher pass; research only F5 root cause and the acknowledge fit | F.A.S.T. support (`128bbd7`, `d4c3c23`, `tool.recoveryControl`) is the template | — Pending |
 | Use quick tasks for post-phase fixes instead of inserting decimal phases | Small, test-backed queue fixes (f48, h0q, o44, t9e) | ✓ Good — but leaves earlier phase verifications stale; re-verify after |
 
 ## Evolution
@@ -135,4 +165,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-10-16 after v1 milestone*
+*Last updated: 2026-10-28 after starting milestone v2*

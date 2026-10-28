@@ -1,20 +1,16 @@
 ---
 gsd_state_version: "1.0"
-milestone: v1
-milestone_name: Live Run Control (queue & run page)
-status: Awaiting next milestone
-stopped_at: Milestone v1 archived
-last_updated: "2026-10-15T23:05:17.926Z"
-last_activity: 2026-10-16
-last_activity_desc: Milestone v1 completed and archived
-state_head: b1bec6b8dd2d812dcea2f9aeb0434d1e7dad4f9d
+milestone: v2
+milestone_name: STACK tool support — codegen, operator acknowledge, error visibility, F5
+status: planning
+last_updated: "2026-10-28T13:09:18.836Z"
+last_activity: 2026-10-28
 progress:
-  total_phases: 2
-  completed_phases: 2
-  total_plans: 11
-  completed_plans: 11
-  percent: 100
-current_phase: 02
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -29,10 +25,10 @@ decides every recovery action; the web app never acts on its own or pre-selects 
 
 ## Current Position
 
-Phase: Milestone v1 complete
+Phase: Not started (defining requirements)
 Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-10-16 — Milestone v1 completed and archived
+Status: Defining requirements
+Last activity: 2026-10-28 — Milestone v2 started
 
 ## Performance Metrics
 
