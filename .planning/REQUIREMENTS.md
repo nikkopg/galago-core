@@ -101,24 +101,24 @@ not one row three times. The real defect is an unguarded re-entrant `_start()`.
 | QUE-07 | Phase 3 | Pending |
 | QUE-08 | Phase 3 | Pending |
 | QUE-09 | Phase 3 | Pending |
-| ERR-01 | Phase 4 | Pending |
-| ERR-02 | Phase 4 | Pending |
-| ERR-03 | Phase 4 | Pending |
-| ERR-04 | Phase 4 | Pending |
-| ERR-05 | Phase 4 | Pending |
-| OPR-01 | Phase 5 | Pending |
-| OPR-02 | Phase 5 | Pending |
-| OPR-03 | Phase 5 | Pending |
-| OPR-04 | Phase 5 | Pending |
-| OPR-05 | Phase 5 | Pending |
-| GEN-01 | Phase 6 | Pending |
-| GEN-02 | Phase 6 | Pending |
-| GEN-03 | Phase 6 | Pending |
-| GEN-04 | Phase 6 | Pending |
+| ERR-01 | Phase 3 | Pending |
+| ERR-02 | Phase 3 | Pending |
+| ERR-03 | Phase 3 | Pending |
+| ERR-04 | Phase 3 | Pending |
+| ERR-05 | Phase 3 | Pending |
+| OPR-01 | Phase 4 | Pending |
+| OPR-02 | Phase 4 | Pending |
+| OPR-03 | Phase 4 | Pending |
+| OPR-04 | Phase 4 | Pending |
+| OPR-05 | Phase 4 | Pending |
+| GEN-01 | Phase 5 | Pending |
+| GEN-02 | Phase 5 | Pending |
+| GEN-03 | Phase 5 | Pending |
+| GEN-04 | Phase 5 | Pending |
 
 **Coverage:**
 - v2 requirements: 17 total (QUE 3, ERR 5, OPR 5, GEN 4)
-- Mapped to phases: 17 (Phase 3: 3, Phase 4: 5, Phase 5: 5, Phase 6: 4)
+- Mapped to phases: 17 (Phase 3: 8, Phase 4: 5, Phase 5: 4)
 - Unmapped: 0
 
 ---

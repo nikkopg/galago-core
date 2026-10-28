@@ -6,7 +6,7 @@ status: planning
 last_updated: "2026-10-28T13:37:01.000Z"
 last_activity: 2026-10-28
 progress:
-  total_phases: 4
+  total_phases: 3
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -21,14 +21,14 @@ See: .planning/PROJECT.md (updated 2026-10-28)
 
 **Core value:** While an instrument step runs, the operator sees what the instrument is doing and
 decides every recovery action; the web app never acts on its own or pre-selects a physical decision.
-**Current focus:** Phase 3 — Queue Start Guard & Visibility (milestone v2, STACK tool support)
+**Current focus:** Phase 3 — Queue Start Guard & Tool Error Visibility (milestone v2, STACK tool support)
 
 ## Current Position
 
-Phase: 3 of 6 (Queue Start Guard & Visibility) — first of 4 phases in v2 (Phases 3-6)
+Phase: 3 of 5 (Queue Start Guard & Tool Error Visibility) — first of 3 phases in v2 (Phases 3-5)
 Plan: — (not yet planned)
 Status: Ready to plan
-Last activity: 2026-10-28 — Roadmap v2 created (4 phases, 17/17 requirements mapped)
+Last activity: 2026-10-28 — Roadmap v2 compressed to 3 phases (17/17 requirements mapped)
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -75,10 +75,10 @@ Decisions are logged in PROJECT.md Key Decisions table.
 v1 decisions are archived in `milestones/v1-ROADMAP.md` (Milestone Summary) and PROJECT.md.
 Recent decisions affecting current work:
 
-- [Roadmap v2]: Phase order is F5 (3) → F3 (4) → operator acknowledge (5) → STACK codegen (6), the user's
-  build order; Phases 3 and 4 have no dependency on each other.
-- [Roadmap v2]: Phase 5 is built on string tool types and `"stack" as ToolType` fakes, so it does not wait
-  for `stack.proto`; only Phase 6 is hard-gated on galago-tools Phase 4.
+- [Roadmap v2]: Phase order is F5 + F3 (3) → operator acknowledge (4) → STACK codegen (5), the user's
+  build order; F5 and F3 merged into one phase (2026-10-28, user decision) since they share files.
+- [Roadmap v2]: Phase 4 is built on string tool types and `"stack" as ToolType` fakes, so it does not wait
+  for `stack.proto`; only Phase 5 is hard-gated on galago-tools Phase 4.
 - [Roadmap v2]: `stack` is NOT added to `runControl`; the acknowledge uses a recovery-only spec plus one
   operator-only command table (ACK-AND-F3.md §1.2, §2.2).
 
@@ -89,7 +89,7 @@ Recent decisions affecting current work:
 
 ### Blockers/Concerns
 
-- [Phase 6]: Hard-gated on galago-tools Phase 4 pushing the frozen `stack.proto` to `feat/stack-tool`
+- [Phase 5]: Hard-gated on galago-tools Phase 4 pushing the frozen `stack.proto` to `feat/stack-tool`
   (not there yet). A needed `stack.proto` change or a stack-automation-layer gap stops the work and is
   noted for the user; it is never patched here.
 - [Phase 2]: Re-review on 2026-10-16 (`02-REVIEW.md`, diff since 3cfb240) left 4 warnings and 1 info

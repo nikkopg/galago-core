@@ -3,7 +3,7 @@
 ## Milestones
 
 - ✅ **v1 Live Run Control (queue & run page)** — Phases 1-2 (shipped 2026-10-16) — [archive](milestones/v1-ROADMAP.md)
-- 🚧 **v2 STACK tool support — codegen, operator acknowledge, error visibility, F5** — Phases 3-6 (in progress)
+- 🚧 **v2 STACK tool support — codegen, operator acknowledge, error visibility, F5** — Phases 3-5 (in progress)
 
 ## Phases
 
@@ -21,7 +21,7 @@
 only the operator an audited AcknowledgeFailure, and the root cause of F5 (a queued command executed more
 than once) is fixed. Research: `.planning/research/SUMMARY.md` (`F5-ROOT-CAUSE.md`, `ACK-AND-F3.md`).
 Companion: galago-tools' own v2 milestone "STACK Tool & STACK↔F.A.S.T. Handoff" (`feat/stack-tool`), whose
-phases are always written "galago-tools Phase N" here because its numbering (4-7) overlaps this one (3-6).
+phases are always written "galago-tools Phase N" here because its numbering (4-7) overlaps this one (3-5).
 
 **Hard constraints (every v2 phase):**
 - No STACK or F.A.S.T. motion from tests: fakes only (FakeGrpc, `"stack" as ToolType` fakes). Live runs
@@ -34,74 +34,65 @@ phases are always written "galago-tools Phase N" here because its numbering (4-7
 - Retry-after-failure stays: a FAILED row stays queued and re-runs first on the next Start.
 - Push only to the `nikkopg` fork remote, and only when the user says so.
 
-- [ ] **Phase 3: Queue Start Guard & Visibility** - A Start never dispatches a row already in flight, and the
-  operator sees what a Start will run before confirming (F5, DEP-03c).
-- [ ] **Phase 4: Tool Error Visibility** - A failed step shows the tool's own message and is never shown as
-  success (F3, DEP-03b).
-- [ ] **Phase 5: Operator-only Commands & STACK Acknowledge** - Only an operator, from the tool page, can
+- [ ] **Phase 3: Queue Start Guard & Tool Error Visibility** - A Start never dispatches a row already in
+  flight, the operator sees what a Start will run, and a failed step shows the tool's own message and is
+  never shown as success (F5, DEP-03c; F3, DEP-03b).
+- [ ] **Phase 4: Operator-only Commands & STACK Acknowledge** - Only an operator, from the tool page, can
   acknowledge a STACK failure; no protocol, script or queue row can (DEP-03a).
-- [ ] **Phase 6: STACK Codegen & Command Forms** - Build against the frozen `stack.proto`, offer every STACK
+- [ ] **Phase 5: STACK Codegen & Command Forms** - Build against the frozen `stack.proto`, offer every STACK
   command as a form, and prove the acknowledge work on the real wire (DEP-02).
 
 ## Phase Details
 
-### Phase 3: Queue Start Guard & Visibility
+### Phase 3: Queue Start Guard & Tool Error Visibility
 
-**Goal**: A Start, restart or enqueue never dispatches a queue row that is already in flight, and the
-operator sees before confirming what a Start will run, so a stale leftover row is never a surprise.
-**Depends on**: Nothing (first v2 phase; builds on v1's queue)
-**Requirements**: QUE-07, QUE-08, QUE-09
+**Goal**: A Start, restart or enqueue never dispatches a queue row that is already in flight; the operator
+sees before confirming what a Start will run, so a stale leftover row is never a surprise; and when a tool
+step fails, the operator sees the tool's own message wherever the failure shows, and no tool error is ever
+shown as success.
+**Depends on**: Nothing (first v2 phase; builds on v1's queue and run page)
+**Requirements**: QUE-07, QUE-08, QUE-09, ERR-01, ERR-02, ERR-03, ERR-04, ERR-05
 **Success Criteria** (what must be TRUE):
   1. While a step is in flight, pressing Run, restarting or enqueueing a run does not dispatch that row a
      second time: the tool receives one `executeCommand`, the queue still shows as running, and Logs record
      a "Queue Start Ignored" entry (a FakeGrpc test proves the call count stays at one).
   2. Before confirming a Start, the operator's Run confirmation shows how many queued rows will run, how
      many of them are FAILED retries and how many distinct runs they belong to, read-only, with nothing
-     pre-selected and no timer.
-  3. After a Start, Logs list the queue_ids and run_ids that Start will run, so a multi-row start can be
-     explained afterwards.
-  4. A FAILED step still stays queued and re-runs first on the next Start; the existing retry-after-failure,
+     pre-selected and no timer; after the Start, Logs list the queue_ids and run_ids that Start will run.
+  3. A FAILED step still stays queued and re-runs first on the next Start; the existing retry-after-failure,
      h0q, o44 and t9e regression tests pass unmodified.
-**Plans**: TBD
-**UI hint**: yes
-**Notes**: F5's premise was wrong (F5-ROOT-CAUSE.md): Run 1 ran three different queued rows in one Start,
-as designed. The real defect is the unguarded re-entrant `_start()`; the guard must sit before the state
-flip so an ignored start does not move the queue out of BUSY. Out of scope: `startNext` skipping STARTED
-rows (Future Requirements), auto-deleting leftovers, idempotency keys (would need a proto change). The
-confirmation must keep the UI-08 static scan green (no timers, no state checks, no Enter-bound default).
-
-### Phase 4: Tool Error Visibility
-
-**Goal**: When a tool step fails, the operator sees the tool's own message wherever the failure shows, and
-no tool error is ever shown as success.
-**Depends on**: Nothing functional (independent of Phase 3; sequenced after it by the build order, and both
-touch the queue's failure handling, so they run one after the other)
-**Requirements**: ERR-01, ERR-02, ERR-03, ERR-04, ERR-05
-**Success Criteria** (what must be TRUE):
-  1. A test, written failing first, drives each tool response code through the queue and pins the message,
+  4. A test, written failing first, drives each tool response code through the queue and pins the message,
      code and stored error the run UI receives for that code.
-  2. On a failed step the run page shows the tool's own text: for `ERROR_FROM_TOOL` the text itself, and for
+  5. On a failed step the run page shows the tool's own text: for `ERROR_FROM_TOOL` the text itself, and for
      the other non-SUCCESS codes the tool's text next to the generic sentence rather than replaced by it;
      the code badge and the log show the real code name, never "UNKNOWN".
-  3. A failed step's card shows its stored error message, including after the banner was cleared or
-     galago-web restarted.
-  4. After the operator dismisses the error banner, the next failure shows the banner again.
-  5. A failed step is never shown as completed, a SUCCESS reply that carries an error message is reported
+  6. A failed step's card shows its stored error message, including after the banner was cleared or
+     galago-web restarted; after the operator dismisses the error banner, the next failure shows it again.
+  7. A failed step is never shown as completed, a SUCCESS reply that carries an error message is reported
      as an error, and a run whose failed step was skipped is not shown as plain success.
 **Plans**: TBD
 **UI hint**: yes
-**Notes**: Research flag: the live F3 report ("nothing on screen") is not explained by reading the code
-alone, so the first task is the failing test (criterion 1), not a fix. Re-arming the banner needs a failure
-sequence number in the `getError` payload, a small server change in the queue. ACK-AND-F3.md §4.4 items 5-7
-(a "Send to Tool" outcome toast, a persistent tool-page error toast, Gantt FAILED styling) are not mapped
-to any ERR requirement, so they are not scheduled; add them as requirements or quick tasks if wanted.
+**Notes**: Merged from the former Phases 3 (F5) and 4 (F3) on 2026-10-28 (user decision): no dependency
+between them, and both edit `command_queue.ts`, the run page, its banner and the Run confirmation, so one
+design pass avoids conflicting edits. Plans can still split by requirement group.
+- F5 (F5-ROOT-CAUSE.md): F5's premise was wrong — Run 1 ran three different queued rows in one Start, as
+  designed. The real defect is the unguarded re-entrant `_start()`; the guard must sit before the state flip
+  so an ignored start does not move the queue out of BUSY. Out of scope: `startNext` skipping STARTED rows
+  (Future Requirements), auto-deleting leftovers, idempotency keys (would need a proto change).
+- F3 (ACK-AND-F3.md §4): the live F3 report ("nothing on screen") is not explained by reading the code
+  alone, so the first F3 task is the failing test (criterion 4), not a fix. Re-arming the banner needs a
+  failure sequence number in the `getError` payload, a small server change in the queue. §4.4 items 5-7 (a
+  "Send to Tool" outcome toast, a persistent tool-page error toast, Gantt FAILED styling) are not mapped to
+  any requirement, so they are not scheduled; add them as requirements or quick tasks if wanted.
+- The confirmation and banner changes must keep the UI-08 static scan green (no timers, no state checks, no
+  Enter-bound default).
 
-### Phase 5: Operator-only Commands & STACK Acknowledge
+### Phase 4: Operator-only Commands & STACK Acknowledge
 
 **Goal**: Only an operator, from the tool page, can acknowledge a STACK failure, through an explicit and
 audited confirmation; no protocol, script, imported file, editor or queued row can send an operator-only
 command.
-**Depends on**: Phase 4 (the latched guid is read from the step-card error, and the acknowledge's tests need
+**Depends on**: Phase 3 (the latched guid is read from the step-card error, and the acknowledge's tests need
 a real failure path). No dependency on `stack.proto`: built on string tool types and fakes.
 **Requirements**: OPR-01, OPR-02, OPR-03, OPR-04, OPR-05
 **Success Criteria** (what must be TRUE):
@@ -126,17 +117,17 @@ the run-state poller, show dead Pause/Resume/Abort buttons, route Stop/Clear All
 modal with no STACK abort, and make `toolControl("acknowledge_failure")` valid mid-step). Use the
 recovery-only spec (`server/recoveryActions.ts`) and the one operator-only table
 (`server/operatorOnlyCommands.ts`), guard on `String(this.toolType)`, and `"stack" as ToolType` fakes. The
-latch-read command name is a single constant, set when galago-tools Phase 4 names it and pinned in Phase 6.
-Not provable before codegen (Phase 6): the real-encoder wire test, `getToolConfigDefinition` for `stack`,
+latch-read command name is a single constant, set when galago-tools Phase 4 names it and pinned in Phase 5.
+Not provable before codegen (Phase 5): the real-encoder wire test, `getToolConfigDefinition` for `stack`,
 and creating a STACK tool row through `zToolType`. galago-web has no authentication, so "operator-only"
 means unreachable from any protocol, script, queue row or editor, plus the core's exact-guid check.
 
-### Phase 6: STACK Codegen & Command Forms
+### Phase 5: STACK Codegen & Command Forms
 
 **Goal**: galago-core builds against the frozen `stack.proto`, offers every STACK command except
 acknowledge as a command form, shows STACK read replies, and has the operator-acknowledge work proven on the
 real generated types.
-**Depends on**: Phase 5 **and** galago-tools Phase 4, the hard gate: its frozen `stack.proto` must be pushed
+**Depends on**: Phase 4 **and** galago-tools Phase 4, the hard gate: its frozen `stack.proto` must be pushed
 to `feat/stack-tool` (it is not there yet). This phase cannot start until it is.
 **Requirements**: GEN-01, GEN-02, GEN-03, GEN-04
 **Success Criteria** (what must be TRUE):
@@ -163,26 +154,24 @@ STACK motion.
 
 | Gate | Direction | What it covers | Gates | Status |
 |------|-----------|----------------|-------|--------|
-| galago-tools DEP-02 | This milestone delivers (Phase 6) | Submodule bump, ts-proto 1.151.1 regen, `commandFields.stack` without acknowledge | galago-tools Phase 6 (FLOW-02..04) and Phase 7 (LIVE-*), hard gate | Not started; waits on galago-tools Phase 4 |
-| galago-tools DEP-03 | This milestone delivers (Phases 3-5) | F5 root cause (Phase 3), F3 tool-error display (Phase 4), operator AcknowledgeFailure on the D-20 pattern (Phase 5) | galago-tools Phase 7, recommended before live runs, not a hard gate | Not started |
-| galago-tools Phase 4 | This milestone waits on (Phase 6) | The frozen `stack.proto` pushed to `feat/stack-tool`, with `AcknowledgeFailure(guid, arm_inspected)` and a latch-read command | galago-core Phase 6, hard gate | Not pushed to `feat/stack-tool` yet |
+| galago-tools DEP-02 | This milestone delivers (Phase 5) | Submodule bump, ts-proto 1.151.1 regen, `commandFields.stack` without acknowledge | galago-tools Phase 6 (FLOW-02..04) and Phase 7 (LIVE-*), hard gate | Not started; waits on galago-tools Phase 4 |
+| galago-tools DEP-03 | This milestone delivers (Phases 3-4) | F5 root cause and F3 tool-error display (Phase 3), operator AcknowledgeFailure on the D-20 pattern (Phase 4) | galago-tools Phase 7, recommended before live runs, not a hard gate | Not started |
+| galago-tools Phase 4 | This milestone waits on (Phase 5) | The frozen `stack.proto` pushed to `feat/stack-tool`, with `AcknowledgeFailure(guid, arm_inspected)` and a latch-read command | galago-core Phase 5, hard gate | Not pushed to `feat/stack-tool` yet |
 
-Phases 3-5 do not wait on any other repo. galago-tools DEP-01 (stack-automation-layer G1-G3) gates only
+Phases 3-4 do not wait on any other repo. galago-tools DEP-01 (stack-automation-layer G1-G3) gates only
 galago-tools Phase 5; nothing here waits on it. A needed `stack.proto` change or stack-automation-layer gap
 found while building stops the work and is noted for the user; it is never patched in this repo.
 
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 3 → 4 → 5 → 6 (Phases 3 and 4 have no dependency on each other; Phase 6
-waits on galago-tools Phase 4)
+Phases execute in numeric order: 3 → 4 → 5 (Phase 5 waits on galago-tools Phase 4)
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 3. Queue Start Guard & Visibility | v2 | 0/TBD | Not started | - |
-| 4. Tool Error Visibility | v2 | 0/TBD | Not started | - |
-| 5. Operator-only Commands & STACK Acknowledge | v2 | 0/TBD | Not started | - |
-| 6. STACK Codegen & Command Forms | v2 | 0/TBD | Not started (gated on galago-tools Phase 4) | - |
+| 3. Queue Start Guard & Tool Error Visibility | v2 | 0/TBD | Not started | - |
+| 4. Operator-only Commands & STACK Acknowledge | v2 | 0/TBD | Not started | - |
+| 5. STACK Codegen & Command Forms | v2 | 0/TBD | Not started (gated on galago-tools Phase 4) | - |
 
 ## Backlog
 
