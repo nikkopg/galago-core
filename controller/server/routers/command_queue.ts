@@ -2,7 +2,31 @@ import { z } from "zod";
 import CommandQueue from "../command_queue";
 import { procedure, router } from "@/server/trpc";
 import { ToolCommandExecutionError } from "../tools";
-import { ResponseCode } from "gen-interfaces/tools/grpc_interfaces/tool_base";
+
+// One plain payload for every error. The operator text is composed once, at the
+// source (describeToolReply), so nothing here rewrites it (ERR-02, D-12).
+function queueErrorPayload(error: Error, seq: number) {
+  if (error instanceof ToolCommandExecutionError) {
+    return {
+      message: error.message,
+      userFriendlyMessage: error.message,
+      code: error.code,
+      codeString: String(error.code),
+      name: error.name,
+      stack: error.stack,
+      seq,
+    };
+  }
+  const code = (error as { code?: unknown }).code;
+  return {
+    message: error.message,
+    userFriendlyMessage: error.message,
+    name: error.name,
+    stack: error.stack,
+    seq,
+    ...(typeof code === "number" || typeof code === "string" ? { code } : {}),
+  };
+}
 
 export const commandQueueRouter = router({
   state: procedure.query(async () => {
@@ -15,41 +39,10 @@ export const commandQueueRouter = router({
     CommandQueue.global.stop();
   }),
   getError: procedure.query(async () => {
-    const error = CommandQueue.global.getError();
+    const queue = CommandQueue.global;
+    const error = queue.getError();
     if (!error) return null;
-
-    // If the error is a ToolCommandExecutionError, enhance it with a user-friendly message
-    if (error instanceof ToolCommandExecutionError) {
-      // Get a user-friendly message based on the error code
-      let userFriendlyMessage = error.message;
-
-      // Add specific messages for different error codes
-      if (error.code === ResponseCode.UNRECOGNIZED_COMMAND) {
-        userFriendlyMessage =
-          "This command is not recognized by the tool. Please verify that the command is supported.";
-      } else if (error.code === ResponseCode.INVALID_ARGUMENTS) {
-        userFriendlyMessage =
-          "Invalid arguments provided for this command. Please check the parameters.";
-      } else if (error.code === ResponseCode.WRONG_TOOL) {
-        userFriendlyMessage =
-          "The command was sent to the wrong tool type. Please check that you're using the correct tool for this operation.";
-      } else if (error.code === ResponseCode.NOT_READY) {
-        userFriendlyMessage = "The tool is not ready. Please check its status and try again.";
-      }
-
-      // Return enhanced error information
-      return {
-        message: error.message,
-        userFriendlyMessage,
-        code: error.code,
-        codeString: error.code.toString(),
-        name: error.name,
-        stack: error.stack,
-      };
-    }
-
-    // For other types of errors, return as is
-    return error;
+    return queueErrorPayload(error, queue.failureSeq);
   }),
   skipCommand: procedure.input(z.number()).mutation(async ({ input }) => {
     CommandQueue.global.skipCommand(input);

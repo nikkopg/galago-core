@@ -65,6 +65,10 @@ export class CommandQueue {
   private _state: CommandQueueState = ToolStatus.OFFLINE;
   private _runningPromise?: Promise<any>;
   error?: Error;
+  // In memory only, like `error`. Bumped once per recorded failure so the run banner
+  // can re-arm for a repeat of identical text. Seeded from the clock so a restarted
+  // process never reuses a seq a still-open page has already dismissed (ERR-04).
+  private _failureSeq: number = Date.now();
   private _lastAlertKey?: string;
   private _lastAlertAtMs?: number;
   private _runningStep?: Readonly<RunningStep>;
@@ -159,7 +163,7 @@ export class CommandQueue {
       error = new Error(error);
     }
     this._setState(ToolStatus.FAILED);
-    this.error = error;
+    this._recordFailure(error);
     logger.error("CommandQueue failed:", error);
   }
 
@@ -414,6 +418,17 @@ export class CommandQueue {
 
   getError() {
     return this.error || null;
+  }
+
+  get failureSeq(): number {
+    return this._failureSeq;
+  }
+
+  // The single place a failure is recorded: sets the error and bumps the seq in
+  // failure order. Never clears, acknowledges or retries anything (ERR-04).
+  private _recordFailure(error: Error): void {
+    this._failureSeq += 1;
+    this.error = error;
   }
 
   private async _ensureModalReady(): Promise<void> {
@@ -923,9 +938,10 @@ export class CommandQueue {
         action: "Queue failed to start",
         details: "Error while starting the queue.: " + e,
       });
-      this.error = e instanceof Error ? e : new Error("Execution failed");
+      const failure = e instanceof Error ? e : new Error("Execution failed");
+      this._recordFailure(failure);
       this._setState(ToolStatus.FAILED);
-      await this._notifyFailure({ error: this.error });
+      await this._notifyFailure({ error: failure });
     } finally {
       this._runningPromise = undefined;
       if (this.state === ToolStatus.BUSY) {
@@ -1406,7 +1422,8 @@ export class CommandQueue {
         }
 
         // Set error state for UI to display
-        this.error = e instanceof Error ? e : new Error("Execution failed");
+        const failure = e instanceof Error ? e : new Error("Execution failed");
+        this._recordFailure(failure);
         this._setState(ToolStatus.FAILED);
 
         logAction({
@@ -1420,7 +1437,7 @@ export class CommandQueue {
         });
 
         await this._notifyFailure({
-          error: this.error,
+          error: failure,
           runId: nextCommand.runId,
           toolId: nextCommand.commandInfo?.toolId,
           toolType: nextCommand.commandInfo?.toolType,

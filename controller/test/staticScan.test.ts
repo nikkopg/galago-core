@@ -402,3 +402,46 @@ describe("Run confirmation shows what a Start will run (QUE-08)", () => {
     expect(stripComments(read(summaryFile))).not.toMatch(/dangerouslySetInnerHTML/);
   });
 });
+
+describe("error path invariants (ERR-02, ERR-04, QUE-07)", () => {
+  const queueSrc = stripComments(read("server/command_queue.ts"));
+  const routerSrc = stripComments(read("server/routers/command_queue.ts"));
+  const toolsSrc = stripComments(read("server/tools.ts"));
+
+  it("single failure-recording site", () => {
+    const assignments = queueSrc.match(/this\.error\s*=(?!=)(?!\s*undefined\b)/g) ?? [];
+    expect(assignments.length).toBe(1);
+    const region = extractBracedRegion(queueSrc, /private _recordFailure\(/);
+    expect(region).toMatch(/this\.error\s*=(?!=)(?!\s*undefined\b)/);
+    expect(region).toContain("this._failureSeq += 1");
+  });
+
+  it("_start guard comes first, no await before the claim", () => {
+    const body = extractBracedRegion(queueSrc, /async _start\(/);
+    const g = body.indexOf("if (this._runningPromise)");
+    expect(g).toBeGreaterThanOrEqual(0);
+    for (const later of [
+      "this._failedAttempt = undefined",
+      '"Queue Started"',
+      "this.error = undefined",
+      "this._setState(",
+    ]) {
+      const i = body.indexOf(later);
+      expect(i, later).toBeGreaterThanOrEqual(0);
+      expect(g, later).toBeLessThan(i);
+    }
+    const claim = body.search(/this\._runningPromise\s*=(?!=)/);
+    expect(claim).toBeGreaterThanOrEqual(0);
+    expect(body.slice(0, claim)).not.toMatch(/\bawait\b/);
+  });
+
+  it("one operator-text composer", () => {
+    expect(routerSrc).not.toMatch(
+      /ResponseCode\.(UNRECOGNIZED_COMMAND|INVALID_ARGUMENTS|WRONG_TOOL|NOT_READY)/,
+    );
+    expect(toolsSrc).toMatch(/describeToolReply\(/);
+    const cls = extractBracedRegion(toolsSrc, /export class ToolCommandExecutionError/);
+    expect(cls).toContain("String(code)");
+    expect(cls).not.toMatch(/typeof value/);
+  });
+});

@@ -237,13 +237,11 @@ export const RunsComponent: React.FC = () => {
         // Check if error is a ToolCommandExecutionError
         if (typeof getError.data === "object" && getError.data !== null) {
           // Handle ToolCommandExecutionError with our enhanced properties
-          if ("userFriendlyMessage" in getError.data) {
-            errorMessage = getError.data.userFriendlyMessage;
-          } else if ("message" in getError.data) {
-            errorMessage = getError.data.message;
-          }
+          // getError now returns one plain payload (message text is composed once
+          // on the server), so read its fields directly.
+          errorMessage = getError.data.userFriendlyMessage;
 
-          if ("codeString" in getError.data) {
+          if ("codeString" in getError.data && getError.data.codeString) {
             errorCode = getError.data.codeString;
           } else if ("code" in getError.data) {
             // Convert numeric code to string if possible
