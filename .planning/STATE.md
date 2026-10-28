@@ -5,16 +5,16 @@ milestone_name: STACK tool support — codegen, operator acknowledge, error visi
 current_phase: 3
 current_phase_name: Queue Start Guard & Tool Error Visibility
 status: executing
-stopped_at: Completed 03-01-PLAN.md
-last_updated: "2026-10-28T22:20:55.484Z"
+stopped_at: Completed 03-02-PLAN.md
+last_updated: "2026-10-28T22:25:39.608Z"
 last_activity: 2026-10-28
 last_activity_desc: Phase 3 execution started
-state_head: 5c0c4bfafaae20a9f40a8f3733172750f8bb5874
+state_head: 8eb3432c99f20299491badb43cf6a1dcf7262751
 progress:
   total_phases: 3
   completed_phases: 0
   total_plans: 6
-  completed_plans: 1
+  completed_plans: 2
   percent: 0
 ---
 
@@ -31,7 +31,7 @@ decides every recovery action; the web app never acts on its own or pre-selects 
 ## Current Position
 
 Phase: 3 (Queue Start Guard & Tool Error Visibility) — EXECUTING
-Plan: 2 of 6
+Plan: 3 of 6
 Status: Ready to execute
 Last activity: 2026-10-28 — Phase 3 execution started
 
@@ -72,6 +72,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 02 P05 | 40 min | 2 tasks | 7 files |
 | Phase 02-run-page-live-controls P06 | 25min | 2 tasks | 1 files |
 | Phase 3 P01 | 30 min | 2 tasks | 4 files |
+| Phase 3 P02 | 15 min | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -89,6 +90,7 @@ Recent decisions affecting current work:
   operator-only command table (ACK-AND-F3.md §1.2, §2.2).
 - [Phase 3]: 03-01: single-flight guard is the first statement of CommandQueue._start; an ignored Start logs 'Queue Start Ignored' and changes nothing
 - [Phase 3]: 03-01: Start listing read via synchronous SqliteQueue.queuedRowsSync (no await before the _runningPromise claim), capped at 50 rows
+- [Phase 3]: 03-02: errorPath.test.ts committed RED by design (D-10); 30 of 45 cases fail on assertions until 03-04, run wave gates with --exclude test/errorPath.test.ts
 
 ### Pending Todos
 
@@ -127,8 +129,8 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-28T22:20:55.462Z
-Stopped at: Completed 03-01-PLAN.md
+Last session: 2026-10-28T22:25:39.585Z
+Stopped at: Completed 03-02-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
