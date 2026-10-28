@@ -5,16 +5,16 @@ milestone_name: STACK tool support — codegen, operator acknowledge, error visi
 current_phase: 3
 current_phase_name: Queue Start Guard & Tool Error Visibility
 status: executing
-stopped_at: Completed 03-03-PLAN.md
-last_updated: "2026-10-28T22:29:19.299Z"
+stopped_at: Completed 03-04-PLAN.md
+last_updated: "2026-10-28T22:34:40.016Z"
 last_activity: 2026-10-28
 last_activity_desc: Phase 3 execution started
-state_head: 51504a54b1df0f83beae055e9c55669cc8ac1eb8
+state_head: cdf48db1ac6a28d93ef662a4f8750223870fec82
 progress:
   total_phases: 3
   completed_phases: 0
   total_plans: 6
-  completed_plans: 3
+  completed_plans: 4
   percent: 0
 ---
 
@@ -31,7 +31,7 @@ decides every recovery action; the web app never acts on its own or pre-selects 
 ## Current Position
 
 Phase: 3 (Queue Start Guard & Tool Error Visibility) — EXECUTING
-Plan: 4 of 6
+Plan: 5 of 6
 Status: Ready to execute
 Last activity: 2026-10-28 — Phase 3 execution started
 
@@ -74,6 +74,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 3 P01 | 30 min | 2 tasks | 4 files |
 | Phase 3 P02 | 15 min | 2 tasks | 1 files |
 | Phase 03 P03 | 3 min | 2 tasks | 4 files |
+| Phase 3 P04 | 15min | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -93,6 +94,7 @@ Recent decisions affecting current work:
 - [Phase 3]: 03-01: Start listing read via synchronous SqliteQueue.queuedRowsSync (no await before the _runningPromise claim), capped at 50 rows
 - [Phase 3]: 03-02: errorPath.test.ts committed RED by design (D-10); 30 of 45 cases fail on assertions until 03-04, run wave gates with --exclude test/errorPath.test.ts
 - [Phase 03]: 03-03: Start summary counts come from queue-joined commandQueue.commands, not getAll; STARTED rows shown on a separate line and excluded from will-run
+- [Phase 3]: 03-04: whitespace-only error_message counts as empty; SUCCESS+message is thrown as ERROR_FROM_TOOL; _failureSeq seeded from Date.now()
 
 ### Pending Todos
 
@@ -131,8 +133,8 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-28T22:29:14.974Z
-Stopped at: Completed 03-03-PLAN.md
+Last session: 2026-10-28T22:34:39.992Z
+Stopped at: Completed 03-04-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

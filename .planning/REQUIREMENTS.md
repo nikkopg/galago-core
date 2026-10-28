@@ -28,15 +28,15 @@ not one row three times. The real defect is an unguarded re-entrant `_start()`.
 
 ### Error visibility (F3, DEP-03b)
 
-- [ ] **ERR-01**: A test, written failing first, drives each tool response code through the queue and
+- [x] **ERR-01**: A test, written failing first, drives each tool response code through the queue and
   pins what the run UI receives
-- [ ] **ERR-02**: The operator sees the tool's own text for `ERROR_FROM_TOOL`; for other non-SUCCESS
+- [x] **ERR-02**: The operator sees the tool's own text for `ERROR_FROM_TOOL`; for other non-SUCCESS
   codes the tool's text is shown next to the generic sentence, not replaced; the logged code name is
   real, not "UNKNOWN"
 - [ ] **ERR-03**: A failed step shows its stored error message on its step card
-- [ ] **ERR-04**: After a dismiss, the error banner reappears on each new failure (a failure sequence
+- [x] **ERR-04**: After a dismiss, the error banner reappears on each new failure (a failure sequence
   number in `getError`)
-- [ ] **ERR-05**: No tool error renders as success: a failed step is never shown as completed, and a run
+- [x] **ERR-05**: No tool error renders as success: a failed step is never shown as completed, and a run
   whose failed step was skipped is not shown as plain success
 
 ### Operator acknowledge (DEP-03a)
@@ -101,11 +101,11 @@ not one row three times. The real defect is an unguarded re-entrant `_start()`.
 | QUE-07 | Phase 3 | Complete |
 | QUE-08 | Phase 3 | Complete |
 | QUE-09 | Phase 3 | Complete |
-| ERR-01 | Phase 3 | Pending |
-| ERR-02 | Phase 3 | Pending |
+| ERR-01 | Phase 3 | Complete |
+| ERR-02 | Phase 3 | Complete |
 | ERR-03 | Phase 3 | Pending |
-| ERR-04 | Phase 3 | Pending |
-| ERR-05 | Phase 3 | Pending |
+| ERR-04 | Phase 3 | Complete |
+| ERR-05 | Phase 3 | Complete |
 | OPR-01 | Phase 4 | Pending |
 | OPR-02 | Phase 4 | Pending |
 | OPR-03 | Phase 4 | Pending |
