@@ -2,9 +2,14 @@
 gsd_state_version: "1.0"
 milestone: v2
 milestone_name: STACK tool support — codegen, operator acknowledge, error visibility, F5
+current_phase: 3
+current_phase_name: first of 3 phases in v2
 status: planning
-last_updated: "2026-10-28T13:37:01.000Z"
+stopped_at: Phase 3 context gathered
+last_updated: "2026-10-28T13:47:00.334Z"
 last_activity: 2026-10-28
+last_activity_desc: Roadmap v2 compressed to 3 phases (17/17 requirements mapped)
+state_head: 8fbbdf28fe4acc197f7d3e0bfa9be49a1dbe9418
 progress:
   total_phases: 3
   completed_phases: 0
@@ -119,9 +124,9 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-28
-Stopped at: Roadmap v2 created; Phase 3 ready to plan
-Resume file: None
+Last session: 2026-10-28T13:47:00.317Z
+Stopped at: Phase 3 context gathered
+Resume file: .planning/phases/03-queue-start-guard-tool-error-visibility/03-CONTEXT.md
 
 ## Operator Next Steps
 
