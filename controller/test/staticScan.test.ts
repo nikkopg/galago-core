@@ -361,3 +361,44 @@ describe("safety invariants", () => {
     expect(stripComments(read("components/runs/ToolPausedModal.tsx"))).not.toMatch(pattern);
   });
 });
+
+describe("Run confirmation shows what a Start will run (QUE-08)", () => {
+  const modalFile = "components/runs/status/QueueStatuscomponent.tsx";
+  const summaryFile = "components/runs/queuedStartSummary.ts";
+  const timerPattern = /\b(?:window\.|globalThis\.)?set(?:Timeout|Interval)\(/;
+
+  it("the modal reads the queue-joined commands query and keeps the simulation warning", () => {
+    const raw = read(modalFile);
+    const src = stripComments(raw);
+    expect(src).toMatch(/commandQueue\.commands\.useQuery\(/);
+    expect(src).toMatch(/queuedStartLines\(/);
+    expect(src).toContain("Make sure instruments are not unintentionally in simulation mode.");
+  });
+
+  it("the Run confirmation has no timer, form, autoFocus or default selection", () => {
+    const src = stripComments(read(modalFile));
+    expect(src).not.toMatch(timerPattern);
+    expect(src).not.toMatch(/<form|autoFocus|defaultValue|defaultChecked|initialFocusRef/);
+  });
+
+  it("the Run confirmation footer keeps exactly two buttons", () => {
+    const src = stripComments(read(modalFile));
+    const start = src.indexOf("<ModalFooter>");
+    expect(start).toBeGreaterThanOrEqual(0);
+    const end = src.indexOf("</ModalFooter>", start);
+    expect(end).toBeGreaterThan(start);
+    const footer = src.slice(start, end);
+    expect(footer.match(/<Button\b/g)?.length).toBe(2);
+  });
+
+  it("the pure summary module stays React-free and timer-free", () => {
+    const src = stripComments(read(summaryFile));
+    expect(src).not.toMatch(/from "react"|\.tsx"/);
+    expect(src).not.toMatch(timerPattern);
+  });
+
+  it("neither file injects raw HTML", () => {
+    expect(stripComments(read(modalFile))).not.toMatch(/dangerouslySetInnerHTML/);
+    expect(stripComments(read(summaryFile))).not.toMatch(/dangerouslySetInnerHTML/);
+  });
+});

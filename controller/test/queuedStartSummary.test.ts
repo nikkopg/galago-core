@@ -77,7 +77,9 @@ describe("queuedStartLines copy (UI-SPEC S1)", () => {
       { text: QUEUED_START_ERROR, tone: "caption" },
       NOTE_LINE,
     ]);
-    expect(QUEUED_START_ERROR).toBe("Could not read the queue. Logs list the steps this Start ran.");
+    expect(QUEUED_START_ERROR).toBe(
+      "Could not read the queue. Logs list the steps this Start ran.",
+    );
   });
 
   it("empty: no rows shows The queue is empty. then the note", () => {
@@ -181,13 +183,13 @@ describe("queuedStartLines copy (UI-SPEC S1)", () => {
       expect(lines[lines.length - 1]).toEqual(NOTE_LINE);
     }
     expect(QUEUED_START_NOTE).toBe(
-      "Counts refresh every second. Logs list the exact steps this Start ran."
+      "Counts refresh every second. Logs list the exact steps this Start ran.",
     );
   });
 
   it("the summary is counts only: line count is bounded regardless of queue size", () => {
     const rows = Array.from({ length: 500 }, (_, i) =>
-      makeRow({ status: i % 2 === 0 ? "FAILED" : "CREATED", runId: `r${i}` })
+      makeRow({ status: i % 2 === 0 ? "FAILED" : "CREATED", runId: `r${i}` }),
     );
     expect(queuedStartLines({ rows, isError: false }).length).toBeLessThanOrEqual(4);
   });

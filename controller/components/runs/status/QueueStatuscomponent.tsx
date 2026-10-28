@@ -10,6 +10,7 @@ import {
   ModalBody,
   ModalCloseButton,
   Text,
+  VStack,
   useDisclosure,
   ButtonGroup,
   Icon,
@@ -25,6 +26,7 @@ import { shouldInterceptQueueStop, buildStopRequest } from "../stopInterception"
 import type { InstrumentStopRequest } from "../stopInterception";
 import { InstrumentStopModal } from "../InstrumentStopModal";
 import type { RunStateEnvelope } from "@/server/runState";
+import { queuedStartLines } from "../queuedStartSummary";
 
 interface QueueStatusComponent {
   totalRuns: number;
@@ -37,6 +39,10 @@ export const QueueStatusComponent: React.FC<QueueStatusComponent> = ({
 }) => {
   const stateQuery = trpc.commandQueue.state.useQuery(undefined, { refetchInterval: 1000 });
   const commandsQuery = trpc.commandQueue.getAll.useQuery(undefined, { refetchInterval: 1000 });
+  // D-06 (recorded deviation): the Start summary counts queue-joined rows from
+  // `commands`, not `getAll`, so a dequeued FAILED row is never promised as a
+  // retry. Deliberately not part of the spinner condition below.
+  const queuedCommandsQuery = trpc.commandQueue.commands.useQuery({}, { refetchInterval: 1000 });
   const stateMutationOpts = {
     onSettled: () => {
       stateQuery.refetch();
@@ -91,6 +97,18 @@ export const QueueStatusComponent: React.FC<QueueStatusComponent> = ({
           <ModalCloseButton />
           <ModalBody>
             <Text>Make sure instruments are not unintentionally in simulation mode.</Text>
+            <VStack align="stretch" spacing={2} mt={4}>
+              {queuedStartLines({
+                rows: queuedCommandsQuery.data,
+                isError: queuedCommandsQuery.isError,
+              }).map((line, index) => (
+                <Text
+                  key={`${line.text}-${index}`}
+                  {...(line.tone === "caption" ? { fontSize: "sm", color: "gray.500" } : {})}>
+                  {line.text}
+                </Text>
+              ))}
+            </VStack>
           </ModalBody>
           <ModalFooter>
             <Button colorScheme="teal" mr={3} onClick={handleConfirmStart}>
