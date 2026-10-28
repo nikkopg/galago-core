@@ -98,12 +98,10 @@ describe("describeQueueError (D-16, ERR-02, ERR-05)", () => {
   });
 
   it("never labels the badge SUCCESS or UNKNOWN", () => {
-    expect(describeQueueError({ message: "m", codeString: "SUCCESS", code: "INVALID_ARGUMENTS" }).code).toBe(
-      "INVALID_ARGUMENTS",
-    );
-    expect(describeQueueError({ message: "m", codeString: "UNKNOWN", code: "NOT_READY" }).code).toBe(
-      "NOT_READY",
-    );
+    const successFirst = { message: "m", codeString: "SUCCESS", code: "INVALID_ARGUMENTS" };
+    const unknownFirst = { message: "m", codeString: "UNKNOWN", code: "NOT_READY" };
+    expect(describeQueueError(successFirst).code).toBe("INVALID_ARGUMENTS");
+    expect(describeQueueError(unknownFirst).code).toBe("NOT_READY");
     expect(describeQueueError({ message: "m", code: "SUCCESS" }).code).toBeNull();
     expect(describeQueueError({ message: "m", code: "UNKNOWN" }).code).toBeNull();
   });
