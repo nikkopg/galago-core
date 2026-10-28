@@ -2,9 +2,9 @@
 phase: "3"
 slug: "queue-start-guard-tool-error-visibility"
 # status lifecycle: draft (seeded by plan-phase) → validated (set by validate-phase §6)
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: validated
+nyquist_compliant: true
+wave_0_complete: true
 created: "2026-10-28"
 ---
 
@@ -44,21 +44,21 @@ Task IDs are filled in by the planner; requirement → test mapping is fixed her
 
 | Requirement | Behavior | Test Type | Automated Command | File Exists | Status |
 |-------------|----------|-----------|-------------------|-------------|--------|
-| QUE-07 | Second / same-tick `_start()` while in flight: one `executeCommand`, state BUSY, one "Queue Started", "Queue Start Ignored" warning | integration | `npx vitest run test/queueStartGuard.test.ts` | ❌ W0 | ⬜ pending |
-| QUE-07 | `_start` guard first, no `await` before claim | static scan | `npx vitest run test/staticScan.test.ts` | extend | ⬜ pending |
-| QUE-08 | `summarizeQueuedStart` counts (rows, FAILED, distinct runs, empty) | unit | `npx vitest run test/queuedStartSummary.test.ts` | ❌ W0 | ⬜ pending |
-| QUE-08 | "Queue Started" details list queue_ids/run_ids; absent when ignored | integration | `npx vitest run test/queueStartGuard.test.ts` | ❌ W0 | ⬜ pending |
-| QUE-08 | Run modal: no timers/autoFocus/defaultValue/form, keeps warning text, uses summary | static scan | `npx vitest run test/staticScan.test.ts` | extend | ⬜ pending |
-| QUE-09 | Retry, h0q, o44, t9e unchanged (files unmodified) | existing | `npx vitest run test/toolControl.test.ts test/sqliteQueue.test.ts test/queueRestart.test.ts` | ✅ | ⬜ pending |
-| QUE-09 | Recipe A: FAILED retry then leftover CREATED row, in order | integration | `npx vitest run test/queueStartGuard.test.ts` | ❌ W0 | ⬜ pending |
-| ERR-01 | Table over every `ResponseCode` + SUCCESS-with-message pinning getError, stored row error, logs, instance codeString — committed red first | integration | `npx vitest run test/errorPath.test.ts` | ❌ W0 | ⬜ pending |
-| ERR-02 | `describeToolReply` wording; tool text kept; `codeString === String(code)` | unit | `npx vitest run test/errorPath.test.ts` | ❌ W0 | ⬜ pending |
-| ERR-03 | `stepErrorText` (FAILED, SKIPPED+error, stale error on COMPLETED ignored) | unit | `npx vitest run test/queueError.test.ts` | ❌ W0 | ⬜ pending |
-| ERR-03 | Card renders `stepErrorText` with wrapping text | static scan | `npx vitest run test/staticScan.test.ts` | extend | ⬜ pending |
-| ERR-04 | `seq` increases per failure, single `this.error =` failure site; `shouldShowErrorBanner` re-arms | integration + unit + scan | `npx vitest run test/errorPath.test.ts test/queueError.test.ts test/staticScan.test.ts` | ❌ W0 | ⬜ pending |
-| ERR-05 | `describeQueueError` never empty / never SUCCESS; `deriveRunOutcome` skipped-with-error ≠ COMPLETED; check icon COMPLETED-only | unit + scan | `npx vitest run test/queueError.test.ts test/runOutcome.test.ts test/staticScan.test.ts` | ❌ W0 | ⬜ pending |
+| QUE-07 | Second / same-tick `_start()` while in flight: one `executeCommand`, state BUSY, one "Queue Started", "Queue Start Ignored" warning | integration | `npx vitest run test/queueStartGuard.test.ts` | ✅ | ✅ green |
+| QUE-07 | `_start` guard first, no `await` before claim | static scan | `npx vitest run test/staticScan.test.ts` | extend | ✅ green |
+| QUE-08 | `summarizeQueuedStart` counts (rows, FAILED, distinct runs, empty) | unit | `npx vitest run test/queuedStartSummary.test.ts` | ✅ | ✅ green |
+| QUE-08 | "Queue Started" details list queue_ids/run_ids; absent when ignored | integration | `npx vitest run test/queueStartGuard.test.ts` | ✅ | ✅ green |
+| QUE-08 | Run modal: no timers/autoFocus/defaultValue/form, keeps warning text, uses summary | static scan | `npx vitest run test/staticScan.test.ts` | extend | ✅ green |
+| QUE-09 | Retry, h0q, o44, t9e unchanged (files unmodified) | existing | `npx vitest run test/toolControl.test.ts test/sqliteQueue.test.ts test/queueRestart.test.ts` | ✅ | ✅ green |
+| QUE-09 | Recipe A: FAILED retry then leftover CREATED row, in order | integration | `npx vitest run test/queueStartGuard.test.ts` | ✅ | ✅ green |
+| ERR-01 | Table over every `ResponseCode` + SUCCESS-with-message pinning getError, stored row error, logs, instance codeString — committed red first | integration | `npx vitest run test/errorPath.test.ts` | ✅ | ✅ green |
+| ERR-02 | `describeToolReply` wording; tool text kept; `codeString === String(code)` | unit | `npx vitest run test/errorPath.test.ts` | ✅ | ✅ green |
+| ERR-03 | `stepErrorText` (FAILED, SKIPPED+error, stale error on COMPLETED ignored) | unit | `npx vitest run test/queueError.test.ts` | ✅ | ✅ green |
+| ERR-03 | Card renders `stepErrorText` with wrapping text | static scan | `npx vitest run test/staticScan.test.ts` | extend | ✅ green |
+| ERR-04 | `seq` increases per failure, single `this.error =` failure site; `shouldShowErrorBanner` re-arms | integration + unit + scan | `npx vitest run test/errorPath.test.ts test/queueError.test.ts test/staticScan.test.ts` | ✅ | ✅ green |
+| ERR-05 | `describeQueueError` never empty / never SUCCESS; `deriveRunOutcome` skipped-with-error ≠ COMPLETED; check icon COMPLETED-only | unit + scan | `npx vitest run test/queueError.test.ts test/runOutcome.test.ts test/staticScan.test.ts` | ✅ | ✅ green |
 
-*Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
+*Status: ✅ green · ✅ green · ❌ red · ⚠️ flaky*
 
 **Task mapping (filled by the planner):**
 
@@ -85,10 +85,10 @@ Wave-1 full-suite gate runs with `--exclude test/errorPath.test.ts` (red by desi
 
 ## Wave 0 Requirements
 
-- [ ] `controller/test/errorPath.test.ts` — ERR-01/02/04/05 (red first, D-10)
-- [ ] `controller/test/queueStartGuard.test.ts` — QUE-07/08/09 (recipes D, same-tick, A)
-- [ ] `controller/test/queueError.test.ts`, `controller/test/queuedStartSummary.test.ts`, `controller/test/runOutcome.test.ts` — pure helpers
-- [ ] `controller/test/staticScan.test.ts` — new `it` blocks only
+- [x] `controller/test/errorPath.test.ts` — ERR-01/02/04/05 (red first, D-10)
+- [x] `controller/test/queueStartGuard.test.ts` — QUE-07/08/09 (recipes D, same-tick, A)
+- [x] `controller/test/queueError.test.ts`, `controller/test/queuedStartSummary.test.ts`, `controller/test/runOutcome.test.ts` — pure helpers
+- [x] `controller/test/staticScan.test.ts` — new `it` blocks only
 - Framework install: none
 
 ---
@@ -103,11 +103,19 @@ Wave-1 full-suite gate runs with `--exclude test/errorPath.test.ts` (red by desi
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 70s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references
+- [x] No watch-mode flags
+- [x] Feedback latency < 70s
+- [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** approved 2026-10-29 (validate-phase: 8/8 requirements COVERED, 197/197 phase tests green, full suite 428/428)
+
+## Validation Audit 2026-10-28
+
+| Metric | Count |
+|---|---|
+| Gaps found | 0 |
+| Resolved | 0 |
+| Escalated | 0 |
