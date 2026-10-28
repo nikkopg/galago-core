@@ -445,3 +445,74 @@ describe("error path invariants (ERR-02, ERR-04, QUE-07)", () => {
     expect(cls).not.toMatch(/typeof value/);
   });
 });
+
+describe("error visibility invariants (ERR-03, ERR-04, ERR-05)", () => {
+  const runsSrc = stripComments(read("components/runs/RunsComponent.tsx"));
+  const cardSrc = stripComments(read("components/runs/list/SwimLaneCommandComponent.tsx"));
+
+  it("banner re-arms on a failure seq", () => {
+    expect(runsSrc).not.toContain("isErrorVisible");
+    expect(runsSrc).toMatch(/dismissedSeq/);
+    expect(runsSrc).toMatch(/shouldShowErrorBanner\(/);
+    expect(runsSrc).toMatch(/describeQueueError\(/);
+    const banner = extractBracedRegion(runsSrc, /const ErrorBanner = /);
+    expect(banner).toContain('maxH="160px"');
+    expect(banner).toContain('whiteSpace="pre-wrap"');
+    // Dismiss only hides one failure seq locally; it never acts on the queue.
+    expect(banner).not.toMatch(/noOfLines/);
+    expect(banner).not.toMatch(/clearError|\.restart\b|\.mutate\(|mutateAsync\(/);
+  });
+
+  it("step card shows the stored error and checks only completed steps", () => {
+    expect(cardSrc).toMatch(/stepErrorText\(command\)/);
+    expect(cardSrc).toMatch(/noOfLines=\{3\}/);
+    expect(cardSrc).toMatch(/whiteSpace="normal"/);
+    expect(cardSrc).toMatch(/title=\{errorText\}/);
+    expect((cardSrc.match(/<CheckCircle\b/g) ?? []).length).toBe(1);
+    expect(cardSrc).toMatch(/command\.status === "COMPLETED" && <CheckCircle\b/);
+  });
+
+  it("run outcome is wired and never success-coloured", () => {
+    const outcomeSrc = stripComments(read("components/runs/runOutcome.ts"));
+    const utilsSrc = stripComments(read("components/runs/utils.ts"));
+    const runTypesSrc = stripComments(read("types/run.ts"));
+    expect(runsSrc).toMatch(/getRunAttributes\(runInfo, run\.Commands\)/);
+    expect(runsSrc).toMatch(/colorScheme=\{runProgressColorScheme\(runAttributes\.status\)\}/);
+    expect(runsSrc).toMatch(/runOutcomeBadge\(runAttributes\.status\)/);
+    expect(utilsSrc).toMatch(/deriveRunOutcome\(/);
+    expect(outcomeSrc).not.toMatch(/green/i);
+    const badge = extractBracedRegion(outcomeSrc, /export function runOutcomeBadge\(/);
+    expect(badge).toContain("colorScheme");
+    expect(badge).not.toMatch(/teal|green/);
+    expect(runTypesSrc).toMatch(
+      /export type RunStatus = "CREATED" \| "STARTED" \| "FAILED" \| "COMPLETED" \| "SKIPPED";/,
+    );
+  });
+
+  const helperFiles = [
+    "components/runs/queueError.ts",
+    "components/runs/runOutcome.ts",
+    "components/runs/storedError.ts",
+    "components/runs/queuedStartSummary.ts",
+  ];
+
+  it("phase-3 helpers are React-free and timer-free", () => {
+    for (const file of helperFiles) {
+      const src = stripComments(read(file));
+      expect(src, file).not.toMatch(/from "react"|\.tsx"/);
+      expect(src, file).not.toMatch(/\b(?:window\.|globalThis\.)?set(?:Timeout|Interval)\(/);
+    }
+  });
+
+  it("tool text is never injected as HTML", () => {
+    const files = [
+      "components/runs/RunsComponent.tsx",
+      "components/runs/list/SwimLaneCommandComponent.tsx",
+      "components/runs/status/QueueStatuscomponent.tsx",
+      ...helperFiles,
+    ];
+    for (const file of files) {
+      expect(stripComments(read(file)), file).not.toMatch(/dangerouslySetInnerHTML/);
+    }
+  });
+});
