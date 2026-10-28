@@ -8,6 +8,7 @@ import { PromisifiedGrpcClient, promisifyGrpcClient } from "./utils/promisifyGrp
 import { setInterval, clearInterval } from "timers";
 import { logAction } from "./logger";
 import { normalizeToolKey } from "./toolKey";
+import { describeToolReply } from "./toolReply";
 import { JavaScriptExecutor } from "@/server/scripting/javascript/javascript-executor";
 import { CSharpExecutor } from "@/server/scripting/csharp/csharp-executor";
 import { db } from "@/db/client";
@@ -597,54 +598,16 @@ export default class Tool {
 
     const reply = await this.grpc.executeCommand(this._payloadForCommand(command));
 
-    if (reply.response !== tool_base.ResponseCode.SUCCESS) {
-      let userFriendlyErrorMessage: string;
-
-      switch (reply.response) {
-        case tool_base.ResponseCode.UNRECOGNIZED_COMMAND:
-          userFriendlyErrorMessage = `The command "${command.command}" is not recognized by the tool "${command.toolId}". Please verify that this command is supported by this tool or page view.`;
-          break;
-        case tool_base.ResponseCode.INVALID_ARGUMENTS:
-          userFriendlyErrorMessage = `Invalid arguments provided for command "${command.command}". Check the parameters and try again.`;
-          break;
-        case tool_base.ResponseCode.NOT_READY:
-          userFriendlyErrorMessage = `The tool "${command.toolId}" is currently not ready. Please wait and try again.`;
-          break;
-        case tool_base.ResponseCode.WRONG_TOOL:
-          userFriendlyErrorMessage =
-            "The command was sent to the wrong tool type. Please check that you're using the correct tool for this operation.";
-          break;
-        case tool_base.ResponseCode.ERROR_FROM_TOOL:
-          userFriendlyErrorMessage = reply.error_message
-            ? `Error from tool "${command.toolId}": ${reply.error_message}`
-            : `An error occurred while executing the command "${command.command}" on tool "${command.toolId}".`;
-          break;
-        default:
-          userFriendlyErrorMessage =
-            reply.error_message ||
-            `Failed to execute command "${command.command}" on tool "${command.toolId}"`;
-      }
-
+    const failure = describeToolReply(command.command, command.toolId, reply);
+    if (failure) {
       logAction({
         level: "error",
         action: "Tool Command Execution Error",
-        details: `Failed to execute command: ${command.command}, Tool: ${command.toolId}. Error: ${userFriendlyErrorMessage} (Code: ${reply.response})`,
+        details: `Failed to execute command: ${command.command}, Tool: ${command.toolId}. Error: ${failure.message} (Code: ${failure.code})`,
       });
-
-      throw new ToolCommandExecutionError(userFriendlyErrorMessage, reply.response);
-    } else if (reply.return_reply && !reply?.error_message) {
-      return reply;
-    } else if (reply?.error_message) {
-      logAction({
-        level: "error",
-        action: "Tool Command Execution Error",
-        details: `Failed to execute command: ${command.command}, Tool: ${command.toolId}. Error: ${reply.error_message}`,
-      });
-      throw new ToolCommandExecutionError(
-        reply.error_message ?? "Tool command failed",
-        reply.response,
-      );
+      throw new ToolCommandExecutionError(failure.message, failure.code);
     }
+    return reply.return_reply ? reply : undefined;
   }
 
   async estimateDuration(command: ToolCommandInfo) {
@@ -755,19 +718,10 @@ export class ToolCommandExecutionError extends Error {
   ) {
     super(message);
     this.name = "ToolCommandExecutionError";
-    this.codeString = this.getResponseCodeString(code);
+    this.codeString = String(code);
     this.userFriendlyMessage = message;
   }
 
   public codeString: string;
   public userFriendlyMessage: string;
-
-  private getResponseCodeString(code: tool_base.ResponseCode): string {
-    const codeNames =
-      Object.entries(tool_base.ResponseCode)
-        .filter(([_, value]) => typeof value === "number")
-        .find(([_, value]) => value === code)?.[0] || "UNKNOWN";
-
-    return codeNames;
-  }
 }
