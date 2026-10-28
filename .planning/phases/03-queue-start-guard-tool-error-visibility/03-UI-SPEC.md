@@ -1,7 +1,8 @@
 ---
 phase: "03"
 slug: "queue-start-guard-tool-error-visibility"
-status: draft
+status: approved
+reviewed_at: "2026-10-28"
 shadcn_initialized: false
 preset: none
 created: "2026-10-28"
@@ -271,23 +272,48 @@ CSS (card only) but is never trimmed of content, rewritten or replaced. Rendered
 
 ## UI Considerations
 
-Applicable state considerations resolved: 9 covered, 3 backstop, 1 unresolved
+Probe: `ui-consideration-probe.cjs` over S1-S4 (`--auto`; kinds confirmed by re-reading each surface, S2 gained
+`empty` and `populated`). 30 applicable: 24 resolved (explicit), 5 resolved (backstop), 1 unresolved. Copy for
+empty/error states lives in the Copywriting Contract; rows here reference it.
 
-| Category | Element(s) | Status | Resolution / Reason |
-|----------|------------|--------|---------------------|
-| empty | S1 start summary (list-collection of queued rows) | ✅ covered | An empty queue renders "The queue is empty." and Accept behaves as today (S1 table; copy in Copywriting Contract) |
-| loading | S1 start summary | ✅ covered | While the `commands` query has no data the modal shows "Checking the queue..." and Accept stays enabled |
-| error | S1 start summary | ✅ covered | A failed `commands` query renders "Could not read the queue. Logs list the steps this Start ran." and does not block Accept |
-| zero-one-many | S1 summary lines | ✅ covered | Singular/plural copy for 1 vs N steps and 1 vs M runs; the F line switches to "It failed before..." when N = 1 and F = 1; the retry line is omitted when F = 0 |
-| partial | S1 summary (STARTED row present) | ✅ covered | STARTED rows are counted separately and shown as "{S} step(s) still running. A Start is ignored until it ends." instead of being counted as "will run" |
-| long-text | S2 banner message | ✅ covered | Full text is shown, wrapped with `pre-wrap` and `break-word`, scrolls inside a 160px region; never `noOfLines`, never replaced |
-| error | S2 banner when the tool text is empty | ✅ covered | Fallback copy is shown; the message string is never empty (asserted by `describeQueueError`'s unit test) |
-| populated | S2 banner re-arm | ✅ covered | `shouldShowErrorBanner` shows the banner again whenever `seq !== dismissedSeq`; covered by the pure-helper unit test |
-| long-text | S3 step card error | ✅ covered | `noOfLines={3}`, `whiteSpace="normal"`, `wordBreak="break-word"`, full text in `title`; text sits above the sticky label inside the scrolling 165px card |
-| overflow | S3 step card error | 🧪 backstop | Visual fit of 3 clamped lines plus image inside the fixed 165px card cannot be proven by a static scan; verify by eye on a real long message |
-| partial | S3 stale error on non-failed rows | 🧪 backstop | A COMPLETED or STARTED row that kept an old error shows nothing (`stepErrorText` returns null); unit-tested, the on-screen result needs one visual check |
-| overflow | S4 badge in the run row header | 🧪 backstop | `Skipped failure` badge beside a long run name in the `space-between` row; check wrapping at narrow widths visually |
-| long-text | S4 run name plus badge | ⚠ unresolved | Run name truncation behaviour is existing and untouched; the planner treats badge wrapping on very long names as an assumption |
+### Resolved (explicit) — truths
+
+- S1 empty: with no rows in the `commands` query the modal shows "The queue is empty." and Accept/Cancel behave as today.
+- S1 loading: while the `commands` query has no data the modal shows "Checking the queue..." and Accept stays enabled.
+- S1 error: a failed `commands` query shows "Could not read the queue. Logs list the steps this Start ran." and does not disable Accept.
+- S1 populated: with N queued rows from M runs the modal shows "This Start will run N queued step(s) from M run(s)." from `summarizeQueuedStart`.
+- S1 partial: STARTED rows are counted separately as "{S} step(s) still running. A Start is ignored until it ends." and not counted as "will run".
+- S1 zero-one-many: singular/plural copy for 1 vs N steps and 1 vs M runs; the failed-retry line is omitted when F = 0 (unit-tested in `queuedStartSummary.test.ts`).
+- S1 overflow: the summary is counts only (no per-row list), so its length is bounded regardless of queue size.
+- S2 empty: with no error, or queue state not FAILED, `shouldShowErrorBanner` returns false and no banner renders.
+- S2 populated: the banner shows when state is FAILED, an error exists and `seq !== dismissedSeq`; it reappears on the next failure seq (unit-tested in `queueError.test.ts`).
+- S2 loading: before the first `getError` response the banner does not render (no placeholder).
+- S2 error: when the tool text is empty `describeQueueError` returns the fallback copy, never an empty string, and the badge is never `SUCCESS`.
+- S2 long-text: the full message renders with `whiteSpace="pre-wrap"` and `wordBreak="break-word"` in a region with `maxH` 160px and vertical scroll; never `noOfLines`.
+- S3 empty: `stepErrorText` returns null for a row without a stored error and the card renders no error `Text`.
+- S3 loading: the card renders from the already-loaded run commands; no extra fetch, no loading state.
+- S3 error: an unreadable stored error value (non-Error, string, `{message}`) is normalised by `stepErrorText`; it never throws.
+- S3 populated: a FAILED card shows its stored error message; a SKIPPED card with an error shows "Skipped after failure: <text>".
+- S3 partial: a COMPLETED, STARTED or CREATED row that kept a stale error shows no error text (`stepErrorText` returns null).
+- S3 zero-one-many: each card shows at most its own one error message.
+- S3 long-text: the error `Text` uses `noOfLines={3}`, `whiteSpace="normal"`, `wordBreak="break-word"`, and a `title` carrying the full text.
+- S4 empty: a run with no commands derives no special outcome and shows no "Skipped failure" badge.
+- S4 loading: the outcome is derived from the already-loaded `run.Commands`; no loading state.
+- S4 error: `deriveRunOutcome` tolerates missing or non-array commands and returns a non-success default.
+- S4 populated: a run with any SKIPPED step carrying an error derives `COMPLETED_WITH_SKIPPED_FAILURE`, an orange "Skipped failure" badge and an orange Progress bar, never green/teal and never a check icon (unit-tested in `runOutcome.test.ts`).
+- S4 zero-one-many: one or several skipped-with-error steps yield the same single badge per run.
+
+### Resolved (backstop) — visual/UAT checks
+
+- { statement: "S1 overflow of copy at narrow modal widths wraps without clipping the existing warning text", verification: backstop }
+- { statement: "S2 overflow: a 160px scrolling message region with a long tool message keeps the close button and code badge visible", verification: backstop }
+- { statement: "S3 overflow: three clamped lines plus the command image fit inside the fixed 165px step card", verification: backstop }
+- { statement: "S4 partial: a run whose skipped-failure step is followed by COMPLETED steps still shows the orange badge on screen", verification: backstop }
+- { statement: "S4 overflow: the Skipped failure badge beside the run name wraps cleanly at narrow widths", verification: backstop }
+
+### Unresolved
+
+- ⚠ unresolved — planner must treat as assumption: S4 long run name next to the badge. Run-name truncation is existing behaviour and is not changed in this phase.
 
 ---
 
@@ -335,12 +361,12 @@ Applicable state considerations resolved: 9 covered, 3 backstop, 1 unresolved
 
 ## Checker Sign-Off
 
-- [ ] Dimension 1 Copywriting: PASS
-- [ ] Dimension 2 Visuals: PASS
-- [ ] Dimension 3 Color: PASS
-- [ ] Dimension 4 Typography: PASS
-- [ ] Dimension 5 Spacing: PASS
-- [ ] Dimension 6 Registry Safety: PASS
-- [ ] Dimension 7 Inventory Provenance: PASS
+- [x] Dimension 1 Copywriting: FLAG (pre-existing Accept/Cancel/Start labels kept per D-05)
+- [x] Dimension 2 Visuals: FLAG (anchor: S1 summary headline line; run page: the banner when an error exists)
+- [x] Dimension 3 Color: PASS
+- [x] Dimension 4 Typography: FLAG (pre-existing banner weight 500 kept; new elements use 400/700)
+- [x] Dimension 5 Spacing: FLAG (pre-existing 6px / 165px / 250px kept; card not resized in this phase)
+- [x] Dimension 6 Registry Safety: PASS
+- [x] Dimension 7 Inventory Provenance: PASS
 
-**Approval:** pending
+**Approval:** approved 2026-10-28 (gsd-ui-checker; 4 non-blocking FLAGs)
