@@ -40,6 +40,7 @@ import type { InstrumentStopRequest } from "./stopInterception";
 import { useRunControlState } from "@/hooks/useRunControl";
 import { getRunAttributes, groupCommandsByRun } from "./utils";
 import { runOutcomeBadge, runProgressColorScheme } from "./runOutcome";
+import { shouldShowErrorBanner, describeQueueError, errorSeq } from "./queueError";
 import { ChartGantt, Trash2 } from "lucide-react";
 import { ToolStatus } from "gen-interfaces/tools/grpc_interfaces/tool_base";
 import { Inbox } from "lucide-react";
@@ -74,7 +75,7 @@ export const RunsComponent: React.FC = () => {
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
   const [expandedRuns, setExpandedRuns] = useState<Set<string>>(new Set());
   const [runAttributesMap, setRunAttributesMap] = useState<Record<string, any>>({});
-  const [isErrorVisible, setIsErrorVisible] = useState(true);
+  const [dismissedSeq, setDismissedSeq] = useState<number | null>(null);
   const [showAllCommands, setShowAllCommands] = useState(true);
 
   // User Form Modal state
@@ -225,73 +226,56 @@ export const RunsComponent: React.FC = () => {
   };
 
   const ErrorBanner = () => {
-    if (!getError.data && !getError.error) return null;
+    const bannerError: unknown =
+      getError.data ?? (getError.error ? { message: getError.error.message } : null);
+    if (!shouldShowErrorBanner(stateQuery.data, bannerError, dismissedSeq)) return null;
 
-    if (stateQuery.data === ToolStatus.FAILED && isErrorVisible) {
-      // Extract error information
-      let errorMessage = "An error occurred while executing the command";
-      let errorCode = "";
-      let errorDetails = "";
+    const { message, code, details } = describeQueueError(bannerError);
 
-      if (getError.data) {
-        // Check if error is a ToolCommandExecutionError
-        if (typeof getError.data === "object" && getError.data !== null) {
-          // Handle ToolCommandExecutionError with our enhanced properties
-          // getError now returns one plain payload (message text is composed once
-          // on the server), so read its fields directly.
-          errorMessage = getError.data.userFriendlyMessage;
-
-          if ("codeString" in getError.data && getError.data.codeString) {
-            errorCode = getError.data.codeString;
-          } else if ("code" in getError.data) {
-            // Convert numeric code to string if possible
-            const code = getError.data.code;
-            errorCode = typeof code === "number" ? `Code ${code}` : String(code);
-          }
-
-          errorDetails = JSON.stringify(getError.data, null, 2);
-        } else {
-          // Handle plain error message
-          errorMessage = String(getError.data);
-        }
-      }
-
-      return (
-        <Alert status="error" variant="left-accent" mb={2}>
-          <AlertIcon />
-          <Box flex="1">
-            <AlertTitle display="flex" alignItems="center">
-              Error
-              {errorCode && (
-                <Badge ml={2} colorScheme="red">
-                  {errorCode}
-                </Badge>
-              )}
-            </AlertTitle>
-            <AlertDescription fontWeight="medium">{errorMessage}</AlertDescription>
+    return (
+      <Alert status="error" variant="left-accent" mb={2}>
+        <AlertIcon />
+        <Box flex="1">
+          <AlertTitle display="flex" alignItems="center">
+            Error
+            {code !== null && (
+              <Badge ml={2} colorScheme="red">
+                {code}
+              </Badge>
+            )}
+          </AlertTitle>
+          <Box maxH="160px" overflowY="auto">
+            <AlertDescription
+              fontWeight="medium"
+              whiteSpace="pre-wrap"
+              wordBreak="break-word"
+              userSelect="text">
+              {message}
+            </AlertDescription>
           </Box>
-          <HStack>
-            <Button
-              size="sm"
-              colorScheme="red"
-              variant="outline"
-              onClick={() => {
-                setIsErrorModalOpen(true);
-                setErrorModalData({
-                  message: errorMessage,
-                  code: errorCode,
-                  details: errorDetails,
-                });
-              }}>
-              Details
-            </Button>
-            <CloseButton onClick={() => setIsErrorVisible(false)} />
-          </HStack>
-        </Alert>
-      );
-    } else {
-      return null;
-    }
+        </Box>
+        <HStack>
+          <Button
+            size="sm"
+            colorScheme="red"
+            variant="outline"
+            onClick={() => {
+              setIsErrorModalOpen(true);
+              setErrorModalData({
+                message,
+                code: code ?? undefined,
+                details,
+              });
+            }}>
+            Details
+          </Button>
+          <CloseButton
+            aria-label="Dismiss error"
+            onClick={() => setDismissedSeq(errorSeq(bannerError))}
+          />
+        </HStack>
+      </Alert>
+    );
   };
 
   // Calculate statistics

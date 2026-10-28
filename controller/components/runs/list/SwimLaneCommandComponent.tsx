@@ -19,6 +19,7 @@ import { useRef } from "react";
 import { capitalizeFirst } from "@/utils/parser";
 import { RunCommand } from "@/types";
 import CommandImage from "@/components/tools/CommandImage";
+import { stepErrorText } from "../queueError";
 
 interface LaneCommandComponentProps {
   command: RunCommand;
@@ -39,13 +40,21 @@ const SwimLaneCommandComponent: React.FC<LaneCommandComponentProps> = (props) =>
   const completeColor = useColorModeValue("gray.200", "surface.hover");
   const runningBg = useColorModeValue("teal.200", "teal.800");
   const borderColorStyle = useColorModeValue("gray.200", "whiteAlpha.200");
+  const failedTextColor = useColorModeValue("red.900", "red.50");
+  const skippedTextColor = useColorModeValue("orange.800", "orange.200");
 
-  const completedStyle =
-    command.status === "COMPLETED" || command.status === "SKIPPED"
-      ? {
-          opacity: 0.55,
-        }
-      : {};
+  // D-17: the stored error of a FAILED or skipped-after-failure step, read from
+  // the persisted row. A skipped step with an error stays at full opacity so
+  // the failure text is legible; a plain operator Skip keeps the dimmed look.
+  const errorText = stepErrorText(command);
+  const dimmed =
+    command.status === "COMPLETED" || (command.status === "SKIPPED" && errorText === null);
+
+  const completedStyle = dimmed
+    ? {
+        opacity: 0.55,
+      }
+    : {};
 
   useEffect(() => {
     toolNameRef.current = toolName;
@@ -73,7 +82,7 @@ const SwimLaneCommandComponent: React.FC<LaneCommandComponentProps> = (props) =>
   return (
     <Box
       style={
-        command.status === "COMPLETED" || command.status === "SKIPPED"
+        dimmed
           ? completedStyle
           : {
               cursor: "pointer",
@@ -151,6 +160,19 @@ const SwimLaneCommandComponent: React.FC<LaneCommandComponentProps> = (props) =>
               command={command}
               onCommandClick={onCommandClick}
             />
+            {errorText !== null && (
+              <Text
+                fontSize="sm"
+                color={command.status === "FAILED" ? failedTextColor : skippedTextColor}
+                noOfLines={3}
+                whiteSpace="normal"
+                wordBreak="break-word"
+                textAlign="left"
+                userSelect="text"
+                title={errorText}>
+                {errorText}
+              </Text>
+            )}
             <Box bottom={0} position="sticky">
               <Text>{capitalizeFirst(command.commandInfo.command.replaceAll("_", " "))}</Text>
             </Box>
