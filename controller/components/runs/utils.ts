@@ -1,4 +1,5 @@
 import { RunCommand, GroupedCommand } from "@/types";
+import { deriveRunOutcome } from "./runOutcome";
 
 export function getRunAttributes(runInfo: any, commandInfo: any) {
   if (!runInfo) {
@@ -17,32 +18,19 @@ export function getRunAttributes(runInfo: any, commandInfo: any) {
   // Use run_type as the name (it's the protocol ID)
   let runName = runInfo.run_type || "Unknown Run";
 
-  let status = "CREATED";
+  const status = deriveRunOutcome(commandInfo);
   let startedAt = "";
   let completedAt = "";
   let createdAt = "";
 
-  if (commandInfo && Array.isArray(commandInfo)) {
+  if (Array.isArray(commandInfo) && commandInfo.length > 0) {
     createdAt = commandInfo[0]?.createdAt || "";
     const lastCommand = commandInfo[commandInfo.length - 1];
 
-    if (commandInfo.length > 0 && lastCommand?.status === "COMPLETED") {
-      status = "COMPLETED";
-      completedAt = lastCommand.completedAt || "";
-    } else if (commandInfo.some((cmd: any) => cmd.status === "FAILED")) {
-      status = "FAILED";
-    } else if (commandInfo.some((cmd: any) => cmd.status === "STARTED")) {
-      status = "STARTED";
-      startedAt = commandInfo.find((cmd: any) => cmd.status === "STARTED")?.startedAt || "";
-    } else if (commandInfo.every((cmd: any) => cmd.status === "CREATED")) {
-      status = "QUEUED";
-    } else if (
-      lastCommand?.status === "SKIPPED" &&
-      !commandInfo.some((cmd: any) => cmd.status === "CREATED") &&
-      !commandInfo.some((cmd: any) => cmd.status === "STARTED")
-    ) {
-      status = "COMPLETED";
-      completedAt = lastCommand.completedAt || "";
+    if (status === "COMPLETED" || status === "COMPLETED_WITH_SKIPPED_FAILURE") {
+      completedAt = lastCommand?.completedAt || "";
+    } else if (status === "STARTED") {
+      startedAt = commandInfo.find((cmd: any) => cmd?.status === "STARTED")?.startedAt || "";
     }
   }
 

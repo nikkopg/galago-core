@@ -39,6 +39,7 @@ import { shouldInterceptRunDelete, buildStopRequest } from "./stopInterception";
 import type { InstrumentStopRequest } from "./stopInterception";
 import { useRunControlState } from "@/hooks/useRunControl";
 import { getRunAttributes, groupCommandsByRun } from "./utils";
+import { runOutcomeBadge, runProgressColorScheme } from "./runOutcome";
 import { ChartGantt, Trash2 } from "lucide-react";
 import { ToolStatus } from "gen-interfaces/tools/grpc_interfaces/tool_base";
 import { Inbox } from "lucide-react";
@@ -150,7 +151,6 @@ export const RunsComponent: React.FC = () => {
   const expandedRunBg = useColorModeValue("white", "surface.panel");
   const boxShadowValue = useColorModeValue("md", "none");
   const runsInfo = trpc.commandQueue.getAllRuns.useQuery(undefined, { refetchInterval: 1000 });
-  const CommandInfo = trpc.commandQueue.getAll.useQuery(undefined, { refetchInterval: 1000 });
 
   const groupedCommands = useMemo(
     () => (commandsAll.data ? groupCommandsByRun(commandsAll.data) : []),
@@ -319,21 +319,16 @@ export const RunsComponent: React.FC = () => {
       const newAttributes: Record<string, any> = {};
       for (const run of groupedCommands) {
         const runInfo = runsInfo.data?.find((r) => r.id === run.Id);
-        const cmdInfo = CommandInfo.data?.find((r) => r.runId === run.Id);
 
-        // Only update if we don't have attributes for this run or if the data has changed
-        if (!runAttributesMap[run.Id] || runAttributesMap[run.Id].status !== cmdInfo?.status) {
-          const attributes = await getRunAttributes(runInfo, cmdInfo);
-          newAttributes[run.Id] = attributes;
-        } else {
-          newAttributes[run.Id] = runAttributesMap[run.Id];
-        }
+        // Derived from the run's whole command array on every poll; the
+        // function is synchronous and cheap, so no status-compare memo.
+        newAttributes[run.Id] = getRunAttributes(runInfo, run.Commands);
       }
       setRunAttributesMap(newAttributes);
     };
 
     updateRunAttributes();
-  }, [runsInfo.data, CommandInfo.data]);
+  }, [runsInfo.data, groupedCommands]);
 
   function expandButtonIcon(runId: string) {
     return expandedRuns.has(runId) ? <ChevronUpIcon /> : <PlusSquareIcon />;
@@ -381,6 +376,8 @@ export const RunsComponent: React.FC = () => {
         startedAt: "",
       };
 
+      const outcomeBadge = runOutcomeBadge(runAttributes.status);
+
       return (
         <VStack align="left" key={index} width="100%">
           <Box width="100%">
@@ -412,7 +409,7 @@ export const RunsComponent: React.FC = () => {
                         runAttributes.commandsCount) *
                       100
                     }
-                    colorScheme="teal"
+                    colorScheme={runProgressColorScheme(runAttributes.status)}
                     size="xs"
                     borderRadius="full"
                   />
@@ -432,6 +429,15 @@ export const RunsComponent: React.FC = () => {
                       <Text fontSize="sm" fontWeight="medium">
                         {runAttributes.runName}
                       </Text>
+                      {outcomeBadge && (
+                        <Badge
+                          ml={2}
+                          colorScheme={outcomeBadge.colorScheme}
+                          variant="subtle"
+                          title={outcomeBadge.title}>
+                          {outcomeBadge.label}
+                        </Badge>
+                      )}
                     </HStack>
                   </Button>
                   {shouldInterceptRunDelete(runControlQuery.data, run.Id) ? (
