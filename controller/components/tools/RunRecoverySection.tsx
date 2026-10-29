@@ -182,7 +182,24 @@ export const RunRecoverySection: React.FC<RunRecoverySectionProps> = ({ toolName
               )}
               {!readPending && latchResult && (
                 <VStack align="stretch" spacing={2}>
-                  {!latchResult.latched ? (
+                  {latchResult.unknown ? (
+                    /* D-13: a reply the interpreter could not read is flagged
+                       unknown, so the card never presents a confident "No
+                       failure latched" for data it could not interpret.
+                       Render-only raw text — it never gates the ack (D-12). */
+                    <>
+                      <Heading size="sm" fontWeight={700}>
+                        Unrecognized latch reply
+                      </Heading>
+                      <Text fontSize="sm">
+                        The tool replied, but the latch state could not be interpreted. Inspect the
+                        raw reply below; do not assume no failure is latched.
+                      </Text>
+                      <Text fontFamily="mono" wordBreak="break-all" fontSize="xs">
+                        {formatLatchRaw(latchResult.raw)}
+                      </Text>
+                    </>
+                  ) : !latchResult.latched ? (
                     <>
                       <Heading size="sm" fontWeight={700}>
                         {NO_FAILURE_LATCHED_LABEL}

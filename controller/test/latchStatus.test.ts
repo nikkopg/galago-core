@@ -272,6 +272,22 @@ describe("card source invariants (latch block, D-11/D-12)", () => {
     expect(ackGate![0]).not.toMatch(/latch/i);
   });
 
+  it("flags an unknown latch reply so it is never shown as No failure latched (WR-01, D-13)", () => {
+    const card = flat(CARD);
+    // The unknown branch exists with its own truthful copy…
+    expect(card).toContain("Unrecognized latch reply");
+    expect(card).toContain(
+      "The tool replied, but the latch state could not be interpreted. Inspect the raw reply below; do not assume no failure is latched.",
+    );
+    // …and its unknown guard precedes the not-latched guard, so an
+    // uninterpretable reply can never fall through to the confident
+    // "No failure latched" empty state.
+    expect(card.indexOf("latchResult.unknown ?")).toBeGreaterThan(-1);
+    expect(card.indexOf("latchResult.unknown ?")).toBeLessThan(
+      card.indexOf("!latchResult.latched ?"),
+    );
+  });
+
   it("renders the Latched failure block with the documented copy (UI-SPEC)", () => {
     const card = flat(CARD);
     expect(card).toContain("Latched failure");
