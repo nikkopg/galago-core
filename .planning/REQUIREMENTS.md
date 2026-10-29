@@ -55,7 +55,7 @@ not one row three times. The real defect is an unguarded re-entrant `_start()`.
   (`stack.acknowledge_failure`, fast `pause`/`resume`/`abort`) refuses such a run at creation with a
   visible message, and `Tool.executeCommand` refuses them, audited; `controlCommand` (the operator path)
   is unaffected
-- [ ] **OPR-05**: Static scans pin: no code path acknowledges on its own; the `acknowledge_failure`
+- [x] **OPR-05**: Static scans pin: no code path acknowledges on its own; the `acknowledge_failure`
   literal appears only in an exact file list; it is in neither `commandFields` nor `runControl`; the
   guard is in `executeCommand` and not in `controlCommand`; the latch read has a single reader and is off
   the send path
@@ -110,7 +110,7 @@ not one row three times. The real defect is an unguarded re-entrant `_start()`.
 | OPR-02 | Phase 4 | Complete |
 | OPR-03 | Phase 4 | Complete |
 | OPR-04 | Phase 4 | Complete |
-| OPR-05 | Phase 4 | Pending |
+| OPR-05 | Phase 4 | Complete |
 | GEN-01 | Phase 5 | Pending |
 | GEN-02 | Phase 5 | Pending |
 | GEN-03 | Phase 5 | Pending |

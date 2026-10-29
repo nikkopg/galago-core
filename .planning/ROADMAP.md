@@ -127,7 +127,7 @@ a real failure path). No dependency on `stack.proto`: built on string tool types
   5. Static scans fail the suite if any code path acknowledges on its own, if the `acknowledge_failure`
      literal appears outside an exact file list, if it is added to `commandFields` or `runControl`, if the
      guard leaves `executeCommand` or lands in `controlCommand`, or if the latch read feeds the send path.
-**Plans:** 3/5 plans executed
+**Plans:** 5/5 plans executed
 
 Plans:
 **Wave 1**
@@ -138,10 +138,10 @@ Plans:
 - [x] 04-03-PLAN.md — (wave 2, tracer) Client ack UI: spec-driven `createConfirmedSender` recovery branch, modal per-kind render (born-empty radios, guid restated verbatim), card guid entry with the shared `isValidRecoveryGuid`, afterAccepted clear (OPR-01 client)
 
 **Wave 3** *(blocked on Wave 2 completion)*
-- [ ] 04-04-PLAN.md — (wave 3, tracer) Latch read: `LATCH_READ_COMMAND` + `extractLatch`, toolId-only `tool.latchStatus` query through `tool.executeCommand`, card "Latched failure" block with "Use this guid" fill-only (OPR-03)
+- [x] 04-04-PLAN.md — (wave 3, tracer) Latch read: `LATCH_READ_COMMAND` + `extractLatch`, toolId-only `tool.latchStatus` query through `tool.executeCommand`, card "Latched failure" block with "Use this guid" fill-only (OPR-03)
 
 **Wave 4** *(blocked on Wave 3 completion)*
-- [ ] 04-05-PLAN.md — (wave 4) OPR-05 static scans: `acknowledge_failure` closed-file-list, guard placement in executeCommand not controlCommand, /latch/i send-path ban, single latch reader, no-self-acknowledge re-assertion + full-suite phase gate (OPR-05)
+- [x] 04-05-PLAN.md — (wave 4) OPR-05 static scans: `acknowledge_failure` closed-file-list, guard placement in executeCommand not controlCommand, /latch/i send-path ban, single latch reader, no-self-acknowledge re-assertion + full-suite phase gate (OPR-05)
 
 **UI hint**: yes
 **Notes**: Planner must read ACK-AND-F3.md §1.2 so nobody "just adds `stack` to `runControl`" (it would start
@@ -202,7 +202,7 @@ Phases execute in numeric order: 3 → 4 → 5 (Phase 5 waits on galago-tools Ph
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 3. Queue Start Guard & Tool Error Visibility | v2 | 7/7 | Complete    | 2026-10-29 |
-| 4. Operator-only Commands & STACK Acknowledge | v2 | 3/5 | In Progress | - |
+| 4. Operator-only Commands & STACK Acknowledge | v2 | 5/5 | In Progress | - |
 | 5. STACK Codegen & Command Forms | v2 | 0/TBD | Not started (gated on galago-tools Phase 4) | - |
 
 ## Backlog
