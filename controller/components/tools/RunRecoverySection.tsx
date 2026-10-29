@@ -104,6 +104,16 @@ export const RunRecoverySection: React.FC<RunRecoverySectionProps> = ({ toolName
         // the block itself shows nothing beyond the pre-click state.
         persistentErrorToast("Latch read failed", refetched.error.message);
       }
+    } catch (error) {
+      // A rejecting refetch (e.g. a react-query network flush/cancellation
+      // race) is a failed display read like any other: drop any previously
+      // shown result and surface it through the same toast. Display-only,
+      // as always — the read never gates or touches the send path (D-12).
+      setLatchResult(null);
+      persistentErrorToast(
+        "Latch read failed",
+        error instanceof Error ? error.message : String(error),
+      );
     } finally {
       setReadPending(false);
     }
