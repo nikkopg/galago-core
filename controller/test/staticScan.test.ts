@@ -534,3 +534,46 @@ describe("Review fixes WR-01 / WR-02", () => {
     expect(stripComments(read("server/routers/command_queue.ts"))).not.toMatch(/stack:/);
   });
 });
+
+describe("step card error fits the fixed card (G-03-3)", () => {
+  const cardSrc = stripComments(read("components/runs/list/SwimLaneCommandComponent.tsx"));
+
+  it("the error text shares one row with the command image, above the sticky label", () => {
+    const imgAt = cardSrc.indexOf("<CommandImage");
+    const errAt = cardSrc.indexOf("title={errorText}");
+    const labelAt = cardSrc.indexOf('position="sticky"');
+    expect(imgAt).toBeGreaterThan(-1);
+    expect(errAt).toBeGreaterThan(imgAt);
+    expect(labelAt).toBeGreaterThan(errAt);
+
+    const rowOpen = cardSrc.lastIndexOf("<HStack", imgAt);
+    expect(rowOpen).toBeGreaterThan(-1);
+    expect(cardSrc.slice(rowOpen, errAt)).not.toContain("</HStack>");
+
+    const rowClose = cardSrc.indexOf("</HStack>", errAt);
+    expect(rowClose).toBeGreaterThan(errAt);
+    expect(rowClose).toBeLessThan(labelAt);
+    expect(cardSrc.slice(rowOpen, rowClose)).toMatch(/flexShrink=\{0\}/);
+  });
+
+  it("the card box, the error text style and the label are unchanged", () => {
+    const errAt = cardSrc.indexOf("title={errorText}");
+    const errText = cardSrc.slice(cardSrc.lastIndexOf("<Text", errAt), cardSrc.indexOf("</Text>", errAt));
+    expect(errText).toMatch(/fontSize="sm"/);
+    expect(errText).toMatch(/noOfLines=\{3\}/);
+    expect(errText).toMatch(/whiteSpace="normal"/);
+    expect(errText).toMatch(/flex="1"/);
+    expect(errText).toMatch(/minW=\{0\}/);
+
+    expect(cardSrc).toMatch(/height="165px"/);
+    expect(cardSrc).toMatch(/padding="6px"/);
+    expect(cardSrc).toMatch(/minW="250px"/);
+    expect(cardSrc).toMatch(/maxW="300px"/);
+    expect(cardSrc).toMatch(/overflowY="auto"/);
+    expect(cardSrc).not.toMatch(/lineHeight/);
+    expect(cardSrc).toMatch(
+      /<Box bottom=\{0\} position="sticky">\s*<Text>\{capitalizeFirst\(command\.commandInfo\.command\.replaceAll\("_", " "\)\)\}<\/Text>/,
+    );
+    expect((cardSrc.match(/<CommandImage\b/g) ?? []).length).toBe(1);
+  });
+});
