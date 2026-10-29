@@ -3,12 +3,14 @@ import snowflakeIdGenerator from "@/utils/snowflake";
 import { ZodError } from "zod";
 import CommandQueue from "./command_queue";
 import Tool from "./tools";
+import { logAction } from "./logger";
 import { db } from "@/db/client";
 import { tools, workcells, appSettings, protocols, variables } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import type { ProtocolParameter } from "@/protocols/params";
 import { executeProtocolScript } from "@/server/scripting/protocol-script-executor";
 import { resolveToolTypes } from "@/server/scripting/resolve-tool-types";
+import { isOperatorOnlyCommand, OperatorOnlyCommandError } from "./operatorOnlyCommands";
 
 // Helper function to get tool from database
 async function getToolFromDB(toolId: string) {
@@ -215,6 +217,24 @@ export default class RunStore {
       // Generate commands from protocol
       const commands = await generateCommandsFromProtocol(protocol, paramValues);
 
+      // Enqueue-time operator-only scan (D-02b) — cheap early layer keyed on
+      // the DECLARED step type (stored JSON, untrusted); the execute-time
+      // guard keyed on the Tool's real type is the mislabelled-step backstop.
+      // A zero-command list falls out of the loop vacuously.
+      for (let i = 0; i < commands.length; i++) {
+        const c = commands[i];
+        if (isOperatorOnlyCommand(String(c.toolType), c.command)) {
+          await logAction({
+            level: "warning",
+            action: "Operator-Only Command Refused",
+            details: `protocolId=${protocolId} step=${i} toolId=${c.toolId} toolType=${c.toolType} command=${c.command} stage=enqueue`,
+          });
+          throw new OperatorOnlyCommandError(
+            `Step ${i} sends "${c.command}" on tool "${c.toolId}", which is an operator action; remove that step or run it from the tool page Run Recovery card.`,
+          );
+        }
+      }
+
       // Create run ID
       const runId = snowflakeIdGenerator.nextId();
 
@@ -248,6 +268,7 @@ export default class RunStore {
       if (
         error instanceof ProtocolNotFoundError ||
         error instanceof ProtocolGenerationFailedError ||
+        error instanceof OperatorOnlyCommandError ||
         error instanceof ProtocolParamsInvalidError
       ) {
         throw error;

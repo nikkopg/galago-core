@@ -367,6 +367,10 @@ describe("operator-only enqueue refusal (D-02b)", () => {
     };
 
     await pagesApiRunsHandler({ method: "POST", body: { protocolId: "101" } } as never, res as never);
+    // handler() does not await the async postHandler — flush before asserting.
+    for (let i = 0; i < 50 && res.status.mock.calls.length === 0; i++) {
+      await new Promise((resolve) => setImmediate(resolve));
+    }
 
     expect(res.status).toHaveBeenCalledWith(400);
     expect(res.end).toHaveBeenCalledWith(

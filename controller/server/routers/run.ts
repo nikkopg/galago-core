@@ -6,6 +6,7 @@ import RunStore, {
   ProtocolParamsInvalidError,
   upsertParameterVariables,
 } from "../runs";
+import { OperatorOnlyCommandError } from "../operatorOnlyCommands";
 import { procedure, router } from "@/server/trpc";
 import { getSelectedWorkcellId } from "@/db/helpers";
 import { db } from "@/db/client";
@@ -84,6 +85,12 @@ export const runRouter = router({
           throw new TRPCError({
             code: "NOT_FOUND",
             message: "No protocol found for this ID.",
+          });
+        }
+        if (e instanceof OperatorOnlyCommandError) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: e.message,
           });
         }
         if (e instanceof ProtocolGenerationFailedError) {

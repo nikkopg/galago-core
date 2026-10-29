@@ -19,6 +19,9 @@ async function postHandler(req: NextApiRequest, res: NextApiResponse<RunSubmissi
       case "ZodError":
         res.status(400).end(e.message);
         break;
+      case "OperatorOnlyCommandError":
+        res.status(400).end(e.message);
+        break;
       default:
         res.status(500).end(e.message);
     }
