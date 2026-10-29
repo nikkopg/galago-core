@@ -70,7 +70,7 @@ shown as success.
      galago-web restarted; after the operator dismisses the error banner, the next failure shows it again.
   7. A failed step is never shown as completed, a SUCCESS reply that carries an error message is reported
      as an error, and a run whose failed step was skipped is not shown as plain success.
-**Plans:** 6/7 plans executed
+**Plans:** 7/7 plans executed
 
 Plans:
 **Wave 1**
@@ -86,7 +86,7 @@ Plans:
 - [x] 03-06-PLAN.md — (wave 3) Banner re-arm via dismissedSeq, step-card stored error, static scans + phase gate (ERR-03, ERR-04, ERR-05)
 
 **Wave 4 — gap closure** *(UAT gap G-03-3)*
-- [ ] 03-07-PLAN.md — (wave 4, gap closure) Step-card error text beside the command image so it fits the 165px card and the sticky label never covers it; row-layout static scan; UAT test 3 retest (ERR-03)
+- [x] 03-07-PLAN.md — (wave 4, gap closure) Step-card error text beside the command image so it fits the 165px card and the sticky label never covers it; row-layout static scan; UAT test 3 retest (ERR-03)
 
 **UI hint**: yes
 **Notes**: Merged from the former Phases 3 (F5) and 4 (F3) on 2026-10-28 (user decision): no dependency
@@ -186,7 +186,7 @@ Phases execute in numeric order: 3 → 4 → 5 (Phase 5 waits on galago-tools Ph
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 3. Queue Start Guard & Tool Error Visibility | v2 | 6/7 | In Progress | - |
+| 3. Queue Start Guard & Tool Error Visibility | v2 | 7/7 | In Progress | - |
 | 4. Operator-only Commands & STACK Acknowledge | v2 | 0/TBD | Not started | - |
 | 5. STACK Codegen & Command Forms | v2 | 0/TBD | Not started (gated on galago-tools Phase 4) | - |
 

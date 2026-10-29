@@ -2,19 +2,19 @@
 gsd_state_version: "1.0"
 milestone: v2
 milestone_name: STACK tool support — codegen, operator acknowledge, error visibility, F5
-current_phase: 3
+current_phase: 03
 current_phase_name: Queue Start Guard & Tool Error Visibility
 status: verifying
-stopped_at: Completed 03-06-PLAN.md
-last_updated: "2026-10-28T22:44:11.040Z"
-last_activity: 2026-10-28
-last_activity_desc: Phase 3 execution started
-state_head: 0e48d9514d0dcbc563737c10cc0d1e3a8a6ceabb
+stopped_at: Completed 03-07-PLAN.md
+last_updated: "2026-10-29T04:26:17.961Z"
+last_activity: 2026-10-29
+last_activity_desc: Phase 03 execution started
+state_head: 8bcbab9e731c4f2abb513f78a938bdfa28834c16
 progress:
   total_phases: 3
   completed_phases: 0
-  total_plans: 6
-  completed_plans: 6
+  total_plans: 7
+  completed_plans: 7
   percent: 0
 ---
 
@@ -26,14 +26,14 @@ See: .planning/PROJECT.md (updated 2026-10-28)
 
 **Core value:** While an instrument step runs, the operator sees what the instrument is doing and
 decides every recovery action; the web app never acts on its own or pre-selects a physical decision.
-**Current focus:** Phase 3 — Queue Start Guard & Tool Error Visibility
+**Current focus:** Phase 03 — Queue Start Guard & Tool Error Visibility
 
 ## Current Position
 
-Phase: 3 (Queue Start Guard & Tool Error Visibility) — EXECUTING
-Plan: 6 of 6
-Status: Phase complete — ready for verification
-Last activity: 2026-10-28 — Phase 3 execution started
+Phase: 03 (Queue Start Guard & Tool Error Visibility) — EXECUTING
+Plan: 7 of 7 (gap closure G-03-3 done)
+Status: Phase complete — ready for verification (UAT test 3 retest open)
+Last activity: 2026-10-29 — Completed 03-07-PLAN.md
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -77,6 +77,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 3 P04 | 15min | 2 tasks | 8 files |
 | Phase 3 P05 | 6 min | 2 tasks | 5 files |
 | Phase 3 P06 | 10 min | 3 tasks | 5 files |
+| Phase 03 P07 | 20 min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -101,6 +102,7 @@ Recent decisions affecting current work:
 - [Phase 3]: 03-05: storedErrorText is the shared reader of a persisted row error so the run outcome and 03-06 step card cannot drift
 - [Phase 3]: 03-06: banner dismiss stores only dismissedSeq (errorSeq of shown payload); never clears, restarts or acts on the queue
 - [Phase 3]: 03-06: step card error text placed between CommandImage and sticky label; skipped-with-error card at full opacity
+- [Phase 03]: 03-07: step-card error text placed beside CommandImage in one HStack row (amends D-17/UA2) so the fixed 165px card never overflows (G-03-3)
 
 ### Pending Todos
 
@@ -139,8 +141,8 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-28T22:44:11.014Z
-Stopped at: Completed 03-06-PLAN.md
+Last session: 2026-10-29T04:26:17.924Z
+Stopped at: Completed 03-07-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
