@@ -35,12 +35,16 @@ result: [pending]
 expected: A run whose failed step was skipped shows the orange "Skipped failure" badge and orange progress bar (never teal/green, no check icon), including when later steps COMPLETED.
 result: [pending]
 
+### 5. An ignored Start is shown, and a retry right after a failure is accepted
+expected: Right after a step fails (banner visible), pressing Run and accepting starts the retry immediately. If Run is pressed while the queue is still finishing a step (e.g. Pause queue then Run during a step), a "Start ignored" warning toast appears and nothing is dispatched twice.
+result: [pending]
+
 ## Summary
 
-total: 4
+total: 5
 passed: 0
 issues: 0
-pending: 4
+pending: 5
 skipped: 0
 blocked: 0
 
