@@ -1,8 +1,8 @@
 ---
 phase: 03-queue-start-guard-tool-error-visibility
-verified: 2026-10-29T01:15:00Z
+verified: 2026-10-29T04:45:00Z
 status: human_needed
-score: 8/8 must-haves verified
+score: 8/9 must-haves verified
 covered_files:
   - ".planning/phases/03-queue-start-guard-tool-error-visibility/03-01-PLAN.md"
   - ".planning/phases/03-queue-start-guard-tool-error-visibility/03-01-SUMMARY.md"
@@ -16,6 +16,8 @@ covered_files:
   - ".planning/phases/03-queue-start-guard-tool-error-visibility/03-05-SUMMARY.md"
   - ".planning/phases/03-queue-start-guard-tool-error-visibility/03-06-PLAN.md"
   - ".planning/phases/03-queue-start-guard-tool-error-visibility/03-06-SUMMARY.md"
+  - ".planning/phases/03-queue-start-guard-tool-error-visibility/03-07-PLAN.md"
+  - ".planning/phases/03-queue-start-guard-tool-error-visibility/03-07-SUMMARY.md"
   - "controller/components/runs/RunsComponent.tsx"
   - "controller/components/runs/list/SwimLaneCommandComponent.tsx"
   - "controller/components/runs/queueError.ts"
@@ -37,8 +39,8 @@ covered_files:
   - "controller/test/runOutcome.test.ts"
   - "controller/test/staticScan.test.ts"
   - "controller/test/toolReply.test.ts"
-covered_digest: "v3:sha256:c9bf8765e57b9611cf9dd97ef1ba09b1ee753d4e9f43e0a5e23b0b39d9f8687e"
-behavior_unverified: 0
+covered_digest: "v3:sha256:f9e037723f5f80ed7f55b4814b9d74b0b6d5f1d8c0cfe2d7fd4154cd9603ce58"
+behavior_unverified: 1
 overrides_applied: 1
 overrides:
   - must_have: "An ignored Start is not an error to the caller: commandQueue.restart resolves to undefined and no toast or exception is produced (D-02)"
@@ -48,170 +50,161 @@ overrides:
 re_verification:
   previous_status: human_needed
   previous_score: 8/8
-  gaps_closed: []
+  gaps_closed:
+    - "G-03-3 (code level): step-card error text no longer stacked under the image; it shares one HStack row with CommandImage (03-07, commits d8ecac5 red, bf692ba green)"
   gaps_remaining: []
   regressions: []
+behavior_unverified_items:
+  - truth: "A FAILED or skipped-after-failure step card with a 1-line or 3-line error fits the fixed 165px card (scrollHeight <= clientHeight, no internal scroll) and the sticky label never covers the error text (G-03-3, 03-07 must-have, verification: backstop)"
+    test: "UAT test 3 retest on the live page after docker compose up -d --build galago-web. Use Tool Box (software-only) steps; Image-branch only with a confirmed-stopped non-Tool-Box server. At 300px (1-2 steps) and 250px (4+ steps) cards, with 1-line and 3+-line errors, for FAILED and skipped-after-failure, read scrollHeight and clientHeight of the card in DevTools. Never run STACK or F.A.S.T. steps."
+    expected: "scrollHeight <= clientHeight everywhere; error text right of the image, max 3 lines, full text in the tooltip; label below the row; cards without an error look as before."
+    why_human: "Rendered fixed-height layout. The static scan pins the JSX structure and the arithmetic is plausible (row height = 64/65px image block absorbs 63px of clamped text, so content stays at about 147-148px against the 151px box), but no jsdom/RTL harness exists and the executor did not run the live check (03-07-SUMMARY, Open human check). Presence of the markup is not proof that the card fits."
 human_verification:
-  - test: "Run confirmation summary: in galago-web with a fake/simulated tool, queue several steps (include one FAILED retry and rows from two runs) and press Run."
-    expected: "Modal keeps header 'Warning' and the simulation-mode sentence, shows 'This Start will run N queued steps from M runs.' plus the failed-retry line, nothing pre-selected, no timer, Accept (teal) then Cancel (ghost); empty queue shows 'The queue is empty.'; narrow width wraps without clipping."
-    why_human: "Rendered UI; no jsdom/RTL by project decision. Pure copy/count logic is unit-tested, but the JSX wiring and layout are not exercised."
-  - test: "Banner re-arm: queue a failing step, Run, dismiss the error banner, Start again and fail again with the same tool text."
-    expected: "Banner reappears on the second failure without any operator action; a long tool message scrolls inside a 160px region with the Details button, code badge and close button still visible."
-    why_human: "Rendered/polling behaviour across two failures; only the pure predicate and server seq are unit-tested."
-  - test: "Step-card error line: after a failure, dismiss the banner, then reload the page / restart galago-web."
-    expected: "The FAILED card still shows the stored tool message clamped to 3 lines with the full text in its title; 3 clamped lines plus the image fit the 165px card; a plain operator Skip shows no text and stays dimmed; a skip after failure shows 'Skipped after failure: <text>' at full opacity."
-    why_human: "Visual clamp/overflow in a fixed-height card; no rendering harness."
-  - test: "Skipped-failure run outcome: fail a step, Skip it, let the remaining steps complete."
-    expected: "The run row shows an orange 'Skipped failure' badge and orange progress bar (never teal/green or a check icon), wrapping cleanly at narrow widths, even when later steps are COMPLETED."
-    why_human: "Rendered badge/colour; only deriveRunOutcome/runOutcomeBadge/runProgressColorScheme are unit-tested."
-  - test: "Ignored-Start warning and immediate retry after failure (03-UAT item 5): right after a step fails, press Run and Accept; separately, Pause queue then press Run during a step."
-    expected: "The retry starts immediately after a failure (no 'Start ignored' toast). Pressing Run while the queue is still busy shows a 'Start ignored' warning toast and nothing is dispatched twice."
-    why_human: "Rendered toast and live timing between UI polling and the server busy loop; the server accepted/ignored contract is unit-tested but the toast firing is not."
-behavior_unverified_items: []
+  - test: "UAT test 3 retest (G-03-3): measure the step card on the live page as described in behavior_unverified_items."
+    expected: "scrollHeight <= clientHeight for FAILED and skipped-after-failure cards at 250px and 300px widths, 1- and 3-line errors, Tool Box tool; sticky label not over the text; no-error cards unchanged."
+    why_human: "Rendered layout in a fixed-height card; no rendering harness in the project."
 advisory_review_findings:
+  - id: "03-REVIEW WR-01 (new, 03-07 review)"
+    note: "G-03-3 static scan lets flexShrink={0} pass on any element in the row, not only the image wrapper; justifyContent/width not pinned. Test-strength warning, not a defect in shipped behaviour."
+  - id: "03-REVIEW WR-02 (new, 03-07 review)"
+    note: "Row adds a stray 8px gap and indents the error text while tool.info is loading or for a tool without imageUrl (wrapper Box is always rendered). Cosmetic, cannot overflow (3-line text is 63px)."
   - id: IN-01
-    note: "A brief window can show the previous failure's text under a new FAILED state (poll timing). Info only, open."
+    note: "Full error text on the card is hover-only (title). Banner and Details still carry the full text. Info, open."
   - id: IN-02
-    note: "updateRunAttributes is still async with no await. Info only, open."
+    note: "Sticky-label scan is whitespace and prop-order sensitive. Info, open."
   - id: IN-03
-    note: "A SUCCESS reply with whitespace-only error_message fails the step. Info only, open."
+    note: "A SUCCESS reply with whitespace-only error_message fails the step. Info only, open (carried over)."
 ---
 
 # Phase 3: Queue Start Guard & Tool Error Visibility Verification Report
 
 **Phase Goal:** A Start, restart or enqueue never dispatches a queue row that is already in flight; the operator sees before confirming what a Start will run, so a stale leftover row is never a surprise; and when a tool step fails, the operator sees the tool's own message wherever the failure shows, and no tool error is ever shown as success.
 **Verified:** 2026-10-29
-**Status:** human_needed (all automated truths verified; rendered-UI items routed to UAT)
-**Re-verification:** Yes. The prior report (human_needed, 8/8, no gaps) went stale after review-fix commits 5191ffe and 06fc3ea changed covered code. Every must-have was re-checked against the current tree, with focus on what those commits touch.
+**Status:** human_needed (all automated truths verified; one rendered-layout retest left for G-03-3)
+**Re-verification:** Yes, after gap-closure plan 03-07 (G-03-3 recorded in 03-UAT.md). The prior report (human_needed, 8/8) is stale: 03-07 changed `SwimLaneCommandComponent.tsx` and `staticScan.test.ts`. Passed items got a regression check. The failed item (G-03-3) got full verification.
 
 ## Gate Evidence (run in this verification)
 
 | Gate | Command | Result |
 | ---- | ------- | ------ |
-| QUE-09 untouched | `git diff --stat 5726822 -- controller/test/toolControl.test.ts controller/test/sqliteQueue.test.ts controller/test/queueRestart.test.ts` | empty output (no diff) |
-| Unit tests | `cd controller && npm run test:unit` | 20 files / 434 tests passed (was 428; +6 from the WR-01/WR-02 tests) |
+| Unit tests | `cd controller && npm run test:unit` | 20 files / 436 tests passed (434 baseline + 2 new G-03-3 scans) |
 | Types | `npx tsc --noEmit` | exit 0, no output |
-| Debt markers | grep TBD/FIXME/XXX in command_queue.ts, routers/command_queue.ts, QueueStatuscomponent.tsx | none |
+| QUE-09 untouched | `git diff --stat 5726822 -- controller/test/toolControl.test.ts controller/test/sqliteQueue.test.ts controller/test/queueRestart.test.ts` | empty (no diff) |
+| CommandImage unchanged | `git diff --stat e25f0a4 -- controller/components/tools/CommandImage.tsx` | empty (no diff) |
+| Delta since last verification | `git diff --stat 30a4273 HEAD -- controller` | only `SwimLaneCommandComponent.tsx` (+29/-21) and `staticScan.test.ts` (+43/0). No server or queue code changed, so QUE-07/08/09 and ERR-01/02/04/05 server logic is byte-identical to the prior verified state |
+| Debt markers | grep TBD/FIXME/XXX in the two changed files | none |
 | Probes | none declared by this phase | SKIPPED |
 
-## Review-fix delta (5191ffe, 06fc3ea) against the must-haves
+## G-03-3 closure check (full verification of the previously failed item)
 
-Read the diff and the resulting code directly.
+Gap: FAILED / skipped-after-failure card error text did not fit the fixed 165px card (content 230px in a 163px box) and the sticky label painted over the first error line.
 
-- **WR-01.** Both `_notifyFailure` calls (`command_queue.ts:951` in the `_start` catch, `:1449` in the busy-loop catch) are now `void this._notifyFailure(...)`. In the busy-loop catch the order is `_recordFailure` -> `_setState(FAILED)` -> Command Failed log -> `void notify` -> `break`, with no await between, so `_runningPromise` clears within microtasks. `_notifyFailure` (line 217) wraps its entire body in one try/catch, so a fire-and-forget call cannot produce an unhandled rejection. The router `restart` computes `accepted = !queue.isStartInProgress` and calls `_start()` in the same synchronous turn, and `_start` checks `_runningPromise` before any await, so `accepted` matches what `_start` does. A new test with a never-settling `_notifyFailure` shows the retry Start is accepted, produces no "Queue Start Ignored" log, and re-dispatches the same row (`spy` called 2 times, tag r1).
-- **WR-02.** `queueErrorPayload` has no `stack` in either branch. No client code reads `.stack` (only an unrelated telemetry file). `errorPath.test.ts` pins `getError` with no `stack` property for a tool error and a non-tool error.
-- **06fc3ea** changes toast wording and one comment position only.
+What the code now does (`SwimLaneCommandComponent.tsx`, read directly, lines ~158-186):
+- `<HStack spacing={2} width="100%" justifyContent="center">` holds `<Box flexShrink={0}><CommandImage .../></Box>` and, when `errorText !== null`, a `<Text>` with `fontSize="sm"`, `noOfLines={3}`, `whiteSpace="normal"`, `wordBreak="break-word"`, `flex="1"`, `minW={0}`, `title={errorText}`. It is no longer a separate VStack child under the image.
+- The sticky label `<Box bottom={0} position="sticky">` remains the last VStack child, unchanged.
+- Card root box properties (`height="165px"`, `padding="6px"`, `minW="250px"`, `maxW="300px"`, `overflowY="auto"`) are retained and pinned by the new scan. The error Text keeps its font size, default line height and 3-line clamp. `CommandImage.tsx` has no diff. Single `<CommandImage`, single COMPLETED `CheckCircle`, no `dangerouslySetInnerHTML` (existing scans green).
+- Test written red first (d8ecac5), production fix after (bf692ba). The two new scans exist and pass; the earlier ERR-03/04/05 scans pass unedited (`staticScan.test.ts` 0 deleted lines).
 
-Effect on the named must-haves:
+Reasoning on fit (not proof): the image block is 64px (IconButton) / 65px (Image). A 3-line `sm` clamp is about 63px at the default 1.5 line height. The row height therefore stays at the image block height and the content returns to about 147-148px, inside the 151px content box. Without overflow the sticky label is inert again. This is consistent with the UAT debug root cause, but it is a static estimate. The plan itself tagged this truth `verification: backstop` and the 03-07 SUMMARY says the live retest was not performed.
 
-- **QUE-07 single-flight still holds.** The guard (`command_queue.ts:910-918`) is unchanged: first statement in `_start`, returns before the `_failedAttempt` reset and `this.error = undefined`. The only change is that the claim is released sooner, and only after the queue is already FAILED with no step in flight. The in-flight-step cases (restart, direct, same-tick, pause-then-start, enqueue) still assert one Tool call, and the "restart during a running step" test now asserts `{ accepted: false }`. All pass. `enqueueRun` auto-start is still gated on `state === READY`, so it never fires from FAILED.
-- **QUE-09 retry-after-failure holds.** The protected files are byte-identical to 5726822 and pass. `startNext/complete/fail*` are untouched. The FAILED row stays queued and re-runs first (the new WR-01 test shows it). Retry is now more reliable.
-- **ERR-04 holds.** `_recordFailure` still bumps the clock-seeded `failureSeq` at every failure site, and `getError` still returns `seq` in the payload. The non-awaited notify does not touch seq or error.
-- **ERR-05 holds.** The ignored-Start toast is a warning, not a success. The `accepted: false` branch does not clear or alter the banner or the queue error.
-- **Prohibitions.** An ignored Start still changes no state, error or `_failedAttempt`. The toast is client-only, so "no auto acknowledge/cancel/retry/skip" is not violated.
-- **Intentional deviation.** The WR-01 toast reverses CONTEXT D-02 and 03-01-PLAN's plan-level truth "restart resolves to undefined and no toast". This was done at the user's request and is recorded in 03-REVIEW-DISPOSITION.md. It is carried as an override above. It does not touch any ROADMAP success criterion or REQUIREMENTS text, and no test still asserts the old `undefined` contract (updated in 5191ffe, green).
+Verdict for the truth "card fits, label does not cover text": PRESENT_BEHAVIOR_UNVERIFIED. The code is present, wired and the structure is pinned. The assertion is about rendered geometry that no automated check here exercises. It is not FAILED (nothing observable contradicts it) and not VERIFIED (no measurement). Routed to human verification. UAT test 3 remains the open retest.
 
-## Goal Achievement
+Review of 03-07 (03-REVIEW.md, 0 critical, 2 warnings, 2 info) read: the warnings concern scan strength and a cosmetic 8px gap when no image renders. Neither is a correctness defect, neither blocks a must-have. The disposition file lists them as `open` (ids WR-01/WR-02 there are reused from the earlier fixed WR-01/WR-02; the new findings are untriaged), recorded as advisory.
 
-### Observable Truths (ROADMAP success criteria)
+## Observable Truths (ROADMAP success criteria, regression-checked)
 
 | # | Truth | Status | Evidence |
 | - | ----- | ------ | -------- |
-| 1 | While a step is in flight, Run/restart/enqueue does not dispatch the row twice; queue stays running; Logs record "Queue Start Ignored" | VERIFIED | `command_queue.ts:910-918` guard is the first statement of `_start`. `restart` and `enqueueRun` (`this._start("enqueue")`) both route through it. `queueStartGuard.test.ts` asserts the Tool spy is called once and one ignored log for restart, direct, same-tick, pause-then-start and enqueue. Ran green (434/434). |
-| 2 | Run confirmation shows queued rows to run, FAILED retries, distinct runs, read-only, nothing pre-selected, no timer; after Start, Logs list queue_ids and run_ids | VERIFIED (logic + wiring); rendering is UAT | `queuedStartSummary.ts` pure counts. `QueueStatuscomponent.tsx:45` uses `commandQueue.commands` (queue-joined) and maps `queuedStartLines(...)`. The modal has no autoFocus/timer (staticScan). `_start` logs "Queue Started" with `_describeQueueStart(source)` from `queuedRowsSync()`. Unit and guard tests are green. |
-| 3 | FAILED step stays queued and re-runs first on next Start; retry/h0q/o44/t9e regression tests pass unmodified | VERIFIED | Protected test files have zero diff vs 5726822; suites are green. New WR-01 test shows a retry after FAILED re-dispatches the same row. |
-| 4 | Test, written failing first, drives each tool response code through the queue and pins message/code/stored error | VERIFIED | `errorPath.test.ts` (`Record<ResponseCode,...>`, "covers every ResponseCode"). It was committed red in f21a4be/8eb3432 before the production fixes c6d9404/cdf48db. The only later change is the additive WR-02 case in 5191ffe; the original expectations are not weakened. Green. |
-| 5 | Failed step shows tool's own text; real code name, never UNKNOWN | VERIFIED | `toolReply.ts describeToolReply` is the single composer. `tools.ts` throws `ToolCommandExecutionError(failure.message, failure.code)`. The router payload passes the message verbatim and still carries `code`/`codeString` (stack removed). `toolReply.test`/`errorPath.test` green. |
-| 6 | Failed step card shows stored error incl. after banner cleared/restart; after dismiss, next failure shows the banner again | VERIFIED (logic + wiring); rendering is UAT | `SwimLaneCommandComponent` renders `stepErrorText(command)` from the persisted row. `shouldShowErrorBanner` plus `setDismissedSeq(errorSeq(...))`. Server `_recordFailure` bumps `failureSeq` at each failure site. `queueError.test.ts` green. |
-| 7 | Failed step never shown as completed; SUCCESS reply carrying an error message is an error; run whose failed step was skipped is not plain success | VERIFIED (logic + wiring); rendering is UAT | `describeToolReply` SUCCESS+text -> ERROR_FROM_TOOL. `CheckCircle` only under COMPLETED. `deriveRunOutcome`/`runOutcomeBadge`/`runProgressColorScheme`. `runOutcome.test.ts` green. |
+| 1 | While a step is in flight, Run/restart/enqueue does not dispatch the row twice; queue stays running; Logs record "Queue Start Ignored" | VERIFIED | `command_queue.ts` guard is first in `_start`; file unchanged since prior verification; `queueStartGuard.test.ts` green (436/436) |
+| 2 | Run confirmation shows queued rows to run, FAILED retries, distinct runs, read-only, nothing pre-selected, no timer; Logs list queue_ids and run_ids | VERIFIED | Files unchanged; unit and staticScan green; UAT test 1 passed on the live UI |
+| 3 | FAILED step stays queued and re-runs first; retry/h0q/o44/t9e regression tests pass unmodified | VERIFIED | Protected files zero diff vs 5726822; suites green |
+| 4 | Test written failing first drives each tool response code through the queue and pins message/code/stored error | VERIFIED | `errorPath.test.ts` green; red-first commits precede fixes; later change additive only (see 03-07 SUMMARY deviation note, confirmed: purely additive) |
+| 5 | Failed step shows the tool's own text; real code name, never UNKNOWN | VERIFIED | `toolReply.ts`/`tools.ts` unchanged; UAT test 2 confirmed badge on the live UI |
+| 6 | Failed step card shows stored error incl. after banner cleared/restart; after dismiss, the next failure shows the banner again | VERIFIED for content, persistence and re-arm (UAT tests 2, 3 content half); layout fit see truth 9 | Stored-error rendering survives 03-07 (still `stepErrorText(command)` via `errorText`, `title={errorText}`, `noOfLines={3}`) |
+| 7 | Failed step never shown as completed; SUCCESS reply carrying error text is an error; run whose failed step was skipped is not plain success | VERIFIED | `runOutcome.ts`/`utils.ts` unchanged; UAT test 4 passed (orange badge and bar); single COMPLETED `CheckCircle` pinned |
+| 8 | An ignored Start is shown to the operator and a retry right after a failure starts immediately (03-01/WR-01 truth, override applied to the D-02 wording) | PASSED (override) + VERIFIED | Code unchanged; UAT test 5 passed live |
+| 9 | Step-card error fits the fixed 165px card; label never covers the text (03-07 must-have, G-03-3) | PRESENT_BEHAVIOR_UNVERIFIED | Markup and structure verified and pinned; geometry not measured; see above |
 
-**Score:** 8/8 requirements verified (7/7 roadmap truths at logic and wiring level; 0 behavior-unverified; rendered aspects routed to UAT).
+**Score:** 8/9 truths verified; 1 present, behavior-unverified (rendered geometry).
 
 ### Required Artifacts
 
 | Artifact | Status | Details |
 | -------- | ------ | ------- |
-| `controller/server/command_queue.ts` | VERIFIED | guard, listing, `_recordFailure`, `failureSeq`, `isStartInProgress` getter present and wired |
-| `controller/server/routers/command_queue.ts` | VERIFIED | `restart` returns `{ accepted }`; payload without stack, with seq |
-| `controller/server/utils/SqliteQueue.ts`, `queueStartListing.ts`, `toolReply.ts`, `tools.ts` | VERIFIED | unchanged since the prior verification; consumed by command_queue/tools |
-| `controller/components/runs/{queuedStartSummary,storedError,runOutcome,queueError,utils}.ts`, `RunsComponent.tsx`, `SwimLaneCommandComponent.tsx` | VERIFIED | unchanged since the prior verification; substantive and wired |
-| `controller/components/runs/status/QueueStatuscomponent.tsx` | VERIFIED | start summary plus `restartMutation.onSuccess` toast on `!result.accepted`, `onSettled` preserved |
-| Tests: errorPath, queueStartGuard, toolReply, queueError, runOutcome, queuedStartSummary, staticScan | VERIFIED | exist, green; staticScan gains WR-01/WR-02 pins (no `await this._notifyFailure(`, `return { accepted }`, no `stack:`) |
+| `controller/components/runs/list/SwimLaneCommandComponent.tsx` | VERIFIED (substantive, wired) | Row layout as above; imported and rendered by RunsComponent (unchanged wiring) |
+| `controller/test/staticScan.test.ts` | VERIFIED | New describe "step card error fits the fixed card (G-03-3)", 2 cases, pass |
+| `.planning/.../03-UI-SPEC.md` | VERIFIED | S3/UA2/backstop note amended (03-07 Task 2) |
+| `controller/components/tools/CommandImage.tsx` | VERIFIED unchanged | no diff vs e25f0a4 |
+| All other phase artifacts (server queue, router, toolReply, tools, SqliteQueue, queueStartListing, pure UI helpers, banner/modal components, remaining tests) | VERIFIED | unchanged since the previous verification, which read them in full; tests green |
 
 ### Key Link Verification
 
 | From | To | Status |
 | ---- | -- | ------ |
-| router `restart` -> `queue.isStartInProgress` then `_start()` | guard inside `_start` | WIRED |
-| `QueueStatuscomponent` `restart.useMutation.onSuccess` -> `warningToast` on `!result.accepted` | operator visibility of an ignored Start | WIRED |
-| `enqueueRun` -> `this._start("enqueue")` | guarded `_start` | WIRED |
-| `tools.ts` -> `describeToolReply` -> `ToolCommandExecutionError` | getError payload | WIRED |
-| fail / `_start` catch / busy-loop catch -> `_recordFailure` -> `failureSeq` -> `getError.seq` | banner re-arm | WIRED |
-| `QueueStatuscomponent` -> `commands.useQuery` + `queuedStartLines(` | read-only modal lines | WIRED |
-| `RunsComponent` -> `shouldShowErrorBanner`, `setDismissedSeq(errorSeq(...))` | banner re-arm | WIRED |
-| `SwimLaneCommandComponent` -> `stepErrorText(command)` | card error line | WIRED |
-| `utils.getRunAttributes` -> `deriveRunOutcome`; `RunsComponent` -> `runOutcomeBadge`/`runProgressColorScheme` | outcome display | WIRED |
+| `SwimLaneCommandComponent` row -> `CommandImage` (flexShrink 0 wrapper) and error `Text` (flex 1, minW 0) | single HStack above sticky label | WIRED |
+| `SwimLaneCommandComponent` -> `stepErrorText(command)` -> `errorText` | step card error line | WIRED |
+| Router `restart` -> guard in `_start`; `enqueueRun` -> `_start("enqueue")` | single-flight | WIRED (unchanged) |
+| `tools.ts` -> `describeToolReply` -> `ToolCommandExecutionError` -> `getError` payload with seq | banner, step card | WIRED (unchanged) |
+| `QueueStatuscomponent` -> `commands.useQuery` + `queuedStartLines`; `restart` `onSuccess` -> warning toast on `!accepted` | modal, ignored-Start visibility | WIRED (unchanged) |
+| `getRunAttributes` -> `deriveRunOutcome`; `RunsComponent` -> badge/progress scheme | skipped-failure display | WIRED (unchanged) |
 
 ### Data-Flow Trace (Level 4)
 
 | Artifact | Data | Source | Real data | Status |
 | -------- | ---- | ------ | --------- | ------ |
-| Run confirmation modal | `queuedCommandsQuery.data` | `commandQueue.commands` (queue-joined SQLite) | yes | FLOWING |
-| Error banner | `getError.data` | `CommandQueue.getError()` + `failureSeq` | yes | FLOWING |
-| Step card error | `command.error` | persisted row via `getAll` | yes | FLOWING |
-| Run row outcome | `run.Commands` | polled rows | yes | FLOWING |
-| Start-ignored toast | `restart` mutation result | `!queue.isStartInProgress` computed server-side | yes | FLOWING |
+| Step card error Text | `errorText` from `command.error` | persisted row via `getAll` | yes | FLOWING |
+| Run confirmation modal | `commandQueue.commands` | queue-joined SQLite | yes | FLOWING |
+| Error banner | `getError.data` + `failureSeq` | `CommandQueue.getError()` | yes | FLOWING |
+| Run outcome | polled `run.Commands` | rows | yes | FLOWING |
+
+### Behavioral Spot-Checks
+
+| Behavior | Command | Result | Status |
+| -------- | ------- | ------ | ------ |
+| Whole unit suite incl. guard, errorPath, toolReply, queueError, runOutcome, queuedStartSummary, staticScan | `npm run test:unit` (run once) | 436/436 | PASS |
+| Type check | `npx tsc --noEmit` | exit 0 | PASS |
+
+### Probe Execution
+
+None declared by this phase. SKIPPED.
 
 ### Requirements Coverage (PLAN frontmatter vs REQUIREMENTS.md)
 
-IDs claimed across plans: 03-01 {QUE-07, QUE-08, QUE-09}, 03-02 {ERR-01}, 03-03 {QUE-08}, 03-04 {ERR-01, ERR-02, ERR-04, ERR-05}, 03-05 {ERR-05}, 03-06 {ERR-03, ERR-04, ERR-05}. All 8 IDs listed for Phase 3 in REQUIREMENTS.md are accounted for (checked and traceability rows "Complete"); no ORPHANED requirements.
+Plan `requirements:` fields: 03-01 {QUE-07, QUE-08, QUE-09}; 03-02 {ERR-01}; 03-03 {QUE-08}; 03-04 {ERR-01, ERR-02, ERR-04, ERR-05}; 03-05 {ERR-05}; 03-06 {ERR-03, ERR-04, ERR-05}; 03-07 {ERR-03}. Union = {QUE-07, QUE-08, QUE-09, ERR-01, ERR-02, ERR-03, ERR-04, ERR-05}, exactly the 8 IDs mapped to Phase 3 in REQUIREMENTS.md (all checked, traceability "Complete"). No ORPHANED requirements.
 
 | Requirement | Source Plans | Status | Evidence |
 | ----------- | ------------ | ------ | -------- |
-| QUE-07 | 03-01 | SATISFIED | Guard intact after WR-01; single-dispatch tests green |
-| QUE-08 | 03-01, 03-03 | SATISFIED (rendering = UAT) | Truth 2 |
-| QUE-09 | 03-01, 03-04, 03-06 | SATISFIED | zero diff on protected tests; green; retry-after-failure test added |
+| QUE-07 | 03-01 | SATISFIED | Guard unchanged; single-dispatch tests green |
+| QUE-08 | 03-01, 03-03 | SATISFIED | Truth 2; UAT 1 passed live |
+| QUE-09 | 03-01, 03-04, 03-06 | SATISFIED | zero diff on protected tests, green |
 | ERR-01 | 03-02, 03-04 | SATISFIED | red-first errorPath table, green |
 | ERR-02 | 03-04 | SATISFIED | Truth 5 |
-| ERR-03 | 03-06 | SATISFIED (rendering = UAT) | Truth 6 |
-| ERR-04 | 03-04, 03-06 | SATISFIED | seq and dismissedSeq unaffected by 5191ffe |
-| ERR-05 | 03-04, 03-05, 03-06 | SATISFIED (rendering = UAT) | Truth 7 |
+| ERR-03 | 03-06, 03-07 | SATISFIED for content/persistence; layout fit pending live retest | Truth 6 and truth 9 |
+| ERR-04 | 03-04, 03-06 | SATISFIED | seq/dismissedSeq unchanged; UAT 2 passed live |
+| ERR-05 | 03-04, 03-05, 03-06 | SATISFIED | Truth 7; UAT 4 passed live |
 
 ### Prohibitions
 
 | Prohibition | Tier | Status |
 | ----------- | ---- | ------ |
-| Ignored Start changes no state/error/_failedAttempt; no auto acknowledge/cancel/retry/skip | test | Held (guard ordering unchanged; toast is client-only; guard tests green) |
+| Ignored Start changes no state/error/_failedAttempt; no auto acknowledge/cancel/retry/skip | test | Held (server code unchanged) |
 | Protected regression test files unmodified | test | Held (git diff empty) |
 | Run confirmation gains no timer/default/autoFocus/form/new button | test | Held (staticScan) |
-| Summary must not promise un-run rows | test | Held |
-| No tool error reported as success; tool text not rewritten; banner dismissal never clears error | test | Held (the ignored-Start toast is a warning; the `accepted:false` path touches no banner or error) |
-| No RunStatus widening; no motion in tests | test | Held (fakes only) |
-| failing test not weakened | judgment | Held, non-authoritative: the original errorPath expectations are unchanged; 5191ffe only adds a case |
+| No tool error reported as success; tool text not rewritten; banner dismissal never clears error | test | Held; 03-07 keeps error text a React child with `title`, no HTML injection |
+| 03-07: CommandImage.tsx, card box, error Text font/line-height/clamp, label unchanged | test | Held (no diff on CommandImage; scan pins the rest) |
+| failing test not weakened | judgment | Held, non-authoritative (03-07 scans added red-first, 0 deleted lines) |
 
 ### Anti-Patterns Found
 
-None blocking. No TBD/FIXME/XXX. `void this._notifyFailure(...)` is deliberate and safe because the method catches all of its own errors. `status: "UNKNOWN"` in `utils.ts`/`RunsComponent.tsx` is the pre-existing no-run-info placeholder.
-
-### Behavioral Spot-Checks
-
-| Behavior | Command | Result |
-| -------- | ------- | ------ |
-| Whole unit suite incl. guard, errorPath, toolReply, queueError, runOutcome, queuedStartSummary, staticScan | `npm run test:unit` | PASS (434/434) |
-| Types | `npx tsc --noEmit` | PASS |
+None blocking. No TBD/FIXME/XXX in changed files. Review advisories listed in frontmatter.
 
 ### Human Verification Required
 
-Five items (frontmatter `human_verification`, matching 03-UAT.md, all pending): Run confirmation rendering, banner re-arm across two failures, step-card clamp/persistence, orange skipped-failure badge, and the ignored-Start toast plus immediate retry after failure. These are rendered or live-timing items with no automated harness (project decision: no jsdom/RTL). Their pure logic is unit-tested and their wiring is verified above.
-
-### Advisory (not failing a must-have)
-
-- WR-01 and WR-02 from the prior report are now fixed (5191ffe, 06fc3ea) and no longer advisory.
-- IN-01..IN-03 remain open, informational only.
+1. **UAT test 3 retest (G-03-3).** Rebuild (`docker compose up -d --build galago-web`), then on cards at 300px and 250px with 1-line and 3+-line errors, for FAILED and skipped-after-failure, using Tool Box steps, read the card's `scrollHeight` and `clientHeight` in DevTools. Expected: `scrollHeight <= clientHeight`, error right of the image (max 3 lines, full text in tooltip), label below the row, no-error cards unchanged. Why human: fixed-height rendered geometry; no rendering harness. Never run STACK or F.A.S.T. steps.
 
 ### Gaps Summary
 
-No gaps. Every roadmap success criterion and requirement is backed by code and green tests, the QUE-09 no-diff gate holds, and the post-review fixes keep QUE-07 single-flight, QUE-09 retry-after-failure, ERR-04 and ERR-05 intact without violating a prohibition. The D-02 reversal is a user-approved deviation recorded as an override. Status is `human_needed` only because rendered UI behaviour is a UAT item.
+No gaps. Every roadmap success criterion and requirement is backed by code and green tests (436/436, tsc clean, QUE-09 no-diff gate holds, no server code changed since the last verification). The G-03-3 fix is present, structurally pinned by a red-first scan, and consistent with the root-cause arithmetic, but the claim that the card now fits is a measured-geometry claim that has not been measured. Status is `human_needed` solely for that retest; if the measurement shows overflow, reopen G-03-3.
 
 ---
 
