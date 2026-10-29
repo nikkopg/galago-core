@@ -5,11 +5,11 @@ titles: json
 findings:
   - id: WR-01
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "Start is silently dropped while the loop is only notifying, so a FAILED-state retry can be swallowed with no operator feedback"
   - id: WR-02
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "`getError` now returns `stack` for every error type, including non-tool errors"
   - id: IN-01
     severity: info
@@ -23,7 +23,7 @@ findings:
     severity: info
     disposition: open
     title: "A SUCCESS reply with whitespace-only `error_message` fails the step"
-open: 5
+open: 3
 total: 5
 recorded: 2026-10-28T22:50:31.000Z
 ---
@@ -32,8 +32,10 @@ recorded: 2026-10-28T22:50:31.000Z
 
 | Finding | Severity | Disposition | Source |
 |---------|----------|-------------|--------|
-| WR-01 | warning | open | - |
-| WR-02 | warning | open | - |
+| WR-01 | warning | fixed | 5191ffe |
+| WR-02 | warning | fixed | 5191ffe |
 | IN-01 | info | open | - |
 | IN-02 | info | open | - |
 | IN-03 | info | open | - |
+
+WR-01 note: fixing it reverses CONTEXT D-02 ("no toast for an ignored Start") at the user's request on 2026-10-29; an ignored Start now shows a warning toast.
