@@ -12,12 +12,17 @@ import {
   emptyDecisions,
   allDecisionsChosen,
   completeDecisions,
+  completeRecoveryEntries,
+  needsGuidEntry,
   controlButtonHints,
   progressValue,
   nextUnknownSince,
   confirmStillValid,
   restateChoice,
   decisionLabel,
+  confirmHeader,
+  successTitle,
+  toolDisplayName,
   runAfterAccepted,
   shouldShowRecoverySection,
   isToolTrackedByRunningStep,
@@ -27,6 +32,7 @@ import {
   type RunningEnvelope,
   type ConfirmedSendOutcome,
 } from "@/components/runs/controlDecision";
+import { getRecoverySpec } from "@/server/recoveryActions";
 import type { RunStateEnvelope } from "@/server/runState";
 
 function statusReplyWith(run_state: unknown): any {
@@ -417,6 +423,19 @@ describe("recovery section visibility", () => {
     expect(shouldShowRecoverySection("constructor")).toBe(false);
     expect(shouldShowRecoverySection("")).toBe(false);
   });
+
+  it("derives from the recovery spec: stack qualifies without any runControl entry (D-05)", () => {
+    expect(shouldShowRecoverySection("stack")).toBe(true);
+    expect(shouldShowRecoverySection("unknown-type")).toBe(false);
+  });
+
+  it("the guid entry derives from the recovery spec's guid-kind params", () => {
+    expect(needsGuidEntry("stack")).toBe(true);
+    expect(needsGuidEntry("fast")).toBe(false);
+    expect(needsGuidEntry("pf400")).toBe(false);
+    expect(needsGuidEntry("constructor")).toBe(false);
+    expect(needsGuidEntry("")).toBe(false);
+  });
 });
 
 describe("tracked tool", () => {
@@ -539,6 +558,60 @@ describe("recovery send gate", () => {
     pending.resolve({ ok: true, response: "SUCCESS" });
     await first;
   });
+
+  it('sends a complete stack acknowledge with params exactly { guid, arm_inspected: "yes" }', async () => {
+    const sendRecovery = vi.fn().mockResolvedValue({ ok: true, response: "SUCCESS" });
+    const sendRunning = vi.fn();
+    const notify = { accepted: vi.fn(), refused: vi.fn() };
+    const sender = createConfirmedSender({ sendRunning, sendRecovery, notify });
+
+    const outcome = await sender.send({
+      target: { kind: "recovery", toolId: "stack-1" },
+      toolType: "stack",
+      action: "acknowledge_failure",
+      decisions: { arm_inspected: "yes" },
+      params: { guid: "g-1" },
+    });
+
+    expect(outcome.status).toBe("accepted");
+    expect(sendRecovery).toHaveBeenCalledTimes(1);
+    expect(sendRecovery).toHaveBeenCalledWith({
+      toolId: "stack-1",
+      action: "acknowledge_failure",
+      params: { guid: "g-1", arm_inspected: "yes" },
+    });
+    expect(sendRunning).not.toHaveBeenCalled();
+  });
+
+  it("ignores an acknowledge without a confirmable guid and sends nothing", async () => {
+    const sendRecovery = vi.fn().mockResolvedValue({ ok: true, response: "SUCCESS" });
+    const notify = { accepted: vi.fn(), refused: vi.fn() };
+    const sender = createConfirmedSender({ sendRunning: vi.fn(), sendRecovery, notify });
+
+    const outcome = await sender.send({
+      target: { kind: "recovery", toolId: "stack-1" },
+      toolType: "stack",
+      action: "acknowledge_failure",
+      decisions: { arm_inspected: "yes" },
+      params: undefined,
+    });
+
+    expect(outcome).toStrictEqual({ status: "ignored", reason: "incomplete" });
+    expect(sendRecovery).not.toHaveBeenCalled();
+  });
+
+  it("carries the card-typed guid into the request as data (request.params)", async () => {
+    // A request built for acknowledge_failure carries params { guid } — the
+    // modal restates it verbatim from this data, never from an input.
+    const request = {
+      target: { kind: "recovery" as const, toolId: "stack-1" },
+      toolType: "stack",
+      action: "acknowledge_failure",
+      decisions: { arm_inspected: "yes" as const },
+      params: { guid: "abc-123" },
+    };
+    expect(request.params).toStrictEqual({ guid: "abc-123" });
+  });
 });
 
 describe("accepted then follow-up", () => {
@@ -591,5 +664,171 @@ describe("headMovesNote (WR-05)", () => {
   it("shows the note when the tool type or action is not declared", () => {
     expect(headMovesNote("pf400", "pause")).toBe(HEAD_MOVES_NOTE);
     expect(headMovesNote("fast", "unknown")).toBe(HEAD_MOVES_NOTE);
+  });
+
+  it("never shows the note for an acknowledge_failure (D-07)", () => {
+    expect(headMovesNote("stack", "acknowledge_failure")).toBeNull();
+  });
+
+  it("still shows the note for a F.A.S.T. abort after the ack branch exists", () => {
+    expect(headMovesNote("fast", "abort")).toBe(HEAD_MOVES_NOTE);
+  });
+});
+
+describe("recovery completion (completeRecoveryEntries)", () => {
+  const stackAckSpec = getRecoverySpec("stack", "acknowledge_failure")!;
+
+  it('completes a choose-yes ack with params exactly { guid, arm_inspected: "yes" }', () => {
+    expect(
+      completeRecoveryEntries(stackAckSpec, { arm_inspected: "yes" }, { guid: "g-1" }),
+    ).toStrictEqual({
+      guid: "g-1",
+      arm_inspected: "yes",
+    });
+  });
+
+  it("is incomplete when the guid is missing or blank (never trimmed)", () => {
+    expect(completeRecoveryEntries(stackAckSpec, { arm_inspected: "yes" }, undefined)).toBeNull();
+    expect(completeRecoveryEntries(stackAckSpec, { arm_inspected: "yes" }, {})).toBeNull();
+    expect(
+      completeRecoveryEntries(stackAckSpec, { arm_inspected: "yes" }, { guid: "" }),
+    ).toBeNull();
+    expect(
+      completeRecoveryEntries(stackAckSpec, { arm_inspected: "yes" }, { guid: "  " }),
+    ).toBeNull();
+  });
+
+  it("is incomplete when the guid contains whitespace or control characters without any trimming", () => {
+    expect(
+      completeRecoveryEntries(stackAckSpec, { arm_inspected: "yes" }, { guid: "g 1" }),
+    ).toBeNull();
+    expect(
+      completeRecoveryEntries(stackAckSpec, { arm_inspected: "yes" }, { guid: "g\u00001" }),
+    ).toBeNull();
+    expect(
+      completeRecoveryEntries(stackAckSpec, { arm_inspected: "yes" }, { guid: " leading" }),
+    ).toBeNull();
+    expect(
+      completeRecoveryEntries(stackAckSpec, { arm_inspected: "yes" }, { guid: "trailing " }),
+    ).toBeNull();
+  });
+
+  it('is incomplete for arm_inspected "no", "" or unset — only exactly "yes" confirms', () => {
+    expect(
+      completeRecoveryEntries(stackAckSpec, { arm_inspected: "no" }, { guid: "g-1" }),
+    ).toBeNull();
+    expect(
+      completeRecoveryEntries(stackAckSpec, { arm_inspected: "" as any }, { guid: "g-1" }),
+    ).toBeNull();
+    expect(completeRecoveryEntries(stackAckSpec, {}, { guid: "g-1" })).toBeNull();
+  });
+
+  it("still completes the fast recovery entries through their yesno kinds", () => {
+    const fastResumeSpec = getRecoverySpec("fast", "resume")!;
+    expect(
+      completeRecoveryEntries(fastResumeSpec, { is_tip_broken: "no" }, undefined),
+    ).toStrictEqual({ is_tip_broken: "no" });
+    expect(
+      completeRecoveryEntries(fastResumeSpec, { is_tip_broken: "" as any }, undefined),
+    ).toBeNull();
+  });
+});
+
+describe("acknowledge copy and restatement (plan 04-03)", () => {
+  it("uses the acknowledge-specific header, success title and decision label", () => {
+    expect(confirmHeader("acknowledge_failure")).toBe("Acknowledge STACK failure");
+    expect(successTitle("acknowledge_failure")).toBe("STACK failure acknowledged");
+    expect(decisionLabel("arm_inspected")).toBe("Arm inspected?");
+  });
+
+  it("names the STACK tool type", () => {
+    expect(toolDisplayName("stack")).toBe("STACK");
+  });
+
+  it("restates the acknowledge with the guid verbatim and the chosen verdict token", () => {
+    const restated = restateChoice(
+      "stack",
+      "acknowledge_failure",
+      { arm_inspected: "yes" },
+      {
+        guid: "g-1",
+      },
+    );
+    expect(restated).toContain('"g-1"');
+    expect(restated).toBe(
+      'Acknowledge the most recent failure on this tool using guid "g-1". Arm inspected: Yes.',
+    );
+  });
+
+  it("restates an unchosen arm_inspected as 'not chosen'", () => {
+    const restated = restateChoice("stack", "acknowledge_failure", {}, { guid: "g-1" });
+    expect(restated).toBe(
+      'Acknowledge the most recent failure on this tool using guid "g-1". Arm inspected: not chosen.',
+    );
+  });
+
+  it("restates the verdict 'No' for a rejected 'no' choice (the confirm stays gated on yes)", () => {
+    const restated = restateChoice(
+      "stack",
+      "acknowledge_failure",
+      { arm_inspected: "no" },
+      {
+        guid: "g-1",
+      },
+    );
+    expect(restated).toContain("Arm inspected: No.");
+  });
+});
+
+describe("acknowledge single-flight and refusal (T-04-09)", () => {
+  it("ignores a second acknowledge send while the first is in flight", async () => {
+    const pending = deferred<{ ok: boolean; response: string }>();
+    const sendRecovery = vi.fn().mockReturnValue(pending.promise);
+    const notify = { accepted: vi.fn(), refused: vi.fn() };
+    const sender = createConfirmedSender({ sendRunning: vi.fn(), sendRecovery, notify });
+
+    const request = {
+      target: { kind: "recovery" as const, toolId: "stack-1" },
+      toolType: "stack",
+      action: "acknowledge_failure",
+      decisions: { arm_inspected: "yes" as const },
+      params: { guid: "g-1" },
+    };
+
+    const first = sender.send(request);
+    const second = await sender.send(request);
+
+    expect(second).toStrictEqual({ status: "ignored", reason: "in-flight" });
+    expect(sendRecovery).toHaveBeenCalledTimes(1);
+
+    pending.resolve({ ok: true, response: "SUCCESS" });
+    await first;
+  });
+
+  it("refused acknowledge resolves refused and notifies with the server text verbatim", async () => {
+    const sendRecovery = vi.fn().mockResolvedValue({
+      ok: false,
+      response: "ERROR_FROM_TOOL",
+      message: "A run step is running on this tool; acknowledge after it ends.",
+    });
+    const notify = { accepted: vi.fn(), refused: vi.fn() };
+    const sender = createConfirmedSender({ sendRunning: vi.fn(), sendRecovery, notify });
+
+    const outcome = await sender.send({
+      target: { kind: "recovery", toolId: "stack-1" },
+      toolType: "stack",
+      action: "acknowledge_failure",
+      decisions: { arm_inspected: "yes" },
+      params: { guid: "g-1" },
+    });
+
+    expect(outcome).toStrictEqual({
+      status: "refused",
+      message: "A run step is running on this tool; acknowledge after it ends.",
+    });
+    expect(notify.refused).toHaveBeenCalledWith(
+      "A run step is running on this tool; acknowledge after it ends.",
+    );
+    expect(sendRecovery).toHaveBeenCalledTimes(1);
   });
 });

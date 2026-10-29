@@ -3,11 +3,23 @@
 // control (D-24: no React import, no .tsx import — safe to import from any
 // context, including the confirmed-send hook and tests). The only server
 // imports are `getRunControl`, `actionMovesHead` and `normalizeToolKey` (both zero-import
-// modules, safe client-side) and the `RunStateEnvelope` TYPE (import type
-// only, so no server code reaches the client bundle).
+// modules, safe client-side), the recovery spec module `@/server/recoveryActions`
+// (plan 04-01, also zero-import — D-05 mirror) and the `RunStateEnvelope` TYPE
+// (import type only, so no server code reaches the client bundle).
 import { actionMovesHead, getRunControl } from "@/server/runControl";
 import type { ControlDecisionValue, RunControlActionSpec } from "@/server/runControl";
 import { normalizeToolKey } from "@/server/toolKey";
+// D-05: the client mirror imports the recovery spec (and the guid check) as
+// VALUES from the same zero-import module the server validator runs — the
+// card's enable-check is literally the server's check, never a re-declared
+// copy of the pattern.
+import {
+  getRecoverySpec,
+  isRecoveryAction,
+  isValidRecoveryGuid,
+  listRecoveryActions,
+} from "@/server/recoveryActions";
+import type { RecoveryParamKind } from "@/server/recoveryActions";
 import type { RunStateEnvelope } from "@/server/runState";
 
 // Mirrors the server's RUN_STATE_POLL_INTERVAL_MS (D-01) without importing
@@ -19,6 +31,13 @@ export const HEAD_MOVES_NOTE = "The instrument head will move.";
 // WR-05: the note is shown only for actions that move the head (Pause on the
 // F.A.S.T. does not). Unknown tool types and actions still get the note.
 export function headMovesNote(toolType: string, action: string): string | null {
+  // D-07: an acknowledge_failure request is a physical ack the operator is
+  // about to confirm — it never moves the head, and the note must not render
+  // on that surface. Declared through the recovery-action token below rather
+  // than server/runControl's actionMovesHead data (which stays untouched).
+  if (action === "acknowledge_failure") {
+    return null;
+  }
   return actionMovesHead(toolType, action) ? HEAD_MOVES_NOTE : null;
 }
 
@@ -29,6 +48,7 @@ export const NOTHING_SENT_MESSAGE =
 
 const TOOL_DISPLAY_NAMES: Readonly<Record<string, string>> = {
   fast: "F.A.S.T.",
+  stack: "STACK",
 };
 
 export function toolDisplayName(toolType: string): string {
@@ -75,6 +95,60 @@ export function completeDecisions(
     result[name] = value;
   }
   return result;
+}
+
+// D-05 (recovery mirror): a recovery variant of completion over the declared
+// recovery param kinds of one action (server/recoveryActions.ts's spec), in
+// DECLARATION ORDER:
+//   yesno      : passes only an exactly chosen "yes"/"no" (from `values`);
+//   confirmYes : passes only when the chosen value is exactly "yes";
+//                anything else leaves the entry incomplete so the request
+//                can never confirm on "no" or silence;
+//   guid       : takes its value from `params` (the card-typed guid travels
+//                as DATA, D-07) — never trimmed, never folded, and it must
+//                pass the SAME isValidRecoveryGuid the server validator runs;
+//                blank/invalid guid means the send stays incomplete.
+// Incomplete (any entry missing/invalid) → null. Completed params are a
+// plain Record<string, string> holding exactly the declared keys.
+export function completeRecoveryEntries(
+  spec: Readonly<Record<string, RecoveryParamKind>>,
+  values: DecisionValues,
+  params: Readonly<Record<string, string>> | undefined,
+): Record<string, string> | null {
+  const completed: Record<string, string> = {};
+  for (const name of Object.keys(spec)) {
+    const kind = spec[name];
+    if (kind === "guid") {
+      const guid = params === undefined ? undefined : params[name];
+      if (guid === undefined || !isValidRecoveryGuid(guid)) {
+        return null;
+      }
+      completed[name] = guid;
+    } else if (kind === "confirmYes") {
+      if (values[name] !== "yes") {
+        return null;
+      }
+      completed[name] = "yes";
+    } else {
+      const value = values[name];
+      if (value !== "yes" && value !== "no") {
+        return null;
+      }
+      completed[name] = value;
+    }
+  }
+  return completed;
+}
+
+// Guid-entry visibility (STACK's acknowledge surface today): derived from the
+// recovery spec itself — true when any declared recovery action of the tool
+// type requires a guid-kind parameter — so no tool TYPE is hard-coded in the
+// card, mirroring shouldShowRecoverySection's derivation rule (D-05).
+export function needsGuidEntry(toolType: string): boolean {
+  return listRecoveryActions(toolType).some((action) => {
+    const spec = getRecoverySpec(toolType, action);
+    return spec !== undefined && Object.values(spec).includes("guid");
+  });
 }
 
 export type RunningEnvelope = Extract<RunStateEnvelope, { running: true }>;
@@ -184,6 +258,7 @@ const CONFIRM_HEADERS: Readonly<Record<string, string>> = {
   pause: "Pause Instrument",
   resume: "Resume Instrument",
   abort: "Abort Instrument Run",
+  acknowledge_failure: "Acknowledge STACK failure",
 };
 
 export function confirmHeader(action: string): string {
@@ -196,6 +271,7 @@ const SUCCESS_TITLES: Readonly<Record<string, string>> = {
   pause: "Instrument paused",
   resume: "Instrument resumed",
   abort: "Instrument run aborted",
+  acknowledge_failure: "STACK failure acknowledged",
 };
 
 export function successTitle(action: string): string {
@@ -207,6 +283,7 @@ export function successTitle(action: string): string {
 const DECISION_LABELS: Readonly<Record<string, string>> = {
   is_tip_broken: "Tip broken?",
   return_liquid: "Return liquid?",
+  arm_inspected: "Arm inspected?",
 };
 
 export function decisionLabel(name: string): string {
@@ -218,10 +295,39 @@ export function decisionLabel(name: string): string {
 // D-06/D-08: Pause has no decisions, so it keeps its short question form.
 // Any other action restates the choice made, one " {Label}: {Yes/No/not
 // chosen}." sentence per declared decision, in declaration order.
-export function restateChoice(toolType: string, action: string, values: DecisionValues): string {
+// acknowledge_failure (D-07) restates the card-typed guid byte-for-byte
+// verbatim — quoted, NEVER paraphrased — from the `params` data the card
+// passed through the request, then the per-decision restatement sentences.
+// The guid parameter is never an input in the modal: it was typed on the card.
+export function restateChoice(
+  toolType: string,
+  action: string,
+  values: DecisionValues,
+  params?: Readonly<Record<string, string>>,
+): string {
   const name = toolDisplayName(toolType);
   if (action === "pause") {
     return `Pause the ${name} run?`;
+  }
+
+  if (action === "acknowledge_failure") {
+    const guid = params === undefined ? "" : params.guid;
+    let ack = `Acknowledge the most recent failure on this tool using guid "${guid}".`;
+    const recoverySpec = getRecoverySpec(toolType, action);
+    if (recoverySpec) {
+      for (const decisionName of Object.keys(recoverySpec)) {
+        // The guid kind is already quoted verbatim in the first sentence;
+        // only the physical choices appear as verdict sentences.
+        if (recoverySpec[decisionName] === "guid") {
+          continue;
+        }
+        const label = decisionLabel(decisionName).replace(/\?$/, "");
+        const value = values[decisionName];
+        const valueText = value === "yes" ? "Yes" : value === "no" ? "No" : "not chosen";
+        ack += ` ${label}: ${valueText}.`;
+      }
+    }
+    return ack;
   }
 
   let sentence = `${capitalize(action)} the ${name} run.`;
@@ -241,17 +347,21 @@ export function restateChoice(toolType: string, action: string, values: Decision
 // goes straight to a tool by id/name, with no running queue step involved.
 export type ControlTarget = { kind: "running" } | { kind: "recovery"; toolId: string };
 
-// D-21: crash recovery only ever offers Resume/Abort — never Pause.
-export const RECOVERY_UI_ACTIONS = ["resume", "abort"] as const;
+// D-21: crash recovery actions come from the recovery spec module (plan
+// 04-01); the UI never offers an action `isRecoveryAction` does not declare —
+// the old hard-coded client allowlist is gone in its favour.
 
 // The confirmed-send path only ever accepts a COMPLETED decision object
-// (D-24) — callers must run completeDecisions() themselves before building
-// this request.
+// (D-24) — callers must run completeDecisions()/completeRecoveryEntries()
+// themselves before building this request. A recovery request additionally
+// carries the card-typed guid as DATA (D-07) in `params`; the modal restates
+// it verbatim and never renders it as an input.
 export interface ConfirmedControlRequest {
   target: ControlTarget;
   toolType: string;
   action: string;
   decisions: Readonly<Record<string, ControlDecisionValue>>;
+  params?: Readonly<Record<string, string>>;
 }
 
 export interface ToolControlResultLike {
@@ -273,11 +383,12 @@ export interface ConfirmedSendDeps {
   }): Promise<ToolControlResultLike>;
   // Optional (D-24): only the tool page's recovery entry point supplies
   // this. Absent, a recovery request is refused rather than silently
-  // falling back to sendRunning.
+  // falling back to sendRunning. Params are string-valued data (plan 04-03:
+  // the card-typed guid travels as a plain string, never trimmed or folded).
   sendRecovery?(input: {
     toolId: string;
     action: string;
-    params: Record<string, ControlDecisionValue>;
+    params: Record<string, string>;
   }): Promise<ToolControlResultLike>;
   notify: {
     accepted(title: string, description?: string): void;
@@ -331,15 +442,19 @@ export function createConfirmedSender(deps: ConfirmedSendDeps): {
     }
 
     if (request.target.kind === "recovery") {
-      // D-21: only resume/abort are ever offered for crash recovery; a
-      // pause (or anything else) is ignored before any decision lookup.
-      if (!(RECOVERY_UI_ACTIONS as readonly string[]).includes(request.action)) {
+      // The recovery branch is spec-driven (D-05): an action is offered and
+      // sendable only when the recovery spec module declares it for the tool
+      // type — never off a hard-coded UI action list.
+      if (!isRecoveryAction(request.toolType, request.action)) {
         return { status: "ignored", reason: "incomplete" };
       }
 
-      const spec = getActionSpec(request.toolType, request.action);
-      const completed = spec ? completeDecisions(spec, request.decisions) : null;
-      if (!spec || completed === null) {
+      const recoverySpec = getRecoverySpec(request.toolType, request.action);
+      const completed =
+        recoverySpec !== undefined
+          ? completeRecoveryEntries(recoverySpec, request.decisions, request.params)
+          : null;
+      if (recoverySpec === undefined || completed === null) {
         return { status: "ignored", reason: "incomplete" };
       }
 
@@ -372,11 +487,12 @@ export function createConfirmedSender(deps: ConfirmedSendDeps): {
   };
 }
 
-// D-21: visibility of the tool page's "Run Recovery" card depends ONLY on
-// whether the tool type declares a runControl entry — never on whether a
-// step is currently running (Pitfall 10).
+// D-21/D-05: visibility of the tool page's "Run Recovery" card depends ONLY
+// on the recovery spec — whether the tool type declares any recovery action —
+// never on whether a step is currently running (Pitfall 10). STACK qualifies
+// without any runControl entry having ever been added.
 export function shouldShowRecoverySection(toolType: string): boolean {
-  return getRunControl(toolType) !== undefined;
+  return listRecoveryActions(toolType).length > 0;
 }
 
 // WR-06: imported from the shared, zero-dependency @/server/toolKey module

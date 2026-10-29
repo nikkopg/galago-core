@@ -38,7 +38,11 @@ export function useConfirmedControlSend(): {
   if (senderRef.current === null) {
     senderRef.current = createConfirmedSender({
       sendRunning: (input) => mutateAsyncRef.current(input),
-      sendRecovery: (input) => recoveryMutateAsyncRef.current(input),
+      // Plan 04-03: the recovery send's params widen to string data (the
+      // card-typed guid travels verbatim); the completion logic in
+      // controlDecision.ts guarantees the exact shape the validator expects.
+      sendRecovery: (input: { toolId: string; action: string; params: Record<string, string> }) =>
+        recoveryMutateAsyncRef.current(input),
       notify: {
         accepted: (title, description) => successToast(title, description ?? ""),
         refused: (message) => persistentErrorToast("Action refused", message),
