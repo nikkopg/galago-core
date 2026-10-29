@@ -3,7 +3,7 @@ status: complete
 phase: 03-queue-start-guard-tool-error-visibility
 source: [03-VERIFICATION.md]
 started: 2026-10-28T22:54:02Z
-updated: 2026-10-29T04:36:19Z
+updated: 2026-10-29T04:39:33.042Z
 ---
 
 ## Current Test
@@ -58,7 +58,9 @@ blocked: 0
 - gap_id: G-03-3
   truth: "A FAILED / skipped-after-failure step card's error text fits inside the 165px card"
   status: resolved
-  resolved_by: 03-07 (bf692ba); live retest waived by user, marked pass
+  resolved_by: 03-07-PLAN.md
+  resolved_at: 2026-10-29
+  resolution_note: "Fixed in bf692ba; live scrollHeight/clientHeight retest waived as minor by the user, test 3 marked pass."
   reason: "Automated UAT: card content is 230px in a 163px box (internal scroll needed) and the sticky 'Run script' label overlaps the first error line at the default scroll position"
   severity: minor
   test: 3
