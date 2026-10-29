@@ -125,7 +125,7 @@ Phase 4), GAL-02 protocol authoring, `stack.proto` changes, stack-automation-lay
   `acknowledge_failure` literal file list, absence from `commandFields`/`runControl`, guard in
   `executeCommand` not `controlCommand`, single `tool.latchStatus` reader, `/latch/i` absent off the
   send path.
-- **D-15:** Not provable before codegen (Phase 5's GEN-04, not repeated here): real-encoder wire test of
+- **[informational] D-15:** Not provable before codegen (Phase 5's GEN-04, not repeated here): real-encoder wire test of
   the acknowledge payload, latch-read oneof contract, `getToolConfigDefinition("stack")`, creating a
   STACK tool row through `zToolType`.
 

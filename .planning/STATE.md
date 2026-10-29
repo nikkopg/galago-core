@@ -4,16 +4,16 @@ milestone: v2
 milestone_name: STACK tool support — codegen, operator acknowledge, error visibility, F5
 current_phase: 4
 current_phase_name: Operator-only Commands & STACK Acknowledge
-status: planning
+status: executing
 stopped_at: Phase 4 UI-SPEC approved
-last_updated: "2026-10-29T05:21:45.432Z"
+last_updated: "2026-10-29T05:50:22.542Z"
 last_activity: 2026-10-29
 last_activity_desc: Phase 03 complete, transitioned to Phase 4
-state_head: 4e34c00d3d44779bb986fcacccbf579c2427ba3b
+state_head: 44bb2aa2756ee228a3e1f666bf6f4463ca10cbf2
 progress:
   total_phases: 3
   completed_phases: 1
-  total_plans: 7
+  total_plans: 12
   completed_plans: 7
   percent: 33
 ---
@@ -30,9 +30,9 @@ decides every recovery action; the web app never acts on its own or pre-selects 
 
 ## Current Position
 
-Phase: 4 — Operator-only Commands & STACK Acknowledge
+Phase: 4 (Operator-only Commands & STACK Acknowledge) — READY TO EXECUTE
 Plan: Not started
-Status: Ready to plan
+Status: Ready to execute
 Last activity: 2026-10-29 — Phase 03 complete, transitioned to Phase 4
 
 Progress: [███░░░░░░░] 33%
