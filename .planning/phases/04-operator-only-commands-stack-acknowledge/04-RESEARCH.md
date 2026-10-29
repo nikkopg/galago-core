@@ -753,7 +753,10 @@ describe("operator-only guard", () => {
 | A5 | A stack Tool row via `tool.add` is effectively unreachable from the tool page UI list (type input may be a fixed select of editor-known types) | §Pitfall 7 | Only affects the "is the guard production-facing" framing; the guard is live and correct either way |
 | A6 | `getError`'s `queueErrorPayload` behaviour will not regress before Phase 4 lands (Phase 3 code at `routers/command_queue.ts:10-29`) | §Pitfall 2 | D-03 + the execute-time guard would still work (plain Error subclass passes through any future router shape) |
 
-## Open Questions
+## Open Questions (RESOLVED)
+
+All three questions below carried Recommendations that the Phase 4 plans adopted; no unresolved open
+question remains. Resolution record (2026-10-29, at plan-check close):
 
 1. **Should the OPR-04 enqueue scan also reject in `protocol.preview`?**
    - What we know: CONTEXT.md lists it as discretion ("optional; the enqueue refusal already gives a
@@ -761,16 +764,22 @@ describe("operator-only guard", () => {
    - What's unclear: whether authoring feedback is worth the double-check.
    - Recommendation: leave OUT of Phase 4 (deferred), since the enqueue refusal already surfaces a
      visible BAD_REQUEST at run creation and the deferred list puts it there explicitly.
+   - **RESOLVED — adopted:** left out; stays in CONTEXT.md's Deferred Ideas. No plan touches
+     `protocol.preview` (research Pitfall 10's 500-shape caveat noted for Phase 5).
 2. **Which module hosts the client guid checker (same as server vs `components/tools/`)?**
    - What we know: D-05/discretion — "same module or `recoveryActions.ts` to share the validator";
      the pattern elsewhere is "pure logic + static scan" helpers in the server-zero-import module.
    - Recommendation: host in `recoveryActions.ts`, imported by the card (zero-import is the
      established client-safe server module pattern, used by `controlDecision.ts` today).
+   - **RESOLVED — adopted:** hosted in `recoveryActions.ts` (`isValidRecoveryGuid` export; plans
+     04-01 creates it, 04-03 imports it client-side, sharing the one validator).
 3. **Test file naming for the execute-time guard**
    - What we know: ACK-AND-F3.md §6.1 lands the guard tests in `test/operatorOnly.test.ts`, plus the
      existing `test/tools.test.ts` may keep some cases.
    - Recommendation: one `test/operatorOnly.test.ts` for both enforcement points (execute + enqueue +
      runCommand), so the fail-closed invariants live in one file the planner can review.
+   - **RESOLVED — adopted:** one `test/operatorOnly.test.ts` covering both enforcement points
+     (plans 04-01's harness style + 04-02's enqueue cases).
 
 ## Environment Availability
 
