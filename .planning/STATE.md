@@ -5,16 +5,16 @@ milestone_name: STACK tool support — codegen, operator acknowledge, error visi
 current_phase: 4
 current_phase_name: Operator-only Commands & STACK Acknowledge
 status: executing
-stopped_at: Completed 04-02-PLAN.md
-last_updated: "2026-10-29T06:25:31.167Z"
+stopped_at: "Completed 04-03-PLAN.md (acknowledge surface: card guid entry + modal per-kind render + recovery-spec decision state)"
+last_updated: "2026-10-29T06:47:46.201Z"
 last_activity: 2026-10-29
 last_activity_desc: Phase 4 execution started
-state_head: d86e3e02940f25d094e027105ac5726e5c456b06
+state_head: 66b6ee366dd37fec2df045331c031f4261aff3e0
 progress:
   total_phases: 3
   completed_phases: 1
   total_plans: 12
-  completed_plans: 9
+  completed_plans: 10
   percent: 33
 ---
 
@@ -31,7 +31,7 @@ decides every recovery action; the web app never acts on its own or pre-selects 
 ## Current Position
 
 Phase: 4 (Operator-only Commands & STACK Acknowledge) — EXECUTING
-Plan: 3 of 5
+Plan: 4 of 5
 Status: Ready to execute
 Last activity: 2026-10-29 — Phase 4 execution started
 
@@ -81,6 +81,7 @@ Progress: [███░░░░░░░] 33%
 | Phase 03 P07 | 20 min | 2 tasks | 3 files |
 | Phase 04 P01 | 13m | 2 tasks | 5 files |
 | Phase 04 P02 | ~16m | 2 tasks | 9 files |
+| Phase 04 P03 | 11min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -110,6 +111,9 @@ Recent decisions affecting current work:
 - [Phase 04]: D-06 reroute makes action-availability the first server refusal (type-aware BAD_REQUEST); pf400 tool-type refusal test updated to the new fixed order (04-01).
 - [Phase 04]: Operator-only command matching is trim+lowercase exact equality (D-04): deny-by-list never invents a match; the plan's double-space-ack example was inconsistent with its own matcher and resolved as not-refused.
 - [Phase 04]: RED evidence for tdd plans in this repo: vitest default/tap reporters are unparseable by the vendor TAP adapter; use vitest --reporter=junit (supported adapter, unmodified report) for check tdd-red-evidence records.
+- [Phase 04]: 04-03: createConfirmedSender recovery branch is recovery-spec-driven (isRecoveryAction/getRecoverySpec + pure completeRecoveryEntries); RECOVERY_UI_ACTIONS removed
+- [Phase 04]: 04-03: guid travels as request params DATA — modal restates verbatim, never an input; Confirm gated on completeRecoveryEntries (confirmYes exactly "yes")
+- [Phase 04]: 04-03: card guid visibility from needsGuidEntry (spec-derived), buttons never gated on instrument state; enable check = shared isValidRecoveryGuid import
 
 ### Pending Todos
 
@@ -153,8 +157,8 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-29T06:25:31.089Z
-Stopped at: Completed 04-02-PLAN.md
+Last session: 2026-10-29T06:47:40.512Z
+Stopped at: Completed 04-03-PLAN.md (acknowledge surface: card guid entry + modal per-kind render + recovery-spec decision state)
 Resume file: None
 
 ## Operator Next Steps
