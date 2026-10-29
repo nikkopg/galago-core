@@ -9,6 +9,7 @@ import { setInterval, clearInterval } from "timers";
 import { logAction } from "./logger";
 import { normalizeToolKey } from "./toolKey";
 import { describeToolReply } from "./toolReply";
+import { isOperatorOnlyCommand, OperatorOnlyCommandError } from "./operatorOnlyCommands";
 import { JavaScriptExecutor } from "@/server/scripting/javascript/javascript-executor";
 import { CSharpExecutor } from "@/server/scripting/csharp/csharp-executor";
 import { db } from "@/db/client";
@@ -407,6 +408,22 @@ export default class Tool {
   }
 
   async executeCommand(command: ToolCommandInfo) {
+    // Operator-only refusal (D-02a) — FIRST statement, before variable
+    // substitution and before any gRPC: a {{…}}-substituted param can never
+    // rescue a refused command. Keyed on the Tool instance's real type
+    // (String(this.toolType)), never on command.toolType from the stored JSON,
+    // so a mislabelled step is still refused.
+    if (isOperatorOnlyCommand(String(this.toolType), command.command)) {
+      await logAction({
+        level: "warning",
+        action: "Operator-Only Command Refused",
+        details: `toolId=${this.toolId} toolType=${this.toolType} command=${command.command} stage=execute`,
+      });
+      throw new OperatorOnlyCommandError(
+        `"${command.command}" on tool "${this.toolId}" is an operator action and cannot run from a protocol or the queue; use the tool page Run Recovery card.`,
+      );
+    }
+
     const params = command.params;
 
     // Substitute params with variables using Drizzle
