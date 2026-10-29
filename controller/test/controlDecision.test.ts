@@ -848,18 +848,27 @@ describe("acknowledge UI source invariants (UI-08)", () => {
   const cardPath = "components/tools/RunRecoverySection.tsx";
   const modalPath = "components/runs/RunControlConfirmModal.tsx";
 
+  // JSX text wraps where prettier breaks lines; sentence-level pins match on
+  // whitespace-flattened source.
+  function flat(rel: string): string {
+    return readSource(rel).replace(/\s+/g, " ");
+  }
+
   function expectAbsence(source: string, token: string, file: string): void {
-    expect((source.match(new RegExp(token, "g")) ?? []).length, `${file} contains ${token}`).toBe(0);
+    expect((source.match(new RegExp(token, "g")) ?? []).length, `${file} contains ${token}`).toBe(
+      0,
+    );
   }
 
   it("the card carries the guid entry: label, maxLength, placeholder, helper and disabled hint", () => {
     const src = readSource(cardPath);
-    expect(src).toContain('maxLength={256}');
+    const card = flat(cardPath);
+    expect(src).toContain("maxLength={256}");
     expect(src).toContain("isValidRecoveryGuid(");
-    expect(src).toContain('"Failure guid"');
-    expect(src).toContain("Paste the guid from the failed step's error");
-    expect(src).toContain("Sent exactly as typed. Spaces and control characters are not allowed.");
-    expect(src).toContain(
+    expect(card).toContain("Failure guid");
+    expect(card).toContain("Paste the guid from the failed step's error");
+    expect(card).toContain("Sent exactly as typed. Spaces and control characters are not allowed.");
+    expect(card).toContain(
       "A guid cannot be blank. Enter the guid shown in the failed step's error or via Read latch.",
     );
   });
@@ -886,7 +895,7 @@ describe("acknowledge UI source invariants (UI-08)", () => {
       "autoFocus",
       "defaultValue",
       "defaultChecked",
-      "type=\"submit\"",
+      'type="submit"',
       "<form",
     ]) {
       expectAbsence(card, token, cardPath);
@@ -903,13 +912,15 @@ describe("acknowledge UI source invariants (UI-08)", () => {
     expect(modal).toContain("params?:");
     expect(modal).toContain("getRecoverySpec");
     expect(modal).toContain("completeRecoveryEntries");
-    expect(modal).toContain("restateChoice(request.toolType, request.action, values, request.params)");
+    expect(modal).toContain(
+      "restateChoice(request.toolType, request.action, values, request.params)",
+    );
   });
 
   it("the shared modal keeps its non-defaulted wiring for the explicit yes choice", () => {
     const modal = readSource(modalPath);
     expect(modal).toContain('value={values[name] ?? ""}');
-    expect(modal).toContain('params: request.params');
+    expect(modal).toContain("params: request.params");
     expect(modal).toContain("initialFocusRef={cancelRef}");
   });
 

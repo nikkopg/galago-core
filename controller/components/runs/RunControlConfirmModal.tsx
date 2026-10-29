@@ -19,6 +19,7 @@ import {
   emptyDecisions,
   allDecisionsChosen,
   completeDecisions,
+  completeRecoveryEntries,
   confirmHeader,
   restateChoice,
   decisionLabel,
@@ -31,6 +32,8 @@ import type {
   ConfirmedControlRequest,
   ConfirmedSendOutcome,
 } from "./controlDecision";
+import type { ControlDecisionValue } from "@/server/runControl";
+import { getRecoverySpec } from "@/server/recoveryActions";
 import { useConfirmedControlSend } from "@/hooks/useRunControl";
 import { persistentErrorToast } from "@/components/ui/Toast";
 
@@ -56,6 +59,9 @@ export interface RunControlConfirmModalRequest {
   target: ControlTarget;
   toolType: string;
   action: string;
+  // Plan 04-03: for a recovery request the card-typed guid travels as DATA
+  // (D-07) — the body restates it verbatim; it is never an input here.
+  params?: Readonly<Record<string, string>>;
 }
 
 export interface RunControlConfirmModalCopy {
@@ -155,28 +161,72 @@ const RunControlConfirmModalBody: React.FC<{
   const cancelRef = useRef<HTMLButtonElement>(null);
   const bgColor = useColorModeValue("white", "surface.section");
   const spec = getActionSpec(request.toolType, request.action);
-  const [values, setValues] = useState<DecisionValues>(() => (spec ? emptyDecisions(spec) : {}));
+  // A recovery request whose action is declared by the recovery spec (plan
+  // 04-01) — the STACK acknowledge surface today — renders its declared
+  // non-guid choices from that spec. The guid kind is DATA the card carried
+  // in request.params and is restated in the body text, never an input here.
+  const recoverySpec =
+    spec === undefined ? getRecoverySpec(request.toolType, request.action) : undefined;
+  const recoveryChoiceNames =
+    recoverySpec === undefined
+      ? []
+      : Object.keys(recoverySpec).filter((name) => recoverySpec[name] !== "guid");
+  const [values, setValues] = useState<DecisionValues>(() => {
+    if (spec) {
+      return emptyDecisions(spec);
+    }
+    if (recoverySpec) {
+      // Every choice the recovery branch renders is born empty (D-07).
+      const bornEmpty: DecisionValues = {};
+      for (const name of recoveryChoiceNames) {
+        bornEmpty[name] = undefined;
+      }
+      return bornEmpty;
+    }
+    return {};
+  });
 
-  const decisionNames = spec ? Object.keys(spec) : [];
+  const decisionNames = spec ? Object.keys(spec) : recoveryChoiceNames;
   const headNote = headMovesNote(request.toolType, request.action);
-  const canConfirm = spec !== undefined && allDecisionsChosen(spec, values);
+  const recoveryCompleted =
+    recoverySpec === undefined
+      ? null
+      : completeRecoveryEntries(recoverySpec, values, request.params ?? {});
+  const canConfirm =
+    spec !== undefined
+      ? allDecisionsChosen(spec, values)
+      : recoverySpec !== undefined && recoveryCompleted !== null;
   const confirmColorScheme = request.action === "abort" ? "red" : "teal";
 
   const handleConfirm = async () => {
-    if (!spec) {
+    // For a runControl action the completed yes/no decisions; for a recovery
+    // action the declared non-guid choices (the guid went through
+    // request.params as data and re-completes inside the send gate).
+    let decisions: Record<string, ControlDecisionValue> | null = null;
+    if (spec !== undefined) {
+      decisions = completeDecisions(spec, values);
+    } else if (recoverySpec !== undefined && recoveryCompleted !== null) {
+      decisions = {};
+      for (const name of recoveryChoiceNames) {
+        const value = values[name];
+        if (value === "yes" || value === "no") {
+          decisions[name] = value;
+        }
+      }
+    }
+    if (decisions === null) {
       return;
     }
-    const completed = completeDecisions(spec, values);
-    if (completed === null) {
-      return;
-    }
+    // A const so the closure below keeps the non-null narrowed type.
+    const sendDecisions = decisions;
 
     const dispatchSend = () =>
       send({
         target: request.target,
         toolType: request.toolType,
         action: request.action,
-        decisions: completed,
+        decisions: sendDecisions,
+        params: request.params,
       });
 
     if (closeOnDispatch) {
@@ -208,7 +258,8 @@ const RunControlConfirmModalBody: React.FC<{
     }
   };
 
-  const bodyText = copy?.body?.(values) ?? restateChoice(request.toolType, request.action, values);
+  const bodyText =
+    copy?.body?.(values) ?? restateChoice(request.toolType, request.action, values, request.params);
 
   return (
     <Modal
@@ -224,7 +275,7 @@ const RunControlConfirmModalBody: React.FC<{
         {!isSending ? <ModalCloseButton /> : null}
         <ModalBody>
           <VStack spacing={4} align="stretch">
-            {spec === undefined ? (
+            {spec === undefined && recoverySpec === undefined ? (
               <Text>This action is not available for this tool.</Text>
             ) : (
               <>
@@ -260,7 +311,7 @@ const RunControlConfirmModalBody: React.FC<{
             colorScheme={confirmColorScheme}
             onClick={handleConfirm}
             isLoading={isSending}
-            isDisabled={spec === undefined || !canConfirm}>
+            isDisabled={(spec === undefined && recoverySpec === undefined) || !canConfirm}>
             {copy?.confirmLabel ?? "Confirm"}
           </Button>
         </ModalFooter>
