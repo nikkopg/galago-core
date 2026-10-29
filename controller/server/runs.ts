@@ -157,7 +157,6 @@ export async function upsertParameterVariables(
 }
 
 export default class RunStore {
-  nextRunId = 1;
   runs = new Map<string, Run>();
 
   static get global(): RunStore {
