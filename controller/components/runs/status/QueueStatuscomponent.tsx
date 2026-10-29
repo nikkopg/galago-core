@@ -60,7 +60,7 @@ export const QueueStatusComponent: React.FC<QueueStatusComponent> = ({
       if (result && !result.accepted) {
         warningToast(
           "Start ignored",
-          "The queue is still finishing its previous step, so nothing was started. Press Run again in a moment.",
+          "The queue is still busy (finishing a step or waiting on a prompt), so nothing was started. Press Start again once it has stopped.",
         );
       }
     },

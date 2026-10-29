@@ -283,12 +283,12 @@ export class CommandQueue {
     return this._state;
   }
 
-  // Read-only accessor for the in-memory running-step record (D-01).
   // True while a busy loop owns the queue, i.e. when _start would be ignored.
   get isStartInProgress(): boolean {
     return this._runningPromise !== undefined;
   }
 
+  // Read-only accessor for the in-memory running-step record (D-01).
   get runningStep(): Readonly<RunningStep> | undefined {
     return this._runningStep;
   }
