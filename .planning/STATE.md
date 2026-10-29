@@ -5,16 +5,16 @@ milestone_name: STACK tool support — codegen, operator acknowledge, error visi
 current_phase: 4
 current_phase_name: Operator-only Commands & STACK Acknowledge
 status: executing
-stopped_at: Phase 4 UI-SPEC approved
-last_updated: "2026-10-29T05:50:22.542Z"
+stopped_at: Completed 04-01-PLAN.md
+last_updated: "2026-10-29T06:07:18.010Z"
 last_activity: 2026-10-29
-last_activity_desc: Phase 03 complete, transitioned to Phase 4
-state_head: 44bb2aa2756ee228a3e1f666bf6f4463ca10cbf2
+last_activity_desc: Phase 4 execution started
+state_head: dc1d9a89eecb64680abee897efc73bd82bfa4870
 progress:
   total_phases: 3
   completed_phases: 1
   total_plans: 12
-  completed_plans: 7
+  completed_plans: 8
   percent: 33
 ---
 
@@ -30,10 +30,10 @@ decides every recovery action; the web app never acts on its own or pre-selects 
 
 ## Current Position
 
-Phase: 4 (Operator-only Commands & STACK Acknowledge) — READY TO EXECUTE
-Plan: Not started
+Phase: 4 (Operator-only Commands & STACK Acknowledge) — EXECUTING
+Plan: 2 of 5
 Status: Ready to execute
-Last activity: 2026-10-29 — Phase 03 complete, transitioned to Phase 4
+Last activity: 2026-10-29 — Phase 4 execution started
 
 Progress: [███░░░░░░░] 33%
 
@@ -79,6 +79,7 @@ Progress: [███░░░░░░░] 33%
 | Phase 3 P05 | 6 min | 2 tasks | 5 files |
 | Phase 3 P06 | 10 min | 3 tasks | 5 files |
 | Phase 03 P07 | 20 min | 2 tasks | 3 files |
+| Phase 04 P01 | 13m | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -104,6 +105,8 @@ Recent decisions affecting current work:
 - [Phase 3]: 03-06: banner dismiss stores only dismissedSeq (errorSeq of shown payload); never clears, restarts or acts on the queue
 - [Phase 3]: 03-06: step card error text placed between CommandImage and sticky label; skipped-with-error card at full opacity
 - [Phase 03]: 03-07: step-card error text placed beside CommandImage in one HStack row (amends D-17/UA2) so the fixed 165px card never overflows (G-03-3)
+- [Phase 04]: Guid regex extended with \u0085 (NEL): JS \s omits U+0085, so the planned guid class would accept a NEL control char; extended exclusion to make the NEL refusal hold (04-01).
+- [Phase 04]: D-06 reroute makes action-availability the first server refusal (type-aware BAD_REQUEST); pf400 tool-type refusal test updated to the new fixed order (04-01).
 
 ### Pending Todos
 
@@ -147,9 +150,9 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-29T05:21:45.395Z
-Stopped at: Phase 4 UI-SPEC approved
-Resume file: .planning/phases/04-operator-only-commands-stack-acknowledge/04-UI-SPEC.md
+Last session: 2026-10-29T06:07:17.969Z
+Stopped at: Completed 04-01-PLAN.md
+Resume file: None
 
 ## Operator Next Steps
 

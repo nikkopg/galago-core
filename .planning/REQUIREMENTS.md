@@ -41,12 +41,12 @@ not one row three times. The real defect is an unguarded re-entrant `_start()`.
 
 ### Operator acknowledge (DEP-03a)
 
-- [ ] **OPR-01**: Operator can send STACK AcknowledgeFailure from the tool-page Run Recovery card: guid
+- [x] **OPR-01**: Operator can send STACK AcknowledgeFailure from the tool-page Run Recovery card: guid
   text entry (blank refused, never trimmed), an explicit arm-inspected confirmation sent as the string
   `"yes"`, the guid restated in the confirm modal with ack-specific copy, no default, no timer, no
   Enter-bound default; through `tool.recoveryControl` with a recovery-only action map (`stack` is not
   added to `runControl`)
-- [ ] **OPR-02**: Every acknowledge attempt is audited (refused, transport error, outcome); it is refused
+- [x] **OPR-02**: Every acknowledge attempt is audited (refused, transport error, outcome); it is refused
   while the queue's running step is on that tool (STACK-specific message); sent once, never retried
 - [ ] **OPR-03**: Operator can see the latched guid from the step-card error and from an explicit "Read
   latch" button backed by a toolId-only `tool.latchStatus` query (no polling); "Use this guid" fills the
@@ -106,8 +106,8 @@ not one row three times. The real defect is an unguarded re-entrant `_start()`.
 | ERR-03 | Phase 3 | Complete |
 | ERR-04 | Phase 3 | Complete |
 | ERR-05 | Phase 3 | Complete |
-| OPR-01 | Phase 4 | Pending |
-| OPR-02 | Phase 4 | Pending |
+| OPR-01 | Phase 4 | Complete |
+| OPR-02 | Phase 4 | Complete |
 | OPR-03 | Phase 4 | Pending |
 | OPR-04 | Phase 4 | Pending |
 | OPR-05 | Phase 4 | Pending |
