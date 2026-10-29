@@ -1,8 +1,8 @@
 ---
 phase: 04-operator-only-commands-stack-acknowledge
-fixed_at: 2026-10-29T14:42:00Z
+fixed_at: 2026-10-29T14:47:30Z
 review_path: .planning/phases/04-operator-only-commands-stack-acknowledge/04-REVIEW.md
-iteration: 1
+iteration: 2
 findings_in_scope: 5
 fixed: 5
 skipped: 0
@@ -11,100 +11,99 @@ status: all_fixed
 
 # Phase 04: Code Review Fix Report
 
-**Fixed at:** 2026-10-29T14:42:00Z
+**Fixed at:** 2026-10-29T14:47:30Z
 **Source review:** `04-REVIEW.md`
-**Iteration:** 1
+**Iteration:** 2
 
 **Summary:**
-- Findings in scope: 5 (WR-01 … WR-05; IN-01 … IN-05 are out of scope for this pass)
+- Findings in scope: 5 (IN-01 … IN-05 only; WR-01 … WR-05 were fixed in iteration 1 — commits
+  34d616d / 5a7789f / 3a5cbc8 / b0dcc40 / fcfc0b3 — and were NOT redone)
 - Fixed: 5
 - Skipped: 0
 
 **Verification:** All fixes were made and verified inside the isolated review-fix worktree
-(`.claude/worktrees/rf-04-2110186-1793259117`, branch `gsd-reviewfix/04-2110186`; the
+(`.claude/worktrees/rf-04-2129470-1793259821`, branch `gsd-reviewfix/04-2129470`; the
 fast-forward to `feat/stack-tool` is performed by the cleanup tail, so the commits are
-reproducible from the main checkout after the fast-forward). The worktree uses the main
-checkout's `controller/node_modules` via symlink. Per-finding gate:
-`cd controller && npx vitest run test/staticScan.test.ts` (plus finding-specific suites);
-before the last fix commit the full suite (`npm run test:unit` — 23 files / 545 tests
-passed), `npx tsc --noEmit` (exit 0), and `prettier --check` all ran clean. Locked design
-decisions were honored: no gleam of the latch read entered the send path (the ack gate
-added no latch-derived term, D-12 kept — the new unknown branch is render-only before the
-not-latched branch), the refusal-order pin and D-08/D-13 semantics were preserved, and the
-stage/guard static-scan pins (closed literal set, `.controlCommand(` caller set,
-`/latch/i` set, single latch consumer, no-Enter card pins) stayed green.
+reproducible from the main checkout after the fast-forward). The worktree symlinks the main
+checkout's `controller/node_modules`. Per-finding gate:
+`cd controller && npx vitest run test/staticScan.test.ts` (plus finding-specific suites —
+recoveryControl/controlDecision/latchStatus/operatorOnly). Before the last fix commit the
+full gates ran clean in the worktree: `npm run test:unit` (23 files / 545 tests passed),
+`npx tsc --noEmit` (exit 0), and `prettier --check .` (clean). Locked design decisions were
+honored throughout:
+
+- `/latch/i` still appears in none of the four send-path files (recoveryControl.ts,
+  controlDecision.ts, RunControlConfirmModal.tsx, hooks/useRunControl.ts) and the IN-03 catch
+  gates nothing on the send path — display-only (D-12).
+- D-08 guid untouched; D-09 card grey-out untouched; D-23 one-attempt no-deadline send
+  untouched; D-01 fast entries remain in the refuse table.
+- Static-scan pins stayed green after every change: closed 4-file `/latch/i` literal set,
+  guard-first executeCommand ordering, single latch reader, no-Enter card, no
+  instrument-state checks, send called only from the Confirm handler.
+- Zero-import discipline kept: `server/recoveryActions.ts` and `server/operatorOnlyCommands.ts`
+  still have `grep -cE '^[[:space:]]*import\b|^from '` = 0.
 
 ## Fixed Issues
 
-### WR-01: `extractLatch`'s `unknown` state was never rendered
+### IN-01: `RECOVERY_STRICT_SUCCESS` lookup used a prototype-exposed index
 
-**Files modified:** `controller/components/tools/RunRecoverySection.tsx`, `controller/test/latchStatus.test.ts`
-**Commit:** 34d616d
+**Files modified:** `controller/server/recoveryControl.ts`
+**Commit:** 10b9ae3
 **Status:** fixed
-**Applied fix:** Added the `latchResult.unknown` branch (before the not-latched branch) to
-the recovery card with truthful copy ("Unrecognized latch reply / The tool replied, but the
-latch state could not be interpreted…") and the raw object rendered as one bounded
-`formatLatchRaw` line — the display the D-13 contract names. No latch state reaches the
-send path; the ack gate stays `!isValidRecoveryGuid(guid)` only (D-12). Pinned with a new
-card source-invariant test asserting the branch's copy and its guard order
-(`latchResult.unknown ?` precedes `!latchResult.latched ?`).
+**Applied fix:** The (d) strict-success check now indexes through an explicit
+`Object.prototype.hasOwnProperty.call(RECOVERY_STRICT_SUCCESS, String(toolType))` guard
+before reading the actions array — the same D-04 discipline every sibling lookup in the
+phase uses. For `toolType` values like `"toString"` or `"constructor"` the code now falls
+through to the graceful result mapping instead of dereferencing an inherited `Function` and
+throwing. Comment added explaining the invariant; no behavior change for real tool types.
 
-### WR-02: `tool.latchStatus` mapped an unreadable reply to a confident NOT-latched verdict
+### IN-02: Dead field `RunStore.nextRunId` was never used
 
-**Files modified:** `controller/server/routers/tool.ts`, `controller/test/latchStatus.test.ts`
-**Commit:** 5a7789f
+**Files modified:** `controller/server/runs.ts`
+**Commit:** 2e5d7e5
 **Status:** fixed
-**Applied fix:** `latchStatus` now returns `{ latched: false, unknown: true, raw: {} }`
-when the gRPC reply is missing, or the reply has no `meta_data` (undefined/null) — the
-D-13 unknown treatment instead of a confident not-latched verdict. Replies carrying
-`meta_data` still flow through the pure `extractLatch`. FAILURE / SUCCESS-with-message
-still throws via `describeToolReply` upstream. The "no meta_data" test was updated to pin
-the unknown mapping.
+**Applied fix:** Deleted the `nextRunId = 1;` class field. Run ids still come exclusively
+from `snowflakeIdGenerator.nextId()`; grep confirms no `nextRunId` reference remains in
+`controller/`.
 
-### WR-03: `validateRecoveryRequest`'s first check was dead and semantically inverted
+### IN-03: `readClick` awaited `latchQuery.refetch()` without a catch
 
-**Files modified:** `controller/server/recoveryActions.ts`, `controller/test/recoveryActions.test.ts`
-**Commit:** 3a5cbc8
-**Status:** fixed: requires human verification (logic/ordering change — confirm the
-refusal semantics against a running instance)
-**Applied fix:** Option (a) per the review. Renamed the parameter to `toolType`, deleted
-the "No step is currently running." branch (the recovery gate intentionally has no
-queue-state server-side precondition — recovery is allowed while a DIFFERENT tool runs,
-D-01; the running-step refusal lives in `recoveryControl` before validation), and the
-blank/undefined target type now falls into the tool-type check with a truthful message:
-`Tool type "…" does not support recovery actions.` The documented refusal order is
-re-lettered (a) tool type unsupported, (b) action not declared, (c) kind failure,
-(d) undeclared parameter — first-failing-only kept (D-14). Tests updated: the old
-"(a) no running step" test now pins the blank/undefined-as-unsupported mapping and the
-order titles were re-lettered. `recoveryControl` remains the only production caller; all
-recovery suites and the static-scan pins pass.
+**Files modified:** `controller/components/tools/RunRecoverySection.tsx`
+**Commit:** 2205395
+**Status:** fixed
+**Applied fix:** Added a `catch` alongside the existing `try/finally` in `readClick`: a
+rejecting refetch now drops the previously shown latch result (`setLatchResult(null)`,
+matching the `refetched.error` path) and surfaces "Latch read failed" through the existing
+`persistentErrorToast` — then `finally` still resets the spinner. No timer, no new
+component, no inline latch error element; the read still never gates or feeds the send path
+(D-12).
 
-### WR-04: Client-controlled `action` interpolated unsanitized into audit-log details
+### IN-04: `/api/runs` POST default branch leaked raw internal error text
 
-**Files modified:** `controller/server/logger.ts`, `controller/server/recoveryControl.ts`,
-`controller/server/command_queue.ts`, `controller/test/setup.ts`
-**Commit:** b0dcc40 (plus prettier fixup 511e715)
-**Status:** fixed: requires human verification (log-formatting change — confirm details
-render normally in the DB)
-**Applied fix:** Added `sanitizeLogText` (newlines and U+0000–U+001F → `?`) to
-`server/logger.ts` and wrapped the FULL `details` composition at every `logAction` call in
-`recoveryControl.ts` and inside `CommandQueue.toolControl` (refusals, transport errors,
-strict-success refusals, and success/no-ok outcomes). Only the log string is flattened —
-validation inputs, the send path, DB writes, and client-facing error messages stay
-verbatim (D-08/D-14 untouched; no send-path behavior change). `test/setup.ts`'s logger
-mock was updated to keep the real module and mock only the `logAction` sink.
+**Files modified:** `controller/pages/api/runs/index.ts`
+**Commit:** 5a1e317
+**Status:** fixed
+**Applied fix:** The unnamed-error `default` branch now responds
+`res.status(500).end("Failed to create run")` and logs the raw error server-side via
+`console.error("Runs API error:", e)` — the logging convention every other route under
+`pages/api/` already uses. The classified branches (ProtocolNotFoundError 404, ZodError and
+OperatorOnlyCommandError 400 with their operator-facing text) are untouched, and the "default
+stays 500" REST test continues to pass.
 
-### WR-05: `run.create` left `numberOfRuns` unvalidated
+### IN-05: Confirm modal resolved the action spec from `runControl` regardless of `target.kind`
 
-**Files modified:** `controller/server/routers/run.ts`
-**Commit:** fcfc0b3
-**Status:** fixed: requires human verification (schema-bound change — confirm the client
-flow never needs > 100 runs per call)
-**Applied fix:** `numberOfRuns: z.number().int().min(1).max(100).optional()` — zero and
-negative values are now rejected by the input contract instead of silently no-oping, and
-the upper bound stops a single request from enqueuing an unbounded flood of
-instrument runs. The REST `/api/runs` POST path never accepted `numberOfRuns` (single
-run), so no other site needed clamping.
+**Files modified:** `controller/components/runs/RunControlConfirmModal.tsx`
+**Commit:** 7e4f9fd
+**Status:** fixed: requires human verification (resolution-order change — confirm on a live
+instance that the recovery acknowledge/fast resume-abort modals render exactly as before)
+**Applied fix:** The body now selects the spec family from `request.target.kind`: a
+`"recovery"` target resolves through `getRecoverySpec` (and never touches
+`getActionSpec`); a `"running"` target resolves through `getActionSpec`. The displayed
+decision surface is now, by construction, the shape the send gate validates, so a future
+divergence between the runControl and recovery families can no longer produce the silent
+`completeRecoveryEntries → null → { status: "ignored" }` trap. Today the families are pinned
+byte-identical (`recoveryActions.test.ts` "pins the fast entries as exact value copies of
+runControl"), so no rendered behavior changes.
 
 ## Skipped Issues
 
@@ -112,6 +111,6 @@ None — all in-scope findings were fixed.
 
 ---
 
-_Fixed: 2026-10-29T14:42:00Z_
+_Fixed: 2026-10-29T14:47:30Z_
 _Fixer: the agent (gsd-code-fixer)_
-_Iteration: 1_
+_Iteration: 2_
