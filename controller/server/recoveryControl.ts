@@ -1,5 +1,5 @@
 import { TRPCError } from "@trpc/server";
-import { logAction } from "./logger";
+import { logAction, sanitizeLogText } from "./logger";
 import {
   isRecoveryAction,
   validateRecoveryRequest,
@@ -46,7 +46,7 @@ export async function recoveryControl(args: {
     await logAction({
       level: "warning",
       action: "Tool Recovery Control Refused",
-      details: `${baseDetails} outcome=refused: BAD_REQUEST ${message}`,
+      details: sanitizeLogText(`${baseDetails} outcome=refused: BAD_REQUEST ${message}`),
     });
     throw new TRPCError({ code: "BAD_REQUEST", message });
   }
@@ -64,7 +64,7 @@ export async function recoveryControl(args: {
     await logAction({
       level: "warning",
       action: "Tool Recovery Control Refused",
-      details: `${baseDetails} outcome=refused: PRECONDITION_FAILED ${message}`,
+      details: sanitizeLogText(`${baseDetails} outcome=refused: PRECONDITION_FAILED ${message}`),
     });
     throw new TRPCError({ code: "PRECONDITION_FAILED", message });
   }
@@ -76,7 +76,9 @@ export async function recoveryControl(args: {
     await logAction({
       level: "warning",
       action: "Tool Recovery Control Refused",
-      details: `${baseDetails} outcome=refused: ${verdict.code} ${verdict.message}`,
+      details: sanitizeLogText(
+        `${baseDetails} outcome=refused: ${verdict.code} ${verdict.message}`,
+      ),
     });
     throw new TRPCError({ code: verdict.code, message: verdict.message });
   }
@@ -91,7 +93,7 @@ export async function recoveryControl(args: {
     await logAction({
       level: "warning",
       action: "Tool Recovery Control Failed",
-      details: `${baseDetails} outcome=transport error: ${errorMessage}`,
+      details: sanitizeLogText(`${baseDetails} outcome=transport error: ${errorMessage}`),
     });
     throw new TRPCError({
       code: "INTERNAL_SERVER_ERROR",
@@ -110,14 +112,18 @@ export async function recoveryControl(args: {
     await logAction({
       level: "warning",
       action: "Tool Recovery Control Refused",
-      details: `${baseDetails} outcome=refused: ${result.response} SUCCESS reply carries an error message message=${result.message}`,
+      details: sanitizeLogText(
+      `${baseDetails} outcome=refused: ${result.response} SUCCESS reply carries an error message message=${result.message}`,
+    ),
     });
     return { ok: false, response: result.response, message: result.message };
   }
 
-  const details = result.ok
-    ? `${baseDetails} outcome=${result.response}`
-    : `${baseDetails} outcome=${result.response} message=${result.message}`;
+  const details = sanitizeLogText(
+    result.ok
+      ? `${baseDetails} outcome=${result.response}`
+      : `${baseDetails} outcome=${result.response} message=${result.message}`,
+  );
 
   await logAction({
     level: result.ok ? "info" : "warning",

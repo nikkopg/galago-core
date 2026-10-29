@@ -20,8 +20,10 @@ vi.mock("@/db/client", () => {
   return { db, sqlite: {} };
 });
 
-vi.mock("@/server/logger", () => {
-  return { logAction: vi.fn() };
+vi.mock("@/server/logger", async () => {
+  // Keep the real factory (sanitizeLogText) and mock only the log sink.
+  const actual = await vi.importActual<typeof import("@/server/logger")>("@/server/logger");
+  return { ...actual, logAction: vi.fn() };
 });
 
 vi.mock("@/logger", () => {

@@ -7,7 +7,7 @@ import path from "path";
 import fs from "fs";
 import { ToolType } from "gen-interfaces/controller";
 import { logger } from "@/logger";
-import { logAction } from "./logger";
+import { logAction, sanitizeLogText } from "./logger";
 import { db } from "@/db/client";
 import { appSettings, variables, workcells } from "@/db/schema";
 import { and, eq } from "drizzle-orm";
@@ -545,7 +545,9 @@ export class CommandQueue {
       await logAction({
         level: "warning",
         action: "Tool Control Refused",
-        details: `${baseDetails} outcome=refused: ${verdict.code} ${verdict.message}`,
+        details: sanitizeLogText(
+          `${baseDetails} outcome=refused: ${verdict.code} ${verdict.message}`,
+        ),
       });
       throw new TRPCError({ code: verdict.code, message: verdict.message });
     }
@@ -556,7 +558,7 @@ export class CommandQueue {
       await logAction({
         level: "warning",
         action: "Tool Control Refused",
-        details: `${baseDetails} outcome=refused: PRECONDITION_FAILED ${message}`,
+        details: sanitizeLogText(`${baseDetails} outcome=refused: PRECONDITION_FAILED ${message}`),
       });
       throw new TRPCError({ code: "PRECONDITION_FAILED", message });
     }
@@ -566,7 +568,7 @@ export class CommandQueue {
       await logAction({
         level: "warning",
         action: "Tool Control Refused",
-        details: `${baseDetails} outcome=refused: PRECONDITION_FAILED ${message}`,
+        details: sanitizeLogText(`${baseDetails} outcome=refused: PRECONDITION_FAILED ${message}`),
       });
       throw new TRPCError({ code: "PRECONDITION_FAILED", message });
     }
@@ -579,7 +581,7 @@ export class CommandQueue {
       await logAction({
         level: "warning",
         action: "Tool Control Failed",
-        details: `${baseDetails} outcome=transport error: ${errorMessage}`,
+        details: sanitizeLogText(`${baseDetails} outcome=transport error: ${errorMessage}`),
       });
       throw new TRPCError({
         code: "INTERNAL_SERVER_ERROR",
@@ -588,9 +590,11 @@ export class CommandQueue {
       });
     }
 
-    const details = result.ok
-      ? `${baseDetails} outcome=${result.response}`
-      : `${baseDetails} outcome=${result.response} message=${result.message}`;
+    const details = sanitizeLogText(
+      result.ok
+        ? `${baseDetails} outcome=${result.response}`
+        : `${baseDetails} outcome=${result.response} message=${result.message}`,
+    );
 
     await logAction({
       level: result.ok ? "info" : "warning",
