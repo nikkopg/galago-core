@@ -220,20 +220,20 @@ describe("undeclared params refused (OPR-01 fail-closed)", () => {
 });
 
 describe("refusal order is fixed and first-failing-only (OPR-02, D-14)", () => {
-  it("(a) no running step wins even for a bogus type and bogus action", () => {
+  it("(a) a blank or undefined tool type is refused as Unsupported, before any action check", () => {
     expect(validateRecoveryRequest(undefined, "pause", {})).toStrictEqual({
       ok: false,
       code: "PRECONDITION_FAILED",
-      message: "No step is currently running.",
+      message: 'Tool type "" does not support recovery actions.',
     });
-    expect(validateRecoveryRequest("", "pause", {})).toMatchObject({
+    expect(validateRecoveryRequest("", "resume", {})).toStrictEqual({
       ok: false,
       code: "PRECONDITION_FAILED",
-      message: "No step is currently running.",
+      message: 'Tool type "" does not support recovery actions.',
     });
   });
 
-  it("(b) unknown type wins over the undeclared action", () => {
+  it("(a) unknown type wins over the undeclared action", () => {
     expect(validateRecoveryRequest("pf400", "pause", {})).toStrictEqual({
       ok: false,
       code: "PRECONDITION_FAILED",
@@ -241,7 +241,7 @@ describe("refusal order is fixed and first-failing-only (OPR-02, D-14)", () => {
     });
   });
 
-  it("(c) undeclared action wins over the kind failures", () => {
+  it("(b) undeclared action wins over the kind failures", () => {
     expect(validateRecoveryRequest("stack", "pause", {})).toStrictEqual({
       ok: false,
       code: "BAD_REQUEST",
@@ -249,7 +249,7 @@ describe("refusal order is fixed and first-failing-only (OPR-02, D-14)", () => {
     });
   });
 
-  it("(d) a kind failure wins over the undeclared parameter", () => {
+  it("(c) a kind failure wins over the undeclared parameter", () => {
     expect(
       validateRecoveryRequest("stack", "acknowledge_failure", {
         guid: "ab cd",
@@ -265,7 +265,7 @@ describe("refusal order is fixed and first-failing-only (OPR-02, D-14)", () => {
     });
   });
 
-  it("(e) declared params are checked in declaration order: guid before arm_inspected", () => {
+  it("(d) declared params are checked in declaration order: guid before arm_inspected", () => {
     expect(
       validateRecoveryRequest("stack", "acknowledge_failure", {
         arm_inspected: "no",

@@ -104,33 +104,28 @@ function describeRecoveryValue(value: unknown): string {
 }
 
 // Fixed refusal order, cloned from runControl.ts's validateControlRequest
-// (D-05, QUE-03 ordering):
-//   (a) no running step (blank runningToolType)
-//   (b) tool type has no recovery entry
-//   (c) action not declared for that tool type
-//   (d) a declared param fails its kind
-//   (e) an undeclared parameter was sent
+// (D-05, QUE-03 ordering). The argument is the RECOVERY TARGET's tool type —
+// the only production caller (recoveryControl) is allowed to send while a
+// DIFFERENT tool's step runs (D-01), so there is intentionally no "no step
+// is currently running" server-side precondition here; the queue-state
+// refusal lives in recoveryControl before this validation:
+//   (a) tool type is blank/undefined or has no recovery entry
+//   (b) action not declared for that tool type
+//   (c) a declared param fails its kind
+//   (d) an undeclared parameter was sent
 // The first failing check alone sets the error; later checks never run —
-// with (d) always before (e) (D-14).
+// with (c) always before (d) (D-14).
 export function validateRecoveryRequest(
-  runningToolType: string | undefined,
+  toolType: string | undefined,
   action: string,
   params: Record<string, unknown>,
 ): RecoveryRequestVerdict {
-  if (runningToolType === undefined || runningToolType.trim() === "") {
-    return {
-      ok: false,
-      code: "PRECONDITION_FAILED",
-      message: "No step is currently running.",
-    };
-  }
-
-  const toolSpec = recoveryToolSpec(runningToolType);
+  const toolSpec = recoveryToolSpec(toolType ?? "");
   if (!toolSpec) {
     return {
       ok: false,
       code: "PRECONDITION_FAILED",
-      message: `Tool type "${runningToolType}" does not support recovery actions.`,
+      message: `Tool type "${toolType ?? ""}" does not support recovery actions.`,
     };
   }
 
@@ -138,7 +133,7 @@ export function validateRecoveryRequest(
     return {
       ok: false,
       code: "BAD_REQUEST",
-      message: `Action "${action}" is not available for tool type "${runningToolType}".`,
+      message: `Action "${action}" is not available for tool type "${toolType}".`,
     };
   }
 
@@ -181,9 +176,9 @@ export function validateRecoveryRequest(
     out[paramName] = value as string;
   }
 
-  // (e) Reject any parameter that is not a declared param of this action,
-  // in params' own-key order, after all declared params have passed (d
-  // before e).
+  // (d) Reject any parameter that is not a declared param of this action,
+  // in params' own-key order, after all declared params have passed (c
+  // before d).
   for (const key of Object.keys(params)) {
     if (!Object.prototype.hasOwnProperty.call(actionSpec, key)) {
       return {
