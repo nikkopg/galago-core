@@ -265,30 +265,26 @@ describe("card source invariants (latch block, D-11/D-12)", () => {
     const card = read(CARD);
     // Runs once per explicit click — no polling anywhere in the card.
     expect(card).not.toMatch(/refetchInterval|setInterval|setTimeout/);
-    // The enable gate for the ack stays solely the typed-guid check.
-    const disabledMatch = card.match(/isDisabled=\{[^}]*\}/g) ?? [];
-    const ackGate = disabledMatch.find((line) => line.includes("isValidRecoveryGuid"));
+    // The enable gate for the ack stays solely the typed-guid check — the
+    // ack button's isDisabled adds NO latch-derived term (D-12).
+    const ackGate = card.match(/isDisabled=\{[^}]*isValidRecoveryGuid[^}]*\}/);
     expect(ackGate).toBeDefined();
-    for (const line of disabledMatch) {
-      if (line.toLowerCase().includes("latch")) {
-        expect(line.includes("isValidRecoveryGuid")).toBe(true);
-      }
-    }
+    expect(ackGate![0]).not.toMatch(/latch/i);
   });
 
   it("renders the Latched failure block with the documented copy (UI-SPEC)", () => {
     const card = flat(CARD);
     expect(card).toContain("Latched failure");
-    expect(card).toContain('"Read latch"');
-    expect(card).toContain('"Use this guid"');
-    expect(card).toContain('"No failure latched"');
-    expect(card).toContain('"Raw JSON"');
+    expect(card).toContain("Read latch");
+    expect(card).toContain("Use this guid");
+    expect(card).toContain("No failure latched");
+    expect(card).toContain("Raw JSON");
     // Empty-state body copy, the documented sentence.
     expect(card).toContain(
       "This tool has no failure latched. An acknowledge is not possible until a STACK step fails and ends.",
     );
     // Per-click pending state with the small spinner.
-    expect(card).toContain('"Reading latch…"');
+    expect(card).toContain("Reading latch…");
     expect(card).toContain('Spinner size="sm"');
   });
 
@@ -313,7 +309,10 @@ describe("card source invariants (latch block, D-11/D-12)", () => {
     const card = read(CARD);
     const acceptedIdx = card.indexOf("const afterAccepted");
     expect(acceptedIdx).toBeGreaterThan(-1);
-    const afterAccepted = card.slice(acceptedIdx, card.indexOf("];", acceptedIdx) > 0 ? card.indexOf("];", acceptedIdx) : acceptedIdx + 600);
+    const afterAccepted = card.slice(
+      acceptedIdx,
+      card.indexOf("];", acceptedIdx) > 0 ? card.indexOf("];", acceptedIdx) : acceptedIdx + 600,
+    );
     expect(afterAccepted).toContain("setLatchResult(null)");
     expect(afterAccepted).toContain('setGuid("")');
   });
