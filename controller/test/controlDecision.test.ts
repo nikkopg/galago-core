@@ -5,6 +5,8 @@ import { CommandQueue } from "@/server/command_queue";
 import Tool from "@/server/tools";
 import { commandQueueRouter } from "@/server/routers/command_queue";
 import { installFakeTool, removeFakeTool, deferred, FakeGrpc } from "./helpers/fakeTool";
+import fs from "fs";
+import path from "path";
 import {
   shouldShowControlBar,
   createConfirmedSender,
@@ -830,5 +832,92 @@ describe("acknowledge single-flight and refusal (T-04-09)", () => {
       "A run step is running on this tool; acknowledge after it ends.",
     );
     expect(sendRecovery).toHaveBeenCalledTimes(1);
+  });
+});
+
+// Plan 04-03 Task 2: the acknowledge UI surface's static invariants, asserted
+// the same way the repo proves visual rules without jsdom — by reading the
+// real sources as text (staticScan.test.ts's read() idiom). Plan 05 re-pins
+// these with a dedicated scan; these assertions keep plan 04-03 honest now.
+describe("acknowledge UI source invariants (UI-08)", () => {
+  const uiRoot = path.resolve(__dirname, "..");
+  function readSource(rel: string): string {
+    return fs.readFileSync(path.join(uiRoot, rel), "utf-8");
+  }
+
+  const cardPath = "components/tools/RunRecoverySection.tsx";
+  const modalPath = "components/runs/RunControlConfirmModal.tsx";
+
+  function expectAbsence(source: string, token: string, file: string): void {
+    expect((source.match(new RegExp(token, "g")) ?? []).length, `${file} contains ${token}`).toBe(0);
+  }
+
+  it("the card carries the guid entry: label, maxLength, placeholder, helper and disabled hint", () => {
+    const src = readSource(cardPath);
+    expect(src).toContain('maxLength={256}');
+    expect(src).toContain("isValidRecoveryGuid(");
+    expect(src).toContain('"Failure guid"');
+    expect(src).toContain("Paste the guid from the failed step's error");
+    expect(src).toContain("Sent exactly as typed. Spaces and control characters are not allowed.");
+    expect(src).toContain(
+      "A guid cannot be blank. Enter the guid shown in the failed step's error or via Read latch.",
+    );
+  });
+
+  it('the card offers an "Acknowledge failure…" action gated only by the shared guid check', () => {
+    const src = readSource(cardPath);
+    expect(src).toContain("Acknowledge failure…");
+    expect(src).toContain("params: { guid }");
+  });
+
+  it("an accepted acknowledge clears the typed guid via afterAccepted (D-07)", () => {
+    const src = readSource(cardPath);
+    expect(src).toContain("afterAccepted");
+    expect(src).toContain('setGuid("")');
+  });
+
+  it("the acknowledge surface has no Enter-bound default, preselected choice, form or auto focus", () => {
+    const card = readSource(cardPath);
+    for (const token of [
+      "onKeyDown",
+      "onKeyPress",
+      "onKeyUp",
+      "onSubmit",
+      "autoFocus",
+      "defaultValue",
+      "defaultChecked",
+      "type=\"submit\"",
+      "<form",
+    ]) {
+      expectAbsence(card, token, cardPath);
+    }
+    const modal = readSource(modalPath);
+    for (const token of ["autoFocus", "defaultValue", "defaultChecked", "<form"]) {
+      expectAbsence(modal, token, modalPath);
+    }
+  });
+
+  it("the modal never renders a guid input; the guid is restated from request data (D-07)", () => {
+    const modal = readSource(modalPath);
+    expectAbsence(modal, "<Input", modalPath);
+    expect(modal).toContain("params?:");
+    expect(modal).toContain("getRecoverySpec");
+    expect(modal).toContain("completeRecoveryEntries");
+    expect(modal).toContain("restateChoice(request.toolType, request.action, values, request.params)");
+  });
+
+  it("the shared modal keeps its non-defaulted wiring for the explicit yes choice", () => {
+    const modal = readSource(modalPath);
+    expect(modal).toContain('value={values[name] ?? ""}');
+    expect(modal).toContain('params: request.params');
+    expect(modal).toContain("initialFocusRef={cancelRef}");
+  });
+
+  it("the card adds no new instrument-state read beyond the pre-existing run-control query flow", () => {
+    const card = readSource(cardPath);
+    expect((card.match(/commandQueue\.runState/g) ?? []).length).toBe(0);
+    expect((card.match(/\bfetchStatus\b/g) ?? []).length).toBe(0);
+    expect((card.match(/\bgetStatus\b/g) ?? []).length).toBe(0);
+    expect((card.match(/\.status\b/g) ?? []).length).toBe(0);
   });
 });
