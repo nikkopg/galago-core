@@ -173,6 +173,22 @@ function extractBracedRegion(src: string, declPattern: RegExp): string {
   return src.slice(startIdx, group.end);
 }
 
+// Returns the rel paths whose stripped source matches `pattern`, in the
+// SAME ORDER the list was supplied (the walk() order), so scan violations
+// are always enumerated the same way every run (OPR-05 determinism edge).
+// `sources`, when supplied, substitutes in-memory content for a rel path —
+// used by the in-fixture determinism backstop case instead of real files.
+function findMatchingRels(
+  orderedRels: string[],
+  pattern: RegExp,
+  sources?: Map<string, string>,
+): string[] {
+  return orderedRels.filter((relPath) => {
+    const src = sources?.get(relPath) ?? stripComments(read(relPath));
+    return pattern.test(src);
+  });
+}
+
 describe("stripComments helper", () => {
   it("strips line and block comments while preserving code and URL-like strings", () => {
     const result = stripComments('a // x\nb /* y */ c "http://h"');
@@ -355,10 +371,45 @@ describe("safety invariants", () => {
     expect(senderBody).not.toMatch(/runState|envelope|controlButtonHints/);
   });
 
+  // D-12: the latch read never rides the operator send path — it lives in
+  // the recovery card (RunRecoverySection.tsx) and the four files below
+  // (the send hook, the decision module, the confirm modal, the recovery
+  // server route) stay latch-free.
+  it("the operator send path stays latch-free (/latch/i)", () => {
+    const sendPathFiles = [
+      "server/recoveryControl.ts",
+      "components/runs/controlDecision.ts",
+      "components/runs/RunControlConfirmModal.tsx",
+      "hooks/useRunControl.ts",
+    ];
+    for (const file of sendPathFiles) {
+      expect(stripComments(read(file)), file).not.toMatch(/latch/i);
+    }
+  });
+
+  // OPR-05 single-reader pin: the latch read has exactly ONE consumer — the
+  // recovery card. A second consumer would mean latched-failure state is
+  // driving something other than the explicit card read.
+  it("the latch read has exactly one consumer (the card)", () => {
+    const walkOrderRels = [
+      ...walk("components"),
+      ...walk("hooks"),
+      ...walk("pages"),
+      ...walk("server"),
+    ].map(rel);
+    expect(findMatchingRels(walkOrderRels, /tool\.latchStatus/).sort()).toStrictEqual([
+      "components/tools/RunRecoverySection.tsx",
+    ]);
+  });
+
   it("no Enter-bound default or preselected decision", () => {
-    const pattern = /<form|autoFocus|defaultValue|defaultChecked/;
+    const pattern =
+      /<form|autoFocus|defaultValue|defaultChecked|onKeyDown|onKeyPress|onKeyUp|onSubmit|type="submit"/;
     expect(stripComments(read("components/runs/RunControlConfirmModal.tsx"))).not.toMatch(pattern);
     expect(stripComments(read("components/runs/ToolPausedModal.tsx"))).not.toMatch(pattern);
+    // The recovery card (plan 04-04) joins the same no-Enter surface (D-07):
+    // ack/abort/resume confirm clicks only, never an Enter-bound default.
+    expect(stripComments(read("components/tools/RunRecoverySection.tsx"))).not.toMatch(pattern);
   });
 });
 
