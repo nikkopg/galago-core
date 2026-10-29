@@ -10,8 +10,7 @@ vi.mock("@/db/helpers", () => ({
   INVENTORY_TOOL_MAP: {},
 }));
 
-import { ToolType } from "gen-interfaces/controller";
-import { ResponseCode } from "gen-interfaces/tools/grpc_interfaces/tool_base";
+import { ToolType } from "gen-interfaces/controller";import { ResponseCode } from "gen-interfaces/tools/grpc_interfaces/tool_base";
 import { findMany, getSelectedWorkcellId } from "@/db/helpers";
 import { toolRouter } from "@/server/routers/tool";
 import CommandQueue from "@/server/command_queue";
@@ -35,21 +34,35 @@ const PF400_TOOL_ROW = {
   port: 2,
   workcellId: 1,
 };
+const STACK_TOOL_ROW = {
+  id: 3,
+  name: "stack-1",
+  type: "stack",
+  ip: "127.0.0.1",
+  port: 3,
+  workcellId: 1,
+};
 
 describe("recoveryControl", () => {
   let fastGrpc: FakeGrpc;
   let pf400Grpc: FakeGrpc;
+  let stackGrpc: FakeGrpc;
 
   beforeEach(() => {
     (globalThis as any)["__global_command_queue_key"] = new CommandQueue({} as any);
     (globalThis as any)["__global_command_queue_key"].slackNotificationsEnabled = false;
 
     vi.mocked(getSelectedWorkcellId).mockResolvedValue(1);
-    vi.mocked(findMany).mockResolvedValue([FAST_TOOL_ROW, PF400_TOOL_ROW]);
+    vi.mocked(findMany).mockResolvedValue([FAST_TOOL_ROW, PF400_TOOL_ROW, STACK_TOOL_ROW]);
 
     fastGrpc = installFakeTool("fast-1", ToolType.fast).grpc;
     pf400Grpc = installFakeTool("pf400-1", ToolType.pf400).grpc;
+    stackGrpc = installFakeTool("stack-1", "stack" as ToolType).grpc;
     fastGrpc.executeCommand.mockResolvedValue({
+      response: ResponseCode.SUCCESS,
+      return_reply: true,
+    });
+    stackGrpc.executeCommand.mockResolvedValue({
       response: ResponseCode.SUCCESS,
       return_reply: true,
     });
@@ -58,6 +71,7 @@ describe("recoveryControl", () => {
   afterEach(async () => {
     await removeFakeTool("fast-1");
     await removeFakeTool("pf400-1");
+    await removeFakeTool("stack-1");
     delete (globalThis as any)["__global_command_queue_key"];
     vi.restoreAllMocks();
   });
@@ -205,10 +219,13 @@ describe("recoveryControl", () => {
     ).rejects.toMatchObject({ code: "BAD_REQUEST", message: expect.stringContaining("hard") });
   });
 
-  it("refuses a tool type without runControl", async () => {
+  it("refuses a tool type without recovery actions (action check is first)", async () => {
     await expect(
       caller().recoveryControl({ toolId: "pf400-1", action: "resume", params: {} }),
-    ).rejects.toMatchObject({ code: "PRECONDITION_FAILED" });
+    ).rejects.toMatchObject({
+      code: "BAD_REQUEST",
+      message: 'Action "resume" is not available for tool type "pf400".',
+    });
     expect(pf400Grpc.executeCommand).not.toHaveBeenCalled();
   });
 
@@ -355,6 +372,118 @@ describe("recoveryControl", () => {
         "A run step is tracking this tool; use the run page.",
       );
       expect(fastGrpc.executeCommand).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("stack acknowledge", () => {
+    it("sends one controlCommand with the exact payload (tracer, OPR-01)", async () => {
+      const result = await caller().recoveryControl({
+        toolId: "stack-1",
+        action: "acknowledge_failure",
+        params: { guid: "guid-a", arm_inspected: "yes" },
+      });
+
+      expect(result).toMatchObject({ ok: true, response: ResponseCode.SUCCESS });
+      expect(stackGrpc.executeCommand).toHaveBeenCalledTimes(1);
+      expect(stackGrpc.executeCommand.mock.calls[0]).toHaveLength(1);
+      expect(stackGrpc.executeCommand.mock.calls[0][0]).toStrictEqual({ stack: { acknowledge_failure: { guid: "guid-a", arm_inspected: "yes" } } });
+      expect(stackGrpc.executeCommand).toHaveBeenCalledWith({
+        stack: { acknowledge_failure: { guid: "guid-a", arm_inspected: "yes" } },
+      });
+      expect(logAction).toHaveBeenCalledTimes(1);
+      expect(logAction).toHaveBeenCalledWith(
+        expect.objectContaining({ action: "Tool Recovery Control", level: "info" }),
+      );
+    });
+
+    it("refuses an acknowledge while the queue's step runs on the stack tool (D-09)", async () => {
+      vi.spyOn(CommandQueue.prototype, "runningStep", "get").mockReturnValue({
+        queueId: 1,
+        runId: "run-1",
+        toolId: "STACK 1",
+        toolType: "stack" as ToolType,
+        command: "transfer",
+        startedAt: 0,
+      });
+
+      await expect(
+        caller().recoveryControl({
+          toolId: "stack-1",
+          action: "acknowledge_failure",
+          params: { guid: "guid-a", arm_inspected: "yes" },
+        }),
+      ).rejects.toMatchObject({
+        code: "PRECONDITION_FAILED",
+        message: "A run step is running on this tool; acknowledge after it ends.",
+      });
+      expect(stackGrpc.executeCommand).not.toHaveBeenCalled();
+      expect(logAction).toHaveBeenCalledTimes(1);
+      const details = vi.mocked(logAction).mock.calls[0][0].details;
+      expect(details).toContain("toolId=stack-1");
+      expect(details).toContain("outcome=refused: PRECONDITION_FAILED");
+      expect(details).toContain("A run step is running on this tool; acknowledge after it ends.");
+    });
+
+    it("keeps the run-page message for a tool type with runControl while it runs (D-09)", async () => {
+      vi.spyOn(CommandQueue.prototype, "runningStep", "get").mockReturnValue({
+        queueId: 1,
+        runId: "run-1",
+        toolId: "FAST 1",
+        toolType: ToolType.fast,
+        command: "transfer",
+        startedAt: 0,
+      });
+
+      await expect(
+        caller().recoveryControl({
+          toolId: "fast-1",
+          action: "resume",
+          params: { is_tip_broken: "no" },
+        }),
+      ).rejects.toMatchObject({
+        message: "A run step is tracking this tool; use the run page.",
+      });
+      expect(fastGrpc.executeCommand).not.toHaveBeenCalled();
+    });
+
+    it("refuses a fast action on the stack type and audits it", async () => {
+      await expect(
+        caller().recoveryControl({ toolId: "stack-1", action: "resume", params: {} }),
+      ).rejects.toMatchObject({
+        code: "BAD_REQUEST",
+        message: 'Action "resume" is not available for tool type "stack".',
+      });
+      expect(stackGrpc.executeCommand).not.toHaveBeenCalled();
+      expect(logAction).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: "Tool Recovery Control Refused",
+          level: "warning",
+          details: expect.stringContaining("outcome=refused: BAD_REQUEST"),
+        }),
+      );
+    });
+
+    it.each([
+      {},
+      { arm_inspected: "yes" },
+      { guid: "" },
+      { guid: "guid-a", arm_inspected: "" },
+      { guid: "guid-a", arm_inspected: "No" },
+    ])("refuses an acknowledge with missing or failed params %j", async (params) => {
+      await expect(
+        caller().recoveryControl({
+          toolId: "stack-1",
+          action: "acknowledge_failure",
+          params,
+        }),
+      ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+      expect(stackGrpc.executeCommand).not.toHaveBeenCalled();
+      expect(logAction).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: "Tool Recovery Control Refused",
+          level: "warning",
+        }),
+      );
     });
   });
 });

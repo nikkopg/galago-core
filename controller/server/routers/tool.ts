@@ -505,11 +505,12 @@ export const toolRouter = router({
       return await Tool.executeCommand(input);
     }),
 
-  // Crash-recovery control (D-22, D-23): sends Resume or Abort to a tool by
-  // id when no queue step is tracking it. action stays z.string() at the
-  // schema level (not restricted to RECOVERY_ACTIONS) so a Pause attempt
-  // still reaches recoveryControl's own refusal and gets logged, the same
-  // reasoning as runCommand's unrestricted params.
+  // Crash-recovery control (D-06, D-23): sends a recovery action declared by
+  // server/recoveryActions.ts to a tool by id when no queue step is tracking
+  // it. action stays z.string() at the schema level (not restricted to the
+  // declared recovery actions) so an undeclared action attempt still reaches
+  // recoveryControl's own refusal and gets logged, the same reasoning as
+  // runCommand's unrestricted params.
   recoveryControl: procedure
     .input(
       z.object({
