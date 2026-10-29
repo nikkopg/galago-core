@@ -1,51 +1,64 @@
 ---
-status: testing
+status: complete
 phase: 03-queue-start-guard-tool-error-visibility
 source: [03-VERIFICATION.md]
 started: 2026-10-28T22:54:02Z
-updated: 2026-10-28T22:54:02Z
+updated: 2026-10-29T03:51:20.963Z
 ---
 
 ## Current Test
 
-number: 1
-name: Run confirmation shows what a Start will run
-expected: |
-  With two queued runs, one holding a FAILED step, pressing Run opens the confirmation with
-  "This Start will run N queued step(s) from M run(s)." and the failed-retry line; the existing
-  simulation-mode warning, Accept and Cancel are unchanged; nothing is pre-selected, Enter does not
-  confirm, no timer; text wraps at narrow widths.
-awaiting: user response
+[testing complete]
 
 ## Tests
 
 ### 1. Run confirmation shows what a Start will run
 expected: Counts of steps, failed retries and runs are shown read-only; nothing pre-selected, no timer, Enter does not confirm; wraps at narrow widths.
-result: [pending]
+result: pass
+source: automated
+evidence: "Live UI (Chrome, toolbox-only JS fixtures). Two queued runs, one with a FAILED step -> 'This Start will run 4 queued steps from 2 runs.' + '1 of them failed before and will be retried first.'; simulation-mode warning, Accept, Cancel unchanged; initial focus on the X close button (not Accept/Cancel); Enter closed the dialog without starting (queue state unchanged); dialog stayed open >15s (no timer); at 240px width all lines wrap, no overflow."
 
 ### 2. Error banner re-arms after a dismiss
 expected: Dismiss a failure banner, then cause a second failure (even with identical text): the banner shows again. A long tool message scrolls inside the 160px region; the code badge shows the real code name (never UNKNOWN/SUCCESS).
-result: [pending]
+result: pass
+source: automated
+evidence: "Dismissed the ERROR_FROM_TOOL banner, retried the same failing step -> identical-text failure re-showed the banner. Message region max-height 160px / overflow-y auto, scrolls at ~860px window width. Badge shows ERROR_FROM_TOOL; a plain Error (Tool Box not in store) shows no badge (never UNKNOWN/SUCCESS)."
 
 ### 3. Step card shows the stored error
 expected: A FAILED step card shows its tool error (clamped to 3 lines, full text on hover) and keeps showing it after the banner is dismissed and after a galago-web restart; a step skipped after failure reads "Skipped after failure: ..."; a plain Skip shows no error text; the text fits inside the 165px card.
-result: [pending]
+result: issue
+source: automated
+reported: "Automated check: the FAILED card shows the stored error (3-line clamp, full text in title), it survives banner dismiss and a galago-web container restart, a skipped-after-failure card reads 'Skipped after failure: ...' in orange at full opacity, and a plain Skip shows no error (dimmed 0.55). BUT the text does not fit the 165px card: card content is 230px in a 163px box, so the card needs an internal scroll, and at its default scroll position the sticky 'Run script' label is drawn over the first line of the error text (seen on both the FAILED and the skipped-after-failure card)."
+severity: minor
 
 ### 4. Skipped-failure run is not shown as success
 expected: A run whose failed step was skipped shows the orange "Skipped failure" badge and orange progress bar (never teal/green, no check icon), including when later steps COMPLETED.
-result: [pending]
+result: pass
+source: automated
+evidence: "Run whose failed step was skipped, later steps COMPLETED -> orange 'SKIPPED FAILURE' badge and orange striped progress bar, no check icon; the plain-skip run kept the normal bar."
 
 ### 5. An ignored Start is shown, and a retry right after a failure is accepted
 expected: Right after a step fails (banner visible), pressing Start and accepting starts the retry immediately. If Start is pressed while the queue is still busy (e.g. Pause queue then Start during a step), a "Start ignored" warning toast appears and nothing is dispatched twice.
-result: [pending]
+result: pass
+source: automated
+evidence: "With the failure banner visible, Start+Accept retried immediately (state BUSY, step 1 COMPLETED). Pause queue during a 12s step, then Start+Accept -> 'Start ignored' warning toast; server logged 'Queue Start Ignored'; the running step executed once and the next step stayed CREATED (no double dispatch)."
 
 ## Summary
 
 total: 5
-passed: 0
-issues: 0
-pending: 5
+passed: 4
+issues: 1
+pending: 0
 skipped: 0
 blocked: 0
 
 ## Gaps
+
+- gap_id: G-03-3
+  truth: "A FAILED / skipped-after-failure step card's error text fits inside the 165px card"
+  status: failed
+  reason: "Automated UAT: card content is 230px in a 163px box (internal scroll needed) and the sticky 'Run script' label overlaps the first error line at the default scroll position"
+  severity: minor
+  test: 3
+  artifacts: []
+  missing: []
