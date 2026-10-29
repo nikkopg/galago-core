@@ -485,5 +485,155 @@ describe("recoveryControl", () => {
         }),
       );
     });
+
+    it("refuses a SUCCESS reply that carries a message on the acknowledge (D-10)", async () => {
+      stackGrpc.executeCommand.mockResolvedValue({
+        response: ResponseCode.SUCCESS,
+        error_message: "latch not cleared: arm still armed",
+        return_reply: true,
+      });
+
+      const result = await caller().recoveryControl({
+        toolId: "stack-1",
+        action: "acknowledge_failure",
+        params: { guid: "guid-a", arm_inspected: "yes" },
+      });
+
+      expect(stackGrpc.executeCommand).toHaveBeenCalledTimes(1);
+      expect(result).toMatchObject({
+        ok: false,
+        response: ResponseCode.SUCCESS,
+        message: "latch not cleared: arm still armed",
+      });
+      expect(logAction).toHaveBeenCalledTimes(1);
+      expect(logAction).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: "Tool Recovery Control Refused",
+          level: "warning",
+          details: expect.stringContaining("latch not cleared: arm still armed"),
+        }),
+      );
+    });
+
+    it("treats a whitespace-only error_message as present on the acknowledge (D-10)", async () => {
+      stackGrpc.executeCommand.mockResolvedValue({
+        response: ResponseCode.SUCCESS,
+        error_message: "   ",
+        return_reply: true,
+      });
+
+      const result = await caller().recoveryControl({
+        toolId: "stack-1",
+        action: "acknowledge_failure",
+        params: { guid: "guid-a", arm_inspected: "yes" },
+      });
+
+      expect(stackGrpc.executeCommand).toHaveBeenCalledTimes(1);
+      expect(result).toMatchObject({
+        ok: false,
+        response: ResponseCode.SUCCESS,
+        message: "   ",
+      });
+      expect(logAction).toHaveBeenCalledWith(
+        expect.objectContaining({ action: "Tool Recovery Control Refused", level: "warning" }),
+      );
+    });
+
+    it("accepts a SUCCESS reply with an empty error_message on the acknowledge", async () => {
+      stackGrpc.executeCommand.mockResolvedValue({
+        response: ResponseCode.SUCCESS,
+        error_message: "",
+        return_reply: true,
+      });
+
+      const result = await caller().recoveryControl({
+        toolId: "stack-1",
+        action: "acknowledge_failure",
+        params: { guid: "guid-a", arm_inspected: "yes" },
+      });
+
+      expect(result).toMatchObject({ ok: true, response: ResponseCode.SUCCESS });
+      expect(logAction).toHaveBeenCalledWith(
+        expect.objectContaining({ action: "Tool Recovery Control", level: "info" }),
+      );
+    });
+
+    it("keeps SUCCESS+message accepted for fast resume (D-10 scoped to stack)", async () => {
+      fastGrpc.executeCommand.mockResolvedValue({
+        response: ResponseCode.SUCCESS,
+        error_message: "resume scheduled",
+        return_reply: true,
+      });
+
+      const result = await caller().recoveryControl({
+        toolId: "fast-1",
+        action: "resume",
+        params: { is_tip_broken: "no" },
+      });
+
+      expect(result).toMatchObject({ ok: true, response: ResponseCode.SUCCESS });
+      expect(logAction).toHaveBeenCalledWith(
+        expect.objectContaining({ action: "Tool Recovery Control", level: "info" }),
+      );
+    });
+
+    it("audits a transport error with its text and rethrows it (D-23 one attempt)", async () => {
+      stackGrpc.executeCommand.mockRejectedValue(new Error("14 UNAVAILABLE"));
+
+      await expect(
+        caller().recoveryControl({
+          toolId: "stack-1",
+          action: "acknowledge_failure",
+          params: { guid: "guid-a", arm_inspected: "yes" },
+        }),
+      ).rejects.toMatchObject({
+        code: "INTERNAL_SERVER_ERROR",
+        message: expect.stringContaining("14 UNAVAILABLE"),
+      });
+      expect(stackGrpc.executeCommand).toHaveBeenCalledTimes(1);
+      expect(logAction).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: "Tool Recovery Control Failed",
+          level: "warning",
+          details: expect.stringContaining("outcome=transport error: 14 UNAVAILABLE"),
+        }),
+      );
+    });
+
+    it("serves two requests one attempt each with no retry (no-busy-wait)", async () => {
+      const pending = deferred<{ response: ResponseCode; return_reply: boolean }>();
+      stackGrpc.executeCommand.mockReturnValueOnce(pending.promise);
+
+      let firstSettled = false;
+      const first = caller()
+        .recoveryControl({
+          toolId: "stack-1",
+          action: "acknowledge_failure",
+          params: { guid: "guid-a", arm_inspected: "yes" },
+        })
+        .then((r) => {
+          firstSettled = true;
+          return r;
+        });
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      expect(firstSettled).toBe(false);
+
+      pending.resolve({ response: ResponseCode.SUCCESS, return_reply: true });
+      await expect(first).resolves.toMatchObject({ ok: true });
+
+      const second = await caller().recoveryControl({
+        toolId: "stack-1",
+        action: "acknowledge_failure",
+        params: { guid: "guid-b", arm_inspected: "yes" },
+      });
+      expect(second).toMatchObject({ ok: true });
+
+      // Two overlapping/completed requests, exactly two sends — never a
+      // re-issue of the first request's payload.
+      expect(stackGrpc.executeCommand).toHaveBeenCalledTimes(2); // one attempt per request
+      expect(stackGrpc.executeCommand.mock.calls[0][0]).toStrictEqual({ stack: { acknowledge_failure: { guid: "guid-a", arm_inspected: "yes" } } });
+      expect(stackGrpc.executeCommand.mock.calls[1][0]).toStrictEqual({ stack: { acknowledge_failure: { guid: "guid-b", arm_inspected: "yes" } } });
+    });
   });
 });
