@@ -1,9 +1,9 @@
 ---
-status: diagnosed
+status: complete
 phase: 03-queue-start-guard-tool-error-visibility
 source: [03-VERIFICATION.md]
 started: 2026-10-28T22:54:02Z
-updated: 2026-10-29T03:51:20.963Z
+updated: 2026-10-29T04:36:19Z
 ---
 
 ## Current Test
@@ -26,9 +26,10 @@ evidence: "Dismissed the ERROR_FROM_TOOL banner, retried the same failing step -
 
 ### 3. Step card shows the stored error
 expected: A FAILED step card shows its tool error (clamped to 3 lines, full text on hover) and keeps showing it after the banner is dismissed and after a galago-web restart; a step skipped after failure reads "Skipped after failure: ..."; a plain Skip shows no error text; the text fits inside the 165px card.
-result: issue
-source: automated
-reported: "Automated check: the FAILED card shows the stored error (3-line clamp, full text in title), it survives banner dismiss and a galago-web container restart, a skipped-after-failure card reads 'Skipped after failure: ...' in orange at full opacity, and a plain Skip shows no error (dimmed 0.55). BUT the text does not fit the 165px card: card content is 230px in a 163px box, so the card needs an internal scroll, and at its default scroll position the sticky 'Run script' label is drawn over the first line of the error text (seen on both the FAILED and the skipped-after-failure card)."
+result: pass
+source: user
+note: "Marked pass by the user after gap-closure plan 03-07 (error text moved beside the image; static scan pins the row layout). The live scrollHeight/clientHeight retest was waived as minor by the user."
+reported_before_fix: "Automated check: the FAILED card shows the stored error (3-line clamp, full text in title), it survives banner dismiss and a galago-web container restart, a skipped-after-failure card reads 'Skipped after failure: ...' in orange at full opacity, and a plain Skip shows no error (dimmed 0.55). BUT the text does not fit the 165px card: card content is 230px in a 163px box, so the card needs an internal scroll, and at its default scroll position the sticky 'Run script' label is drawn over the first line of the error text (seen on both the FAILED and the skipped-after-failure card)."
 severity: minor
 
 ### 4. Skipped-failure run is not shown as success
@@ -46,8 +47,8 @@ evidence: "With the failure banner visible, Start+Accept retried immediately (st
 ## Summary
 
 total: 5
-passed: 4
-issues: 1
+passed: 5
+issues: 0
 pending: 0
 skipped: 0
 blocked: 0
@@ -56,7 +57,8 @@ blocked: 0
 
 - gap_id: G-03-3
   truth: "A FAILED / skipped-after-failure step card's error text fits inside the 165px card"
-  status: failed
+  status: resolved
+  resolved_by: 03-07 (bf692ba); live retest waived by user, marked pass
   reason: "Automated UAT: card content is 230px in a 163px box (internal scroll needed) and the sticky 'Run script' label overlaps the first error line at the default scroll position"
   severity: minor
   test: 3
