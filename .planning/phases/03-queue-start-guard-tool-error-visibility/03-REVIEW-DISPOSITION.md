@@ -23,8 +23,16 @@ findings:
     severity: info
     disposition: open
     title: "A SUCCESS reply with whitespace-only `error_message` fails the step"
+  - id: IN-04
+    severity: info
+    disposition: fixed
+    title: "\"Start ignored\" toast names the wrong button and promises \"in a moment\" during modal waits"
+  - id: IN-05
+    severity: info
+    disposition: fixed
+    title: "Running-step comment orphaned above the new isStartInProgress getter"
 open: 3
-total: 5
+total: 7
 recorded: 2026-10-28T22:50:31.000Z
 ---
 
@@ -37,5 +45,7 @@ recorded: 2026-10-28T22:50:31.000Z
 | IN-01 | info | open | - |
 | IN-02 | info | open | - |
 | IN-03 | info | open | - |
+| IN-04 | info | fixed | 06fc3ea |
+| IN-05 | info | fixed | 06fc3ea |
 
 WR-01 note: fixing it reverses CONTEXT D-02 ("no toast for an ignored Start") at the user's request on 2026-10-29; an ignored Start now shows a warning toast.

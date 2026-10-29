@@ -36,7 +36,7 @@ expected: A run whose failed step was skipped shows the orange "Skipped failure"
 result: [pending]
 
 ### 5. An ignored Start is shown, and a retry right after a failure is accepted
-expected: Right after a step fails (banner visible), pressing Run and accepting starts the retry immediately. If Run is pressed while the queue is still finishing a step (e.g. Pause queue then Run during a step), a "Start ignored" warning toast appears and nothing is dispatched twice.
+expected: Right after a step fails (banner visible), pressing Start and accepting starts the retry immediately. If Start is pressed while the queue is still busy (e.g. Pause queue then Start during a step), a "Start ignored" warning toast appears and nothing is dispatched twice.
 result: [pending]
 
 ## Summary

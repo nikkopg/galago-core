@@ -2,104 +2,55 @@
 phase: 03-queue-start-guard-tool-error-visibility
 reviewed: 2026-10-29T00:00:00Z
 depth: standard
-files_reviewed: 21
+files_reviewed: 6
 files_reviewed_list:
   - controller/server/command_queue.ts
-  - controller/server/queueStartListing.ts
-  - controller/server/utils/SqliteQueue.ts
-  - controller/server/toolReply.ts
-  - controller/server/tools.ts
   - controller/server/routers/command_queue.ts
-  - controller/components/runs/RunsComponent.tsx
   - controller/components/runs/status/QueueStatuscomponent.tsx
-  - controller/components/runs/list/SwimLaneCommandComponent.tsx
-  - controller/components/runs/queuedStartSummary.ts
-  - controller/components/runs/queueError.ts
-  - controller/components/runs/runOutcome.ts
-  - controller/components/runs/storedError.ts
-  - controller/components/runs/utils.ts
-  - controller/test/errorPath.test.ts
-  - controller/test/queuedStartSummary.test.ts
-  - controller/test/queueError.test.ts
   - controller/test/queueStartGuard.test.ts
-  - controller/test/runOutcome.test.ts
+  - controller/test/errorPath.test.ts
   - controller/test/staticScan.test.ts
-  - controller/test/toolReply.test.ts
 findings:
   critical: 0
-  warning: 2
-  info: 3
+  warning: 0
+  info: 5
   total: 5
 status: issues_found
 ---
 
-# Phase 3: Code Review Report
+# Phase 3: Code Review Report (incremental re-review)
 
 **Reviewed:** 2026-10-29
-**Depth:** standard (diff against 91ff977)
-**Files Reviewed:** 21
-**Status:** issues_found
+**Depth:** standard (diff 4e74ea0..HEAD, commit 5191ffe, for the 6 files above)
+**Files Reviewed:** 6
+**Status:** issues_found (info only)
 
 ## Summary
 
-I reviewed the phase-3 changes: the single-flight `_start` guard, the Start audit listing, the single operator-text composer (`describeToolReply`), the failure sequence and banner re-arm, the stored-error step card, and the derived run outcome. I also read the tests.
+This is an incremental re-review of the fixes for WR-01 and WR-02. Both prior warnings are resolved, and I found no new blockers or warnings. I ran `vitest` on `queueStartGuard`, `errorPath` and `staticScan`: 91 of 91 tests pass.
 
-The three hard constraints hold on the paths I traced:
+### Resolution of the previous warnings
 
-- No new code path acknowledges, cancels or retries a tool. `_recordFailure` only sets the error and bumps the seq. The banner dismiss is local state only. The guard only logs and returns.
-- A FAILED row stays queued. `commands.fail` is unchanged, and `startNext` still takes the queue head.
-- A tool error is not shown as success.
-  - `describeToolReply` maps any non-SUCCESS reply, and a SUCCESS reply with a message, to a failure.
-  - `usableCode` suppresses a "SUCCESS" badge.
-  - `deriveRunOutcome` returns FAILED for any FAILED row, and the skipped-failure outcome is orange.
-  - `ResponseCode` is a string enum, so `String(code)` yields the code name. There is no codeString regression.
+**WR-01 (retry Start swallowed while the loop only notifies): RESOLVED.**
+- Both `_notifyFailure` call sites are now `void this._notifyFailure(...)`: the busy-loop catch at `command_queue.ts:1449` and `_start`'s catch at `:951`.
+- After a failure the loop does `break` straight after `void _notifyFailure`, so it returns and `_start`'s `finally` clears `_runningPromise` within microtasks. The claim is no longer held across Slack or email I/O.
+- `_notifyFailure` cannot produce an unhandled rejection. Its entire body, including the dedupe step and the settings reads, sits inside one outer `try/catch` that only logs a warning. The dedupe key and timestamp are written synchronously before the first `await`, so overlapping notifications cannot both pass the check.
+- Ordering is safe. `_recordFailure` and `_setState(FAILED)` run before the notification starts, and the notification reads no queue state afterwards.
+- `restart` computes `accepted = !isStartInProgress` and calls `_start()` in the same synchronous turn. `_start` checks `_runningPromise` before any `await`, and its path to claiming `_runningPromise` has no `await` either (`_runBusyLoopWhileQueueNotEmpty` runs synchronously up to its first `await`). The reported `accepted` therefore always agrees with what `_start` does.
+- The toast fires only when the server returned `accepted === false`. The check `result && !result.accepted` also tolerates an older server that returns `undefined`. `onSettled` from `stateMutationOpts` is preserved by the spread.
+- The new test "a pending failure alert does not hold the queue" uses a never-settling `_notifyFailure` and proves the retry Start is accepted and re-dispatches the same row.
 
-I found no blockers. There are two warnings about the guard's operator experience and about data exposure. There are three info items.
+**WR-02 (stack sent to client): RESOLVED.**
+- `queueErrorPayload` no longer includes `stack` in either branch.
+- Nothing on the client reads `.stack` (grepped under `components/runs`). The stack is still recorded server-side by `logger.error("CommandQueue failed")` and `logger.error("Failed to execute command", e)`.
 
-## Warnings
+### Hard constraints, re-checked against the diff
 
-### WR-01: Start is silently dropped while the loop is only notifying, so a FAILED-state retry can be swallowed with no operator feedback
+- **No auto-acknowledge, cancel or retry.** `restart` still calls `_start` only on an operator mutation. `enqueueRun` auto-start is still gated on `state === READY`, so it never fires from FAILED. The notification path touches no queue state. Nothing new dispatches a tool.
+- **Retry after failure is unchanged.** A FAILED row stays queued, and `_start` still clears `error` and runs `startNext` on the queue head. The change makes this path more reliable, not different.
+- **A tool error is never shown as success.** An ignored Start shows a warning toast, not a success toast. The `accepted: false` branch does not clear or alter the banner, and the guard branch changes no state or error.
 
-**File:** `controller/server/command_queue.ts:910-917` (guard), `:1440-1448` (`_notifyFailure` awaited inside the loop), `controller/server/routers/command_queue.ts:35-37` (restart)
-**Issue:** The guard is keyed on `_runningPromise`, not on "a step is in flight". After a step fails, the busy loop still holds `_runningPromise` while it awaits `_notifyFailure`. That call can make Slack and email network calls (`:236-255`). During that window:
-
-- The queue is already FAILED.
-- The error banner is already visible.
-- No step is running.
-
-The operator can read the error, click Start, and accept the modal, which promises "will be retried first". `_start` then returns early with only a `Queue Start Ignored` log line. The same happens in the up-to-1.5 s sleep at the top of the loop after Pause, and in the tail of `stop()`.
-
-The `restart` mutation does not await `_start` and returns `undefined` either way. The client therefore sees success and the UI shows no sign that the Start did nothing. This is safe, because nothing is dispatched twice. It is still a correctness defect for retry-after-failure: the operator's explicit retry is lost without a signal. The modal caption "A Start is ignored until it ends" only covers STARTED rows, not this window.
-
-**Fix:** Make the outcome observable and narrow the window.
-
-```ts
-// command_queue.ts
-async _start(source: QueueStartSource = "operator"): Promise<{ started: boolean }> {
-  if (this._runningPromise) { /* log */ return { started: false }; }
-  ...
-  return { started: true };
-}
-// router
-restart: procedure.mutation(async () => {
-  // Do not await the whole busy loop; return whether the Start was accepted.
-  return { accepted: !CommandQueue.global.isStartIgnoredNow() };
-}),
-```
-
-Alternatively, release the claim before the notification, so a FAILED queue is startable immediately. For example, run `_notifyFailure` after the loop returns, in `_start`'s `finally`, or fire it without awaiting it inside the loop. Have the UI toast "Start ignored: queue still running" when the response says so.
-
-### WR-02: `getError` now returns `stack` for every error type, including non-tool errors
-
-**File:** `controller/server/routers/command_queue.ts:7-29`
-**Issue:** `queueErrorPayload` copies `error.stack` into the payload for both branches. Before this change only the ToolCommandExecutionError branch exposed it. Other errors were returned as a raw `Error`, which SuperJSON serialises as name and message only. Non-tool errors can now carry server file paths and internals to any caller of the unauthenticated `procedure` (the router uses `procedure`, with no auth middleware visible in this file). The Details modal renders the whole payload through `prettyJson`.
-**Fix:** Do not send the stack to the client. Log it server-side instead, since it is already logged via `logger.error`.
-
-```ts
-// drop `stack: error.stack` from both branches; keep name/message/code/seq
-```
-
-If operators need the stack, gate it on an env or debug flag.
+The info items below are small. IN-04 and IN-05 are new. IN-01 to IN-03 are carried forward unchanged from the previous review, because the files they concern were not touched by commit 5191ffe. They were not re-read this round, and their line numbers are as stated in the previous review.
 
 ## Info
 
@@ -124,6 +75,22 @@ It self-corrects. It is a transient mis-attribution rather than a success misrep
 **File:** `controller/server/toolReply.ts:98-107`
 **Issue:** The check `text === ""` means a SUCCESS reply with `" "` is treated as ERROR_FROM_TOOL, and the generic "An error occurred..." text is shown. This is the conservative direction and the tests pin it (D-14). A tool that pads an empty message with whitespace would still fail every run and require a manual retry.
 **Fix:** No change needed if this is intended. Add a one-line comment saying the whitespace behaviour is deliberate, so a later reader does not "fix" it into a silent success.
+
+### IN-04: "Start ignored" toast text can be wrong and names a button that does not exist
+
+**File:** `controller/components/runs/status/QueueStatuscomponent.tsx:61-64`
+**Issue:** The toast says the queue is "still finishing its previous step" and to "Press Run again in a moment". Two problems:
+- The control is labelled "Start" (`:174`), not "Run".
+- `isStartInProgress` is also true while the busy loop is parked on an operator modal (pause, message, timer or user form). Pressing "Pause queue" calls `stop()`, which sets OFFLINE and then awaits `_runningPromise`. The loop is itself waiting for the operator's Continue, so the claim lasts until Continue is pressed. The operator then sees the Start button, gets this toast, and retrying "in a moment" will keep failing.
+
+The safe behaviour holds (nothing is dispatched twice), but the guidance can send the operator in circles.
+**Fix:** Reword to something like "The queue is still busy (finishing a step or waiting on a message or pause). Start was not applied; try again once it has stopped or after you press Continue." Replace "Run" with "Start".
+
+### IN-05: Doc comment sits on the wrong getter
+
+**File:** `controller/server/command_queue.ts:286-292`
+**Issue:** The new `isStartInProgress` getter was inserted between the comment "Read-only accessor for the in-memory running-step record (D-01)" and `get runningStep()`. That comment now sits above `isStartInProgress` and no longer describes it. The one-line comment above `isStartInProgress` is the correct one. The second half of the original comment is orphaned, so `runningStep` has no doc.
+**Fix:** Move the "running-step record (D-01)" comment down to sit directly above `get runningStep()`.
 
 ---
 
