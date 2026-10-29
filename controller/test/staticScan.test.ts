@@ -631,3 +631,120 @@ describe("step card error fits the fixed card (G-03-3)", () => {
     expect((cardSrc.match(/<CommandImage\b/g) ?? []).length).toBe(1);
   });
 });
+
+describe("operator-only ack invariants (OPR-05)", () => {
+  const walkOrderRels = [
+    ...walk("components"),
+    ...walk("hooks"),
+    ...walk("pages"),
+    ...walk("server"),
+  ].map(rel);
+
+  it("the acknowledge_failure literal lives in exactly its four pinned files", () => {
+    // Closed set over the same walk roots as every scan above: the decision
+    // composer (labels/entry points), the recovery card (confirm flow), the
+    // operator-only refuse table and the recovery action spec. stripComments
+    // preserves string literals, so refusal-message text also counts — the
+    // pinned list therefore encodes every legitimate carrier. A FIFTH file
+    // (a self-acknowledging code path, or the ack escaping into e.g.
+    // runControl/commandFields) fails the suite.
+    const matches = findMatchingRels(walkOrderRels, /acknowledge_failure/).sort();
+    expect(matches).toStrictEqual([
+      "components/runs/controlDecision.ts",
+      "components/tools/RunRecoverySection.tsx",
+      "server/operatorOnlyCommands.ts",
+      "server/recoveryActions.ts",
+    ]);
+  });
+
+  it("commandFields never grows a stack tool or an acknowledge entry", () => {
+    const src = stripComments(read("components/tools/constants.ts"));
+    expect(src).not.toContain("acknowledge_failure");
+    // Top-level tool keys are the 2-space-indented entries of the exported
+    // map (nested param names like "stack_id" live deeper) — assert over the
+    // parsed source keys, never a runtime import.
+    const keys = [...src.matchAll(/^  ([A-Za-z0-9_]+): \{/gm)].map((match) => match[1]);
+    expect(keys.length).toBeGreaterThan(0);
+    expect(keys).not.toContain("stack");
+  });
+
+  it("runControl.ts never appends an ack to the live-run control spec", () => {
+    expect(stripComments(read("server/runControl.ts"))).not.toContain("acknowledge_failure");
+  });
+
+  it("the guard rides executeCommand and the enqueue scan, never controlCommand", () => {
+    const toolsSrc = stripComments(read("server/tools.ts"));
+
+    // The instance method is the declaration whose body opens with the
+    // operator-only guard (D-02a) — the static wrapper of the same name
+    // starts with a logAction call instead.
+    const instanceDecl =
+      /async executeCommand\(command: ToolCommandInfo\) \{\s*if \(isOperatorOnlyCommand\(/;
+    const executeBody = extractBracedRegion(toolsSrc, instanceDecl);
+    expect(executeBody.length).toBeGreaterThan(0);
+    expect(executeBody).toContain("isOperatorOnlyCommand(");
+    expect(executeBody).toContain("OperatorOnlyCommandError");
+    // FIRST statement: the guard precedes variable substitution and gRPC.
+    const guardAt = executeBody.indexOf("isOperatorOnlyCommand(");
+    const substituteAt = executeBody.indexOf("const params = command.params");
+    expect(substituteAt).toBeGreaterThan(guardAt);
+
+    const controlBody = extractBracedRegion(toolsSrc, /async controlCommand\(/);
+    expect(controlBody.length).toBeGreaterThan(0);
+    expect(controlBody).not.toContain("isOperatorOnlyCommand(");
+    expect(controlBody).not.toContain("OperatorOnlyCommandError");
+
+    // Enqueue-time scan stays in createFromProtocol (D-02's two-point layer).
+    const enqueueBody = extractBracedRegion(
+      stripComments(read("server/runs.ts")),
+      /async createFromProtocol\(/,
+    );
+    expect(enqueueBody.length).toBeGreaterThan(0);
+    expect(enqueueBody).toContain("isOperatorOnlyCommand(");
+    expect(enqueueBody).toContain("stage=enqueue");
+  });
+
+  it("no code path acknowledges on its own (caller + router compound)", () => {
+    // Belt-and-braces compound re-assertion of the single-send-path pins:
+    // one future edit landing a second ack path fails these together.
+    const serverFiles = walk("server");
+
+    const callSiteCounts: Record<string, number> = {};
+    for (const file of serverFiles) {
+      const count = (stripComments(read(rel(file))).match(/\.controlCommand\(/g) ?? []).length;
+      if (count > 0) {
+        callSiteCounts[rel(file)] = count;
+      }
+    }
+    expect(callSiteCounts).toStrictEqual({
+      "server/command_queue.ts": 1,
+      "server/recoveryControl.ts": 1,
+    });
+
+    const definitionFiles = serverFiles
+      .map(rel)
+      .filter((relPath) => /async controlCommand\(/.test(stripComments(read(relPath))));
+    expect(definitionFiles).toStrictEqual(["server/tools.ts"]);
+
+    const recoveryControlRouters = serverFiles
+      .map(rel)
+      .filter((relPath) => /recoveryControl\(\{/.test(stripComments(read(relPath))));
+    expect(recoveryControlRouters).toStrictEqual(["server/routers/tool.ts"]);
+  });
+
+  it("scan reports are enumerated in deterministic walk order (determinism backstop)", () => {
+    // Synthetic in-memory fixture (no real files, `sources` overrides the
+    // disk read): two violating files in non-alphabetical walk order must be
+    // reported in that same order — a future violation is reported the same
+    // way every run (OPR-05 ordering edge).
+    const sources = new Map<string, string>([
+      ["server/zz_mock.ts", "const x = acknowledge_failure;"],
+      ["components/aa_mock.tsx", "const y = acknowledge_failure;"],
+    ]);
+    const walkFixture = ["server/zz_mock.ts", "components/aa_mock.tsx"];
+    expect(findMatchingRels(walkFixture, /acknowledge_failure/, sources)).toStrictEqual([
+      "server/zz_mock.ts",
+      "components/aa_mock.tsx",
+    ]);
+  });
+});
