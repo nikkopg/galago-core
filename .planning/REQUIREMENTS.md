@@ -51,7 +51,7 @@ not one row three times. The real defect is an unguarded re-entrant `_start()`.
 - [ ] **OPR-03**: Operator can see the latched guid from the step-card error and from an explicit "Read
   latch" button backed by a toolId-only `tool.latchStatus` query (no polling); "Use this guid" fills the
   input and never sends
-- [ ] **OPR-04**: Protocols and the queue can never send an operator-only command: one table
+- [x] **OPR-04**: Protocols and the queue can never send an operator-only command: one table
   (`stack.acknowledge_failure`, fast `pause`/`resume`/`abort`) refuses such a run at creation with a
   visible message, and `Tool.executeCommand` refuses them, audited; `controlCommand` (the operator path)
   is unaffected
@@ -109,7 +109,7 @@ not one row three times. The real defect is an unguarded re-entrant `_start()`.
 | OPR-01 | Phase 4 | Complete |
 | OPR-02 | Phase 4 | Complete |
 | OPR-03 | Phase 4 | Pending |
-| OPR-04 | Phase 4 | Pending |
+| OPR-04 | Phase 4 | Complete |
 | OPR-05 | Phase 4 | Pending |
 | GEN-01 | Phase 5 | Pending |
 | GEN-02 | Phase 5 | Pending |

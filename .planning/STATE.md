@@ -5,16 +5,16 @@ milestone_name: STACK tool support — codegen, operator acknowledge, error visi
 current_phase: 4
 current_phase_name: Operator-only Commands & STACK Acknowledge
 status: executing
-stopped_at: Completed 04-01-PLAN.md
-last_updated: "2026-10-29T06:07:18.010Z"
+stopped_at: Completed 04-02-PLAN.md
+last_updated: "2026-10-29T06:25:31.167Z"
 last_activity: 2026-10-29
 last_activity_desc: Phase 4 execution started
-state_head: dc1d9a89eecb64680abee897efc73bd82bfa4870
+state_head: d86e3e02940f25d094e027105ac5726e5c456b06
 progress:
   total_phases: 3
   completed_phases: 1
   total_plans: 12
-  completed_plans: 8
+  completed_plans: 9
   percent: 33
 ---
 
@@ -31,7 +31,7 @@ decides every recovery action; the web app never acts on its own or pre-selects 
 ## Current Position
 
 Phase: 4 (Operator-only Commands & STACK Acknowledge) — EXECUTING
-Plan: 2 of 5
+Plan: 3 of 5
 Status: Ready to execute
 Last activity: 2026-10-29 — Phase 4 execution started
 
@@ -80,6 +80,7 @@ Progress: [███░░░░░░░] 33%
 | Phase 3 P06 | 10 min | 3 tasks | 5 files |
 | Phase 03 P07 | 20 min | 2 tasks | 3 files |
 | Phase 04 P01 | 13m | 2 tasks | 5 files |
+| Phase 04 P02 | ~16m | 2 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -107,6 +108,8 @@ Recent decisions affecting current work:
 - [Phase 03]: 03-07: step-card error text placed beside CommandImage in one HStack row (amends D-17/UA2) so the fixed 165px card never overflows (G-03-3)
 - [Phase 04]: Guid regex extended with \u0085 (NEL): JS \s omits U+0085, so the planned guid class would accept a NEL control char; extended exclusion to make the NEL refusal hold (04-01).
 - [Phase 04]: D-06 reroute makes action-availability the first server refusal (type-aware BAD_REQUEST); pf400 tool-type refusal test updated to the new fixed order (04-01).
+- [Phase 04]: Operator-only command matching is trim+lowercase exact equality (D-04): deny-by-list never invents a match; the plan's double-space-ack example was inconsistent with its own matcher and resolved as not-refused.
+- [Phase 04]: RED evidence for tdd plans in this repo: vitest default/tap reporters are unparseable by the vendor TAP adapter; use vitest --reporter=junit (supported adapter, unmodified report) for check tdd-red-evidence records.
 
 ### Pending Todos
 
@@ -150,8 +153,8 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-29T06:07:17.969Z
-Stopped at: Completed 04-01-PLAN.md
+Last session: 2026-10-29T06:25:31.089Z
+Stopped at: Completed 04-02-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

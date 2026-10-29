@@ -1,0 +1,196 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<testsuites name="vitest tests" tests="16" failures="5" errors="0" time="0.931">
+    <testsuite name="test/operatorOnly.test.ts" timestamp="2026-10-29T06:20:35.282Z" hostname="forb01" tests="16" failures="5" errors="0" skipped="0" time="0.025907288">
+        <testcase classname="test/operatorOnly.test.ts" name="operatorOnlyCommands map (D-01, D-04) &gt; has exactly the stack + fast shape, deep-frozen, declared once" time="0.001449899">
+        </testcase>
+        <testcase classname="test/operatorOnly.test.ts" name="operatorOnlyCommands map (D-01, D-04) &gt; refuses listed commands case/whitespace-insensitively and nothing else" time="0.000416414">
+        </testcase>
+        <testcase classname="test/operatorOnly.test.ts" name="operatorOnlyCommands map (D-01, D-04) &gt; resolves lookups by own property only — inherited and prototype keys never match (D-04)" time="0.000338117">
+        </testcase>
+        <testcase classname="test/operatorOnly.test.ts" name="operatorOnlyCommands map (D-01, D-04) &gt; OperatorOnlyCommandError is a plain uncoded Error with its own name (D-03)" time="0.000351291">
+        </testcase>
+        <testcase classname="test/operatorOnly.test.ts" name="operator-only execute-time guard (D-02a) &gt; refuses stack.acknowledge_failure at the Tool instance with zero gRPC and an audited warning (OPR-04 execute)" time="0.00499349">
+        </testcase>
+        <testcase classname="test/operatorOnly.test.ts" name="operator-only execute-time guard (D-02a) &gt; refuses through the tRPC runCommand caller too — the caller&apos;s claimed toolType never rescues it" time="0.00505707">
+        </testcase>
+        <testcase classname="test/operatorOnly.test.ts" name="operator-only execute-time guard (D-02a) &gt; keys on the Tool instance&apos;s real type — a mislabelled command.toolType is still refused (anti-pattern: keying on command.toolType)" time="0.000624325">
+        </testcase>
+        <testcase classname="test/operatorOnly.test.ts" name="operator-only execute-time guard (D-02a) &gt; is deny-by-listed, not deny-all: a F.A.S.T. transfer executes normally" time="0.001214987">
+        </testcase>
+        <testcase classname="test/operatorOnly.test.ts" name="operator-only execute-time guard (D-02a) &gt; never touches controlCommand — the operator path sends exactly one unguarded gRPC (D-02 carve-out)" time="0.000810986">
+        </testcase>
+        <testcase classname="test/operatorOnly.test.ts" name="operator-only enqueue refusal (D-02b) &gt; refuses a visual protocol whose step list contains a stack acknowledge at create time: own Step-N message, run not stored, nothing enqueued, one stage=enqueue audit (OPR-04 enqueue)" time="0.004870458">
+            <failure message="promise resolved &quot;{ id: &apos;1565896a1281e7000&apos;, …(5) }&quot; instead of rejecting" type="AssertionError">
+AssertionError: promise resolved &quot;{ id: &apos;1565896a1281e7000&apos;, …(5) }&quot; instead of rejecting
+
+- Expected
++ Received
+
+- [Error: rejected promise]
++ Object {
++   &quot;commands&quot;: Array [
++     Object {
++       &quot;commandInfo&quot;: Object {
++         &quot;advancedParameters&quot;: Object {
++           &quot;runAsynchronously&quot;: false,
++           &quot;skipExecutionVariable&quot;: Object {
++             &quot;value&quot;: &quot;&quot;,
++             &quot;variable&quot;: null,
++           },
++         },
++         &quot;command&quot;: &quot;acknowledge_failure&quot;,
++         &quot;label&quot;: &quot;&quot;,
++         &quot;params&quot;: Object {},
++         &quot;toolId&quot;: &quot;stack-1&quot;,
++         &quot;toolType&quot;: &quot;stack&quot;,
++         &quot;tool_info&quot;: Object {
++           &quot;imageUrl&quot;: undefined,
++           &quot;type&quot;: &quot;stack&quot;,
++         },
++       },
++       &quot;createdAt&quot;: 2026-10-29T06:20:35.237Z,
++       &quot;runId&quot;: &quot;1565896a1281e7000&quot;,
++       &quot;status&quot;: &quot;CREATED&quot;,
++     },
++     Object {
++       &quot;commandInfo&quot;: Object {
++         &quot;advancedParameters&quot;: Object {
++           &quot;runAsynchronously&quot;: false,
++           &quot;skipExecutionVariable&quot;: Object {
++             &quot;value&quot;: &quot;&quot;,
++             &quot;variable&quot;: null,
++           },
++         },
++         &quot;command&quot;: &quot;transfer&quot;,
++         &quot;label&quot;: &quot;&quot;,
++         &quot;params&quot;: Object {},
++         &quot;toolId&quot;: &quot;fast-1&quot;,
++         &quot;toolType&quot;: &quot;fast&quot;,
++         &quot;tool_info&quot;: Object {
++           &quot;imageUrl&quot;: undefined,
++           &quot;type&quot;: &quot;fast&quot;,
++         },
++       },
++       &quot;createdAt&quot;: 2026-10-29T06:20:35.237Z,
++       &quot;runId&quot;: &quot;1565896a1281e7000&quot;,
++       &quot;status&quot;: &quot;CREATED&quot;,
++     },
++   ],
++   &quot;createdAt&quot;: 2026-10-29T06:20:35.237Z,
++   &quot;id&quot;: &quot;1565896a1281e7000&quot;,
++   &quot;protocolId&quot;: &quot;101&quot;,
++   &quot;protocolName&quot;: &quot;visual-ack&quot;,
++   &quot;status&quot;: &quot;CREATED&quot;,
++ }
+
+ ❯ test/operatorOnly.test.ts:266:59
+            </failure>
+        </testcase>
+        <testcase classname="test/operatorOnly.test.ts" name="operator-only enqueue refusal (D-02b) &gt; refuses a script protocol whose resolveToolTypes-filled steps contain a stack acknowledge identically" time="0.001145206">
+            <failure message="promise resolved &quot;{ id: &apos;1565896a1501e7000&apos;, …(5) }&quot; instead of rejecting" type="AssertionError">
+AssertionError: promise resolved &quot;{ id: &apos;1565896a1501e7000&apos;, …(5) }&quot; instead of rejecting
+
+- Expected
++ Received
+
+- [Error: rejected promise]
++ Object {
++   &quot;commands&quot;: Array [
++     Object {
++       &quot;commandInfo&quot;: Object {
++         &quot;command&quot;: &quot;acknowledge_failure&quot;,
++         &quot;params&quot;: Object {},
++         &quot;toolId&quot;: &quot;stack-1&quot;,
++         &quot;toolType&quot;: &quot;stack&quot;,
++       },
++       &quot;createdAt&quot;: 2026-10-29T06:20:35.242Z,
++       &quot;runId&quot;: &quot;1565896a1501e7000&quot;,
++       &quot;status&quot;: &quot;CREATED&quot;,
++     },
++   ],
++   &quot;createdAt&quot;: 2026-10-29T06:20:35.242Z,
++   &quot;id&quot;: &quot;1565896a1501e7000&quot;,
++   &quot;protocolId&quot;: &quot;102&quot;,
++   &quot;protocolName&quot;: &quot;script-ack&quot;,
++   &quot;status&quot;: &quot;CREATED&quot;,
++ }
+
+ ❯ test/operatorOnly.test.ts:302:59
+            </failure>
+        </testcase>
+        <testcase classname="test/operatorOnly.test.ts" name="operator-only enqueue refusal (D-02b) &gt; refuses an imported-JSON-shaped F.A.S.T. step too — the fast entries are live (D-01)" time="0.000854559">
+            <failure message="promise resolved &quot;{ id: &apos;1565896a1581e7000&apos;, …(5) }&quot; instead of rejecting" type="AssertionError">
+AssertionError: promise resolved &quot;{ id: &apos;1565896a1581e7000&apos;, …(5) }&quot; instead of rejecting
+
+- Expected
++ Received
+
+- [Error: rejected promise]
++ Object {
++   &quot;commands&quot;: Array [
++     Object {
++       &quot;commandInfo&quot;: Object {
++         &quot;advancedParameters&quot;: Object {
++           &quot;runAsynchronously&quot;: false,
++           &quot;skipExecutionVariable&quot;: Object {
++             &quot;value&quot;: &quot;&quot;,
++             &quot;variable&quot;: null,
++           },
++         },
++         &quot;command&quot;: &quot;pause&quot;,
++         &quot;label&quot;: &quot;&quot;,
++         &quot;params&quot;: Object {},
++         &quot;toolId&quot;: &quot;fast-1&quot;,
++         &quot;toolType&quot;: &quot;fast&quot;,
++         &quot;tool_info&quot;: Object {
++           &quot;imageUrl&quot;: undefined,
++           &quot;type&quot;: &quot;fast&quot;,
++         },
++       },
++       &quot;createdAt&quot;: 2026-10-29T06:20:35.243Z,
++       &quot;runId&quot;: &quot;1565896a1581e7000&quot;,
++       &quot;status&quot;: &quot;CREATED&quot;,
++     },
++   ],
++   &quot;createdAt&quot;: 2026-10-29T06:20:35.243Z,
++   &quot;id&quot;: &quot;1565896a1581e7000&quot;,
++   &quot;protocolId&quot;: &quot;103&quot;,
++   &quot;protocolName&quot;: &quot;fast-pause&quot;,
++   &quot;status&quot;: &quot;CREATED&quot;,
++ }
+
+ ❯ test/operatorOnly.test.ts:319:59
+            </failure>
+        </testcase>
+        <testcase classname="test/operatorOnly.test.ts" name="operator-only enqueue refusal (D-02b) &gt; never surfaces as the generic &apos;Could not generate commands&apos; message through run.create tRPC — BAD_REQUEST with the refusal&apos;s own message (OPR-04 visible)" time="0.000873013">
+            <failure message="expected undefined to be an instance of TRPCError" type="AssertionError">
+AssertionError: expected undefined to be an instance of TRPCError
+ ❯ test/operatorOnly.test.ts:344:20
+            </failure>
+        </testcase>
+        <testcase classname="test/operatorOnly.test.ts" name="operator-only enqueue refusal (D-02b) &gt; surfaces HTTP 400 with the refusal&apos;s own message through the REST POST /api/runs mapping (default stays 500)" time="0.000659321">
+            <failure message="expected &quot;spy&quot; to be called with arguments: [ 400 ]
+
+Received: 
+
+
+
+Number of calls: 0
+" type="AssertionError">
+AssertionError: expected &quot;spy&quot; to be called with arguments: [ 400 ]
+
+Received: 
+
+
+
+Number of calls: 0
+
+ ❯ test/operatorOnly.test.ts:371:24
+            </failure>
+        </testcase>
+        <testcase classname="test/operatorOnly.test.ts" name="operator-only enqueue refusal (D-02b) &gt; a zero-command protocol is refused nowhere by this guard — the pre-existing empty outcome is unchanged (OPR-05 empty-parity)" time="0.000630277">
+        </testcase>
+        <testcase classname="test/operatorOnly.test.ts" name="operator-only enqueue refusal (D-02b) &gt; keeps creating (and staging) transfer-only F.A.S.T. runs — regression proof that the guard is deny-by-listed" time="0.000409651">
+        </testcase>
+    </testsuite>
+</testsuites>

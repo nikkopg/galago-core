@@ -127,12 +127,12 @@ a real failure path). No dependency on `stack.proto`: built on string tool types
   5. Static scans fail the suite if any code path acknowledges on its own, if the `acknowledge_failure`
      literal appears outside an exact file list, if it is added to `commandFields` or `runControl`, if the
      guard leaves `executeCommand` or lands in `controlCommand`, or if the latch read feeds the send path.
-**Plans:** 1/5 plans executed
+**Plans:** 2/5 plans executed
 
 Plans:
 **Wave 1**
 - [x] 04-01-PLAN.md — (wave 1, tracer) Zero-import `recoveryActions.ts` spec + `validateRecoveryRequest`, `recoveryControl` reroute, exact one-send payload `{ stack: { acknowledge_failure: { guid, arm_inspected: "yes" } } }`, refuse-while-running, D-10 strict success (OPR-01 server, OPR-02)
-- [ ] 04-02-PLAN.md — (wave 1, tracer) `operatorOnlyCommands.ts` refuse table + execute-time guard in `Tool.executeCommand` + enqueue guard in `createFromProtocol` with BAD_REQUEST/400 mapping (OPR-04)
+- [x] 04-02-PLAN.md — (wave 1, tracer) `operatorOnlyCommands.ts` refuse table + execute-time guard in `Tool.executeCommand` + enqueue guard in `createFromProtocol` with BAD_REQUEST/400 mapping (OPR-04)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 - [ ] 04-03-PLAN.md — (wave 2, tracer) Client ack UI: spec-driven `createConfirmedSender` recovery branch, modal per-kind render (born-empty radios, guid restated verbatim), card guid entry with the shared `isValidRecoveryGuid`, afterAccepted clear (OPR-01 client)
@@ -202,7 +202,7 @@ Phases execute in numeric order: 3 → 4 → 5 (Phase 5 waits on galago-tools Ph
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 3. Queue Start Guard & Tool Error Visibility | v2 | 7/7 | Complete    | 2026-10-29 |
-| 4. Operator-only Commands & STACK Acknowledge | v2 | 1/5 | In Progress | - |
+| 4. Operator-only Commands & STACK Acknowledge | v2 | 2/5 | In Progress | - |
 | 5. STACK Codegen & Command Forms | v2 | 0/TBD | Not started (gated on galago-tools Phase 4) | - |
 
 ## Backlog
