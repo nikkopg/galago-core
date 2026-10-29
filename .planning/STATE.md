@@ -5,11 +5,11 @@ milestone_name: STACK tool support — codegen, operator acknowledge, error visi
 current_phase: 4
 current_phase_name: Operator-only Commands & STACK Acknowledge
 status: executing
-stopped_at: "Completed 04-03-PLAN.md (acknowledge surface: card guid entry + modal per-kind render + recovery-spec decision state)"
-last_updated: "2026-10-29T06:47:46.201Z"
+stopped_at: Completed 04-04-PLAN.md
+last_updated: "2026-10-29T07:04:56.754Z"
 last_activity: 2026-10-29
 last_activity_desc: Phase 4 execution started
-state_head: 66b6ee366dd37fec2df045331c031f4261aff3e0
+state_head: 9c908435b3639dd22ce85c6cbbc60d997570c8ac
 progress:
   total_phases: 3
   completed_phases: 1
@@ -31,7 +31,7 @@ decides every recovery action; the web app never acts on its own or pre-selects 
 ## Current Position
 
 Phase: 4 (Operator-only Commands & STACK Acknowledge) — EXECUTING
-Plan: 4 of 5
+Plan: 5 of 5
 Status: Ready to execute
 Last activity: 2026-10-29 — Phase 4 execution started
 
@@ -82,6 +82,7 @@ Progress: [███░░░░░░░] 33%
 | Phase 04 P01 | 13m | 2 tasks | 5 files |
 | Phase 04 P02 | ~16m | 2 tasks | 9 files |
 | Phase 04 P03 | 11min | 2 tasks | 5 files |
+| Phase 04 P04 | 14min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -114,6 +115,9 @@ Recent decisions affecting current work:
 - [Phase 04]: 04-03: createConfirmedSender recovery branch is recovery-spec-driven (isRecoveryAction/getRecoverySpec + pure completeRecoveryEntries); RECOVERY_UI_ACTIONS removed
 - [Phase 04]: 04-03: guid travels as request params DATA — modal restates verbatim, never an input; Confirm gated on completeRecoveryEntries (confirmYes exactly "yes")
 - [Phase 04]: 04-03: card guid visibility from needsGuidEntry (spec-derived), buttons never gated on instrument state; enable check = shared isValidRecoveryGuid import
+- [Phase 04]: latchStatus query is toolId-only with toolType derived from the DB row — zToolType rejects 'stack' until Phase 5 (D-11), so the query reuses the recovery mutation's derivation, never the enum
+- [Phase 04]: extractLatch carries one display kind/explanation pair, reading kind/explanation preferentially over resultKind/reason from galago-tools' unfrozen shape space (D-13); unknown shapes flag unknown:true with the raw object retained for the collapsible
+- [Phase 04]: Card latch read is a born-disabled tRPC query refetched on explicit click — no polling opts at all; 'Use this guid' pins UI-SPEC copy as source constants so the display contract stays greppable
 
 ### Pending Todos
 
@@ -157,8 +161,8 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-29T06:47:40.512Z
-Stopped at: Completed 04-03-PLAN.md (acknowledge surface: card guid entry + modal per-kind render + recovery-spec decision state)
+Last session: 2026-10-29T07:04:56.673Z
+Stopped at: Completed 04-04-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

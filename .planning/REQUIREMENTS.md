@@ -48,7 +48,7 @@ not one row three times. The real defect is an unguarded re-entrant `_start()`.
   added to `runControl`)
 - [x] **OPR-02**: Every acknowledge attempt is audited (refused, transport error, outcome); it is refused
   while the queue's running step is on that tool (STACK-specific message); sent once, never retried
-- [ ] **OPR-03**: Operator can see the latched guid from the step-card error and from an explicit "Read
+- [x] **OPR-03**: Operator can see the latched guid from the step-card error and from an explicit "Read
   latch" button backed by a toolId-only `tool.latchStatus` query (no polling); "Use this guid" fills the
   input and never sends
 - [x] **OPR-04**: Protocols and the queue can never send an operator-only command: one table
@@ -108,7 +108,7 @@ not one row three times. The real defect is an unguarded re-entrant `_start()`.
 | ERR-05 | Phase 3 | Complete |
 | OPR-01 | Phase 4 | Complete |
 | OPR-02 | Phase 4 | Complete |
-| OPR-03 | Phase 4 | Pending |
+| OPR-03 | Phase 4 | Complete |
 | OPR-04 | Phase 4 | Complete |
 | OPR-05 | Phase 4 | Pending |
 | GEN-01 | Phase 5 | Pending |
