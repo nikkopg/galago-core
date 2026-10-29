@@ -158,13 +158,15 @@ const SwimLaneCommandComponent: React.FC<LaneCommandComponentProps> = (props) =>
         <Center p={0}>
           <VStack spacing={2} width="100%">
             <HStack spacing={2} width="100%" justifyContent="center">
-              <Box flexShrink={0}>
-                <CommandImage
-                  config={infoQuery.data}
-                  command={command}
-                  onCommandClick={onCommandClick}
-                />
-              </Box>
+              {infoQuery.data?.imageUrl && (
+                <Box flexShrink={0}>
+                  <CommandImage
+                    config={infoQuery.data}
+                    command={command}
+                    onCommandClick={onCommandClick}
+                  />
+                </Box>
+              )}
               {errorText !== null && (
                 <Text
                   fontSize="sm"

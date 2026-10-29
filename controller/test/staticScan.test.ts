@@ -604,7 +604,12 @@ describe("step card error fits the fixed card (G-03-3)", () => {
     const rowClose = cardSrc.indexOf("</HStack>", errAt);
     expect(rowClose).toBeGreaterThan(errAt);
     expect(rowClose).toBeLessThan(labelAt);
-    expect(cardSrc.slice(rowOpen, rowClose)).toMatch(/flexShrink=\{0\}/);
+    const rowHead = cardSrc.slice(rowOpen, imgAt);
+    expect(rowHead).toMatch(/<Box flexShrink=\{0\}>\s*$/);
+    expect(rowHead).toMatch(/width="100%"/);
+    expect(rowHead).toMatch(/justifyContent="center"/);
+    // The wrapper only renders with an image, so an empty one adds no HStack gap.
+    expect(rowHead).toMatch(/\{infoQuery\.data\?\.imageUrl && \(\s*<Box flexShrink=\{0\}>\s*$/);
   });
 
   it("the card box, the error text style and the label are unchanged", () => {
