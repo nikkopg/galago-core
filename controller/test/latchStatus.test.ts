@@ -255,6 +255,12 @@ describe("tool.latchStatus query (D-11)", () => {
 describe("card source invariants (latch block, D-11/D-12)", () => {
   const CARD = "components/tools/RunRecoverySection.tsx";
 
+  // Whitespace-flattened source (comments and prose stay JS-wrapped) for
+  // copy assertions, mirroring the controlDecision.test.ts idiom.
+  function flat(rel: string): string {
+    return read(rel).replace(/\s+/g, " ");
+  }
+
   it("keeps the latch read display-only: no timers, no ack gating by the latch", () => {
     const card = read(CARD);
     // Runs once per explicit click — no polling anywhere in the card.
@@ -268,5 +274,47 @@ describe("card source invariants (latch block, D-11/D-12)", () => {
         expect(line.includes("isValidRecoveryGuid")).toBe(true);
       }
     }
+  });
+
+  it("renders the Latched failure block with the documented copy (UI-SPEC)", () => {
+    const card = flat(CARD);
+    expect(card).toContain("Latched failure");
+    expect(card).toContain('"Read latch"');
+    expect(card).toContain('"Use this guid"');
+    expect(card).toContain('"No failure latched"');
+    expect(card).toContain('"Raw JSON"');
+    // Empty-state body copy, the documented sentence.
+    expect(card).toContain(
+      "This tool has no failure latched. An acknowledge is not possible until a STACK step fails and ends.",
+    );
+    // Per-click pending state with the small spinner.
+    expect(card).toContain('"Reading latch…"');
+    expect(card).toContain('Spinner size="sm"');
+  });
+
+  it("reads the latch through exactly one tool.latchStatus consumer (no polling opts)", () => {
+    const card = read(CARD);
+    expect(card.split("tool.latchStatus").length - 1).toBe(1);
+    expect(card).toContain("enabled: false");
+    expect(card).not.toContain("refetchOnMount");
+    expect(card).not.toContain("refetchOnWindowFocus");
+  });
+
+  it('"Use this guid" fills the guid input only — never sends, never opens the modal', () => {
+    const card = read(CARD);
+    // Fills the same guid state verbatim (no trim), from the latched guid.
+    expect(card).toContain("setGuid(latchResult.guid");
+    expect(card).not.toMatch(/Use this guid[\s\S]{0,200}openConfirm/);
+    expect(card).toContain('variant="outline"');
+    expect(card).toContain('colorScheme="teal"');
+  });
+
+  it("clears the latch result only on an accepted send (afterAccepted parity, D-07)", () => {
+    const card = read(CARD);
+    const acceptedIdx = card.indexOf("const afterAccepted");
+    expect(acceptedIdx).toBeGreaterThan(-1);
+    const afterAccepted = card.slice(acceptedIdx, card.indexOf("];", acceptedIdx) > 0 ? card.indexOf("];", acceptedIdx) : acceptedIdx + 600);
+    expect(afterAccepted).toContain("setLatchResult(null)");
+    expect(afterAccepted).toContain('setGuid("")');
   });
 });
