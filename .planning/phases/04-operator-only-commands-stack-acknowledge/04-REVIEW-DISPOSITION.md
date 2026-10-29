@@ -5,23 +5,23 @@ titles: json
 findings:
   - id: WR-01
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "`extractLatch`'s `unknown` state is never rendered — uninterpretable latch replies display as \"No failure latched\""
   - id: WR-02
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "`tool.latchStatus` maps a reply without `meta_data` to a confident NOT-latched result"
   - id: WR-03
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "`validateRecoveryRequest`'s first check is dead in production and semantically inverted — a blank tool type reports \"No step is currently running.\""
   - id: WR-04
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "Client-controlled `action` is interpolated unsanitized into audit-log details (log forging)"
   - id: WR-05
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "`run.create` leaves `numberOfRuns` unvalidated — negative/zero silently no-op, large values enqueue unbounded instrument runs"
   - id: IN-01
     severity: info
@@ -43,7 +43,7 @@ findings:
     severity: info
     disposition: open
     title: "Confirm modal resolves the action spec from `runControl` regardless of `target.kind` — latent silent-refusal trap"
-open: 10
+open: 5
 total: 10
 recorded: 2026-10-29T12:00:00.000Z
 ---
@@ -52,11 +52,11 @@ recorded: 2026-10-29T12:00:00.000Z
 
 | Finding | Severity | Disposition | Source |
 |---------|----------|-------------|--------|
-| WR-01 | warning | open | - |
-| WR-02 | warning | open | - |
-| WR-03 | warning | open | - |
-| WR-04 | warning | open | - |
-| WR-05 | warning | open | - |
+| WR-01 | warning | fixed | 34d616d |
+| WR-02 | warning | fixed | 5a7789f |
+| WR-03 | warning | fixed (requires human verification) | 3a5cbc8 |
+| WR-04 | warning | fixed (requires human verification) | b0dcc40 |
+| WR-05 | warning | fixed (bound 1–100 is a human-confirmable product choice) | fcfc0b3 |
 | IN-01 | info | open | - |
 | IN-02 | info | open | - |
 | IN-03 | info | open | - |
