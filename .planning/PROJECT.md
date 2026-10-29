@@ -74,13 +74,19 @@ stack-automation-layer core gaps are fixed there via `/gsd-quick`, never here.
   plumbing), Stop/Clear All/delete-run routed through a no-timer abort-first dialog, fast
   abort/resume removed from the step editor, and a tool-page Run Recovery card backed by
   `tool.recoveryControl` — Phase 2 (UAT 9/9 against the redeployed galago-tools, 2026-10-15)
+- ✓ QUE-07..QUE-09 (F5) — v2: single-flight Start guard as the first statement of
+  `CommandQueue._start` (an ignored Start logs "Queue Start Ignored", changes nothing and shows a
+  warning toast); the Start confirmation lists what will run, read-only, from queue-joined rows —
+  Phase 3
+- ✓ ERR-01..ERR-05 (F3) — v2: a tool's `ERROR_FROM_TOOL` message is thrown and persisted (SUCCESS
+  with a message counts as an error), shown in a re-arming run-page banner, on the step card (beside
+  the image, 3-line clamp, full text on hover) and in the run outcome; a skipped failure shows an
+  orange "Skipped failure" badge, never success — Phase 3 (UAT 5/5, 2026-10-29)
 
 ### Active
 
 v2 requirements in `.planning/REQUIREMENTS.md`.
 
-- [ ] F5 root cause fixed (queued command never executed twice after success)
-- [ ] F3 tool error visible in the run UI
 - [ ] Operator-only STACK AcknowledgeFailure (recovery card), refused from the queue
 - [ ] STACK codegen and command forms (DEP-02)
 
@@ -143,7 +149,9 @@ v2 requirements in `.planning/REQUIREMENTS.md`.
 | Prove UI-08 with pure-logic tests plus static source scans, no jsdom/RTL | No new UI test dependencies (D-24); rendered behaviour went to UAT | ✓ Phase 2 (13 scan tests; UAT 9/9) |
 | Stop, Clear All and deleting the running run abort first, then act on the queue only after the abort is accepted | Stop must never leave an instrument run untracked; research showed clearing dropped a running step | ✓ Phase 2 |
 | Busy-loop catch treats a step row already removed by Clear All/delete-run as handled | Follow-up can win the race against the step's rejection (audit INT-01) | ✓ Quick task t9e |
-| v2: pull F5 and F3 into scope (reverses the 2026-10-12 deferral) | The STACK queues a second submit and its errors carry the guid the operator needs; the galago-tools step_key ledger is defence in depth, not the fix | — Pending |
+| v2: pull F5 and F3 into scope (reverses the 2026-10-12 deferral) | The STACK queues a second submit and its errors carry the guid the operator needs; the galago-tools step_key ledger is defence in depth, not the fix | ✓ Shipped in Phase 3 (start guard + error visibility) |
+| v2: run outcome `COMPLETED_WITH_SKIPPED_FAILURE` is client-only, derived from polled rows; `RunStatus` not widened | No schema change; FAILED takes precedence over a COMPLETED last row | ✓ Phase 3 |
+| v2: step-card error sits beside the image in one row (amends D-17/UA2) | The stacked layout overflowed the fixed 165px card (G-03-3) | ✓ Phase 3 (03-07; live fit retest waived by the user as minor) |
 | v2: skip the 4-researcher pass; research only F5 root cause and the acknowledge fit | F.A.S.T. support (`128bbd7`, `d4c3c23`, `tool.recoveryControl`) is the template | — Pending |
 | Use quick tasks for post-phase fixes instead of inserting decimal phases | Small, test-backed queue fixes (f48, h0q, o44, t9e) | ✓ Good — but leaves earlier phase verifications stale; re-verify after |
 
@@ -165,4 +173,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-10-28 after starting milestone v2*
+*Last updated: 2026-10-29 after Phase 3*

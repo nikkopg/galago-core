@@ -34,7 +34,7 @@ phases are always written "galago-tools Phase N" here because its numbering (4-7
 - Retry-after-failure stays: a FAILED row stays queued and re-runs first on the next Start.
 - Push only to the `nikkopg` fork remote, and only when the user says so.
 
-- [ ] **Phase 3: Queue Start Guard & Tool Error Visibility** - A Start never dispatches a row already in
+- [x] **Phase 3: Queue Start Guard & Tool Error Visibility** - A Start never dispatches a row already in (completed 2026-10-29)
   flight, the operator sees what a Start will run, and a failed step shows the tool's own message and is
   never shown as success (F5, DEP-03c; F3, DEP-03b).
 - [ ] **Phase 4: Operator-only Commands & STACK Acknowledge** - Only an operator, from the tool page, can
@@ -70,7 +70,7 @@ shown as success.
      galago-web restarted; after the operator dismisses the error banner, the next failure shows it again.
   7. A failed step is never shown as completed, a SUCCESS reply that carries an error message is reported
      as an error, and a run whose failed step was skipped is not shown as plain success.
-**Plans:** 7/7 plans executed
+**Plans:** 7/7 plans complete
 
 Plans:
 **Wave 1**
@@ -186,7 +186,7 @@ Phases execute in numeric order: 3 → 4 → 5 (Phase 5 waits on galago-tools Ph
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 3. Queue Start Guard & Tool Error Visibility | v2 | 7/7 | In Progress | - |
+| 3. Queue Start Guard & Tool Error Visibility | v2 | 7/7 | Complete    | 2026-10-29 |
 | 4. Operator-only Commands & STACK Acknowledge | v2 | 0/TBD | Not started | - |
 | 5. STACK Codegen & Command Forms | v2 | 0/TBD | Not started (gated on galago-tools Phase 4) | - |
 

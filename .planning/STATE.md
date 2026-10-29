@@ -2,45 +2,45 @@
 gsd_state_version: "1.0"
 milestone: v2
 milestone_name: STACK tool support — codegen, operator acknowledge, error visibility, F5
-current_phase: 03
-current_phase_name: Queue Start Guard & Tool Error Visibility
-status: verifying
-stopped_at: Completed 03-07-PLAN.md
-last_updated: "2026-10-29T04:26:17.961Z"
+current_phase: 4
+current_phase_name: Operator-only Commands & STACK Acknowledge
+status: planning
+stopped_at: Phase 03 complete, ready to plan Phase 4
+last_updated: "2026-10-29T04:40:19.319Z"
 last_activity: 2026-10-29
-last_activity_desc: Phase 03 execution started
-state_head: 8bcbab9e731c4f2abb513f78a938bdfa28834c16
+last_activity_desc: Phase 03 complete, transitioned to Phase 4
+state_head: e03b51472357877fda9870403cb8f8f5bf1272ce
 progress:
   total_phases: 3
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 7
   completed_plans: 7
-  percent: 0
+  percent: 33
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-10-28)
+See: .planning/PROJECT.md (updated 2026-10-29)
 
 **Core value:** While an instrument step runs, the operator sees what the instrument is doing and
 decides every recovery action; the web app never acts on its own or pre-selects a physical decision.
-**Current focus:** Phase 03 — Queue Start Guard & Tool Error Visibility
+**Current focus:** Phase 4 — Operator-only Commands & STACK Acknowledge
 
 ## Current Position
 
-Phase: 03 (Queue Start Guard & Tool Error Visibility) — EXECUTING
-Plan: 7 of 7 (gap closure G-03-3 done)
-Status: Phase complete — ready for verification (UAT test 3 retest open)
-Last activity: 2026-10-29 — Completed 03-07-PLAN.md
+Phase: 4 — Operator-only Commands & STACK Acknowledge
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-10-29 — Phase 03 complete, transitioned to Phase 4
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [███░░░░░░░] 33%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 11
+- Total plans completed: 18
 - Average duration: -
 - Total execution time: 0 hours
 
@@ -50,6 +50,7 @@ Progress: [░░░░░░░░░░] 0%
 |-------|-------|-------|----------|
 | 01 | 5 | - | - |
 | 02 | 6 | - | - |
+| 03 | 7 | - | - |
 
 **Recent Trend:**
 - Last 5 plans: none yet
@@ -122,6 +123,11 @@ Recent decisions affecting current work:
   IN-01 `tip_reuse` select has no default value. Advisory; none violates a Phase 2 must-have.
 - [Phase 2]: WR-05 (`d400c42`) supersedes D-08: the "head will move" note is now per-action
   (`runControlMovesHead`), hidden for the F.A.S.T. soft Pause.
+- [Phase 3]: `03-REVIEW-DISPOSITION.md` has 4 open advisories after the 03-07 re-review: WR-01 the
+  G-03-3 scan accepts `flexShrink={0}` anywhere in the row; WR-02 an 8px gap before the error text
+  when a tool has no image (cosmetic); IN-01 full card error is hover-only; IN-02 label scan is
+  whitespace-sensitive. The earlier WR-01/WR-02 `fixed` rows (5191ffe) were dropped by id reuse.
+  The G-03-3 live fit retest was waived by the user (marked pass).
 - [Phase 2]: The real F.A.S.T. may still hold a paused run from the 2026-10-14 09:33 WrongPlateType
   test; clear it (Run Recovery → Abort, or on the instrument) before the next real run.
 
@@ -142,9 +148,9 @@ Items acknowledged and deferred at milestone close, most recent first:
 ## Session Continuity
 
 Last session: 2026-10-29T04:26:17.924Z
-Stopped at: Completed 03-07-PLAN.md
+Stopped at: Phase 03 complete, ready to plan Phase 4
 Resume file: None
 
 ## Operator Next Steps
 
-- Plan Phase 3 with /gsd-plan-phase 3 (or /gsd-discuss-phase 3 first)
+- Plan Phase 4 with /gsd-plan-phase 4 (or /gsd-discuss-phase 4 first)
