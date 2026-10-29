@@ -279,7 +279,9 @@ describe("queue start guard", () => {
       await vi.advanceTimersByTimeAsync(1500 * 4);
       await p2;
 
-      const dispatched = grpc.executeCommand.mock.calls.map(([payload]) => payload.fast.transfer.tag);
+      const dispatched = grpc.executeCommand.mock.calls.map(
+        ([payload]) => payload.fast.transfer.tag,
+      );
       expect(dispatched).toEqual(["row4", "row4", "row5", "row6"]);
       const all = await queue.commands.all();
       expect(all.map((r) => r.status)).toEqual(["COMPLETED", "COMPLETED", "COMPLETED"]);

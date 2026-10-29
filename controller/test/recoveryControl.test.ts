@@ -10,7 +10,8 @@ vi.mock("@/db/helpers", () => ({
   INVENTORY_TOOL_MAP: {},
 }));
 
-import { ToolType } from "gen-interfaces/controller";import { ResponseCode } from "gen-interfaces/tools/grpc_interfaces/tool_base";
+import { ToolType } from "gen-interfaces/controller";
+import { ResponseCode } from "gen-interfaces/tools/grpc_interfaces/tool_base";
 import { findMany, getSelectedWorkcellId } from "@/db/helpers";
 import { toolRouter } from "@/server/routers/tool";
 import CommandQueue from "@/server/command_queue";
@@ -386,7 +387,9 @@ describe("recoveryControl", () => {
       expect(result).toMatchObject({ ok: true, response: ResponseCode.SUCCESS });
       expect(stackGrpc.executeCommand).toHaveBeenCalledTimes(1);
       expect(stackGrpc.executeCommand.mock.calls[0]).toHaveLength(1);
-      expect(stackGrpc.executeCommand.mock.calls[0][0]).toStrictEqual({ stack: { acknowledge_failure: { guid: "guid-a", arm_inspected: "yes" } } });
+      expect(stackGrpc.executeCommand.mock.calls[0][0]).toStrictEqual({
+        stack: { acknowledge_failure: { guid: "guid-a", arm_inspected: "yes" } },
+      });
       expect(stackGrpc.executeCommand).toHaveBeenCalledWith({
         stack: { acknowledge_failure: { guid: "guid-a", arm_inspected: "yes" } },
       });
@@ -632,8 +635,12 @@ describe("recoveryControl", () => {
       // Two overlapping/completed requests, exactly two sends — never a
       // re-issue of the first request's payload.
       expect(stackGrpc.executeCommand).toHaveBeenCalledTimes(2); // one attempt per request
-      expect(stackGrpc.executeCommand.mock.calls[0][0]).toStrictEqual({ stack: { acknowledge_failure: { guid: "guid-a", arm_inspected: "yes" } } });
-      expect(stackGrpc.executeCommand.mock.calls[1][0]).toStrictEqual({ stack: { acknowledge_failure: { guid: "guid-b", arm_inspected: "yes" } } });
+      expect(stackGrpc.executeCommand.mock.calls[0][0]).toStrictEqual({
+        stack: { acknowledge_failure: { guid: "guid-a", arm_inspected: "yes" } },
+      });
+      expect(stackGrpc.executeCommand.mock.calls[1][0]).toStrictEqual({
+        stack: { acknowledge_failure: { guid: "guid-b", arm_inspected: "yes" } },
+      });
     });
   });
 });

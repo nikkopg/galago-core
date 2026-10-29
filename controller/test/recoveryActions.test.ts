@@ -134,7 +134,7 @@ describe("guid boundary refusals (OPR-01)", () => {
     ).toMatchObject({
       ok: false,
       code: "BAD_REQUEST",
-      message: expect.stringContaining("Parameter \"guid\""),
+      message: expect.stringContaining('Parameter "guid"'),
     });
   });
 
@@ -156,14 +156,14 @@ describe("guid boundary refusals (OPR-01)", () => {
 });
 
 describe("arm_inspected confirmYes refusals (D-14)", () => {
-  it("refuses every value that is not exactly \"yes\"", () => {
+  it('refuses every value that is not exactly "yes"', () => {
     const params = {
-      "no": { guid: "g-1", arm_inspected: "no" },
-      "empty": { guid: "g-1", arm_inspected: "" },
+      no: { guid: "g-1", arm_inspected: "no" },
+      empty: { guid: "g-1", arm_inspected: "" },
       "space-prefixed": { guid: "g-1", arm_inspected: " yes" },
-      "yes": { guid: "g-1", arm_inspected: "Yes" },
-      "boolean": { guid: "g-1", arm_inspected: true },
-      "missing": { guid: "g-1" },
+      yes: { guid: "g-1", arm_inspected: "Yes" },
+      boolean: { guid: "g-1", arm_inspected: true },
+      missing: { guid: "g-1" },
     };
     for (const [label, entry] of Object.entries(params)) {
       const verdict = validateRecoveryRequest("stack", "acknowledge_failure", entry);

@@ -226,33 +226,36 @@ describe("errorPath", () => {
   });
 
   describe("ERR-02 thrown ToolCommandExecutionError instance", () => {
-    it.each(Object.values(ResponseCode))("%s thrown instance carries the real code name", async (code) => {
-      grpc.executeCommand.mockResolvedValueOnce({
-        response: code,
-        error_message: TOOL_TEXT(code),
-        return_reply: true,
-      });
-      const expected = EXPECT[code].withText(TOOL_TEXT(code));
+    it.each(Object.values(ResponseCode))(
+      "%s thrown instance carries the real code name",
+      async (code) => {
+        grpc.executeCommand.mockResolvedValueOnce({
+          response: code,
+          error_message: TOOL_TEXT(code),
+          return_reply: true,
+        });
+        const expected = EXPECT[code].withText(TOOL_TEXT(code));
 
-      const err = await Tool.executeCommand({
-        toolId: TOOL_ID,
-        toolType: ToolType.fast,
-        command: COMMAND,
-        params: {},
-      } as any).then(
-        () => null,
-        (e: unknown) => e,
-      );
+        const err = await Tool.executeCommand({
+          toolId: TOOL_ID,
+          toolType: ToolType.fast,
+          command: COMMAND,
+          params: {},
+        } as any).then(
+          () => null,
+          (e: unknown) => e,
+        );
 
-      expect(err).toBeInstanceOf(ToolCommandExecutionError);
-      expect(err).toMatchObject({
-        code: expected.code,
-        codeString: expected.code,
-        message: expected.message,
-        userFriendlyMessage: expected.message,
-      });
-      expect(expected.code).not.toBe(ResponseCode.SUCCESS);
-    });
+        expect(err).toBeInstanceOf(ToolCommandExecutionError);
+        expect(err).toMatchObject({
+          code: expected.code,
+          codeString: expected.code,
+          message: expected.message,
+          userFriendlyMessage: expected.message,
+        });
+        expect(expected.code).not.toBe(ResponseCode.SUCCESS);
+      },
+    );
   });
 
   describe("ERR-04 failure sequence in getError", () => {

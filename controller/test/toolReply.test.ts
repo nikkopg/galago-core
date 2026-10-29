@@ -66,13 +66,19 @@ describe("describeToolReply generic codes", () => {
 describe("describeToolReply ERROR_FROM_TOOL", () => {
   it("prefixes the tool text", () => {
     expect(
-      describeToolReply(CMD, TOOL, { response: ResponseCode.ERROR_FROM_TOOL, error_message: "boom" }),
+      describeToolReply(CMD, TOOL, {
+        response: ResponseCode.ERROR_FROM_TOOL,
+        error_message: "boom",
+      }),
     ).toEqual({ code: ResponseCode.ERROR_FROM_TOOL, message: `Error from tool "${TOOL}": boom` });
   });
 
   it.each(EMPTIES)("empty text %j gives the empty sentence", (empty) => {
     expect(
-      describeToolReply(CMD, TOOL, { response: ResponseCode.ERROR_FROM_TOOL, error_message: empty }),
+      describeToolReply(CMD, TOOL, {
+        response: ResponseCode.ERROR_FROM_TOOL,
+        error_message: empty,
+      }),
     ).toEqual({ code: ResponseCode.ERROR_FROM_TOOL, message: ERROR_FROM_TOOL_EMPTY });
   });
 });
@@ -98,7 +104,9 @@ describe("describeToolReply default codes", () => {
 
 describe("describeToolReply SUCCESS (ERR-05)", () => {
   it.each(["", undefined])("SUCCESS with %j is a plain success", (empty) => {
-    expect(describeToolReply(CMD, TOOL, { response: ResponseCode.SUCCESS, error_message: empty })).toBeNull();
+    expect(
+      describeToolReply(CMD, TOOL, { response: ResponseCode.SUCCESS, error_message: empty }),
+    ).toBeNull();
   });
 
   it("SUCCESS with a message is reported as ERROR_FROM_TOOL, never SUCCESS", () => {
@@ -126,15 +134,18 @@ describe("describeToolReply fidelity and invariants", () => {
     },
   );
 
-  it.each(Object.values(ResponseCode))("%s never yields code SUCCESS or an empty message", (code) => {
-    for (const text of ["boom", "", "   ", undefined]) {
-      const r = describeToolReply(CMD, TOOL, { response: code, error_message: text });
-      if (r) {
-        expect(r.code).not.toBe(ResponseCode.SUCCESS);
-        expect(r.message.trim().length).toBeGreaterThan(0);
+  it.each(Object.values(ResponseCode))(
+    "%s never yields code SUCCESS or an empty message",
+    (code) => {
+      for (const text of ["boom", "", "   ", undefined]) {
+        const r = describeToolReply(CMD, TOOL, { response: code, error_message: text });
+        if (r) {
+          expect(r.code).not.toBe(ResponseCode.SUCCESS);
+          expect(r.message.trim().length).toBeGreaterThan(0);
+        }
       }
-    }
-  });
+    },
+  );
 });
 
 describe("ToolCommandExecutionError.codeString (D-13)", () => {

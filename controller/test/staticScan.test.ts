@@ -558,7 +558,10 @@ describe("step card error fits the fixed card (G-03-3)", () => {
 
   it("the card box, the error text style and the label are unchanged", () => {
     const errAt = cardSrc.indexOf("title={errorText}");
-    const errText = cardSrc.slice(cardSrc.lastIndexOf("<Text", errAt), cardSrc.indexOf("</Text>", errAt));
+    const errText = cardSrc.slice(
+      cardSrc.lastIndexOf("<Text", errAt),
+      cardSrc.indexOf("</Text>", errAt),
+    );
     expect(errText).toMatch(/fontSize="sm"/);
     expect(errText).toMatch(/noOfLines=\{3\}/);
     expect(errText).toMatch(/whiteSpace="normal"/);

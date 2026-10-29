@@ -36,7 +36,8 @@ const { dbMock, fakeQueue } = vi.hoisted(() => {
     commands: { runPush: vi.fn(), push: vi.fn() },
     enqueueRun: vi.fn(),
     state: undefined,
-  };  return { dbMock, fakeQueue };
+  };
+  return { dbMock, fakeQueue };
 });
 
 vi.mock("@/db/client", () => ({ db: dbMock, sqlite: {} }));
@@ -281,15 +282,17 @@ describe("operator-only enqueue refusal (D-02b)", () => {
     expect(details).toContain("stage=enqueue");
     expect(details).toContain("protocolId=101");
     expect(details).toContain("step=0");
-    expect(details).toContain('toolId=stack-1');
-    expect(details).toContain('toolType=stack'); // declared type is the cheap early layer; execute is the backstop
+    expect(details).toContain("toolId=stack-1");
+    expect(details).toContain("toolType=stack"); // declared type is the cheap early layer; execute is the backstop
   });
 
   it("refuses a script protocol whose resolveToolTypes-filled steps contain a stack acknowledge identically", async () => {
     const { executeProtocolScript } = await import("@/server/scripting/protocol-script-executor");
     vi.mocked(executeProtocolScript).mockResolvedValueOnce({
       success: true,
-      commands: [{ toolId: "stack-1", toolType: "stack", command: "acknowledge_failure", params: {} }],
+      commands: [
+        { toolId: "stack-1", toolType: "stack", command: "acknowledge_failure", params: {} },
+      ],
     } as never);
     installProtocolRow({
       id: 102,
@@ -330,7 +333,9 @@ describe("operator-only enqueue refusal (D-02b)", () => {
       name: "visual-ack",
       mode: "visual",
       workcellId: 1,
-      commands: [{ toolId: "stack-1", toolType: "stack", command: "acknowledge_failure", params: {} }],
+      commands: [
+        { toolId: "stack-1", toolType: "stack", command: "acknowledge_failure", params: {} },
+      ],
     });
 
     const caller = runRouter.createCaller({});
@@ -356,7 +361,9 @@ describe("operator-only enqueue refusal (D-02b)", () => {
       name: "visual-ack",
       mode: "visual",
       workcellId: 1,
-      commands: [{ toolId: "stack-1", toolType: "stack", command: "acknowledge_failure", params: {} }],
+      commands: [
+        { toolId: "stack-1", toolType: "stack", command: "acknowledge_failure", params: {} },
+      ],
     });
 
     const res = {
@@ -366,16 +373,17 @@ describe("operator-only enqueue refusal (D-02b)", () => {
       setHeader: vi.fn(),
     };
 
-    await pagesApiRunsHandler({ method: "POST", body: { protocolId: "101" } } as never, res as never);
+    await pagesApiRunsHandler(
+      { method: "POST", body: { protocolId: "101" } } as never,
+      res as never,
+    );
     // handler() does not await the async postHandler — flush before asserting.
     for (let i = 0; i < 50 && res.status.mock.calls.length === 0; i++) {
       await new Promise((resolve) => setImmediate(resolve));
     }
 
     expect(res.status).toHaveBeenCalledWith(400);
-    expect(res.end).toHaveBeenCalledWith(
-      expect.stringContaining('which is an operator action'),
-    );
+    expect(res.end).toHaveBeenCalledWith(expect.stringContaining("which is an operator action"));
     expect(res.status).not.toHaveBeenCalledWith(500);
   });
 
@@ -394,7 +402,9 @@ describe("operator-only enqueue refusal (D-02b)", () => {
 
     const refusedLogs = vi
       .mocked(logAction)
-      .mock.calls.filter((call) => (call[0] as { action: string }).action.includes("Operator-Only"));
+      .mock.calls.filter((call) =>
+        (call[0] as { action: string }).action.includes("Operator-Only"),
+      );
     expect(refusedLogs).toHaveLength(0); // vacuous: the guard loop never ran
     expect(RunStore.global.all()).toHaveLength(0);
     expect(fakeQueue.enqueueRun).toHaveBeenCalledTimes(0);
@@ -417,7 +427,9 @@ describe("operator-only enqueue refusal (D-02b)", () => {
     expect(fakeQueue.enqueueRun).toHaveBeenCalledTimes(1); // staged but never dispatched (queue stub)
     const refusedLogs = vi
       .mocked(logAction)
-      .mock.calls.filter((call) => (call[0] as { action: string }).action.includes("Operator-Only"));
+      .mock.calls.filter((call) =>
+        (call[0] as { action: string }).action.includes("Operator-Only"),
+      );
     expect(refusedLogs).toHaveLength(0);
   });
 });

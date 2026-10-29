@@ -55,11 +55,7 @@ describe("deriveRunOutcome (D-18, D-19)", () => {
 
   it("yields one outcome for several skipped-with-error steps", () => {
     expect(
-      deriveRunOutcome([
-        cmd("COMPLETED"),
-        cmd("SKIPPED", new Error("a")),
-        cmd("SKIPPED", "b"),
-      ]),
+      deriveRunOutcome([cmd("COMPLETED"), cmd("SKIPPED", new Error("a")), cmd("SKIPPED", "b")]),
     ).toBe("COMPLETED_WITH_SKIPPED_FAILURE");
   });
 
