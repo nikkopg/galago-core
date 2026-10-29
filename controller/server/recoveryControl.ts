@@ -113,8 +113,8 @@ export async function recoveryControl(args: {
       level: "warning",
       action: "Tool Recovery Control Refused",
       details: sanitizeLogText(
-      `${baseDetails} outcome=refused: ${result.response} SUCCESS reply carries an error message message=${result.message}`,
-    ),
+        `${baseDetails} outcome=refused: ${result.response} SUCCESS reply carries an error message message=${result.message}`,
+      ),
     });
     return { ok: false, response: result.response, message: result.message };
   }
