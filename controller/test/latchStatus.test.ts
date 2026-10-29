@@ -192,14 +192,14 @@ describe("tool.latchStatus query (D-11)", () => {
     expect(stackGrpc.executeCommand).toHaveBeenCalledWith({ stack: { latch_status: {} } });
   });
 
-  it("returns a not-latched result when the reply carries no meta_data", async () => {
+  it("flags unknown (never a confident not-latched) when the reply carries no meta_data (WR-02)", async () => {
     stackGrpc.executeCommand.mockResolvedValue({
       response: ResponseCode.SUCCESS,
       return_reply: true,
     });
 
     const result = await caller().latchStatus({ toolId: "stack-1" });
-    expect(result).toStrictEqual({ latched: false, unknown: false, raw: {} });
+    expect(result).toStrictEqual({ latched: false, unknown: true, raw: {} });
   });
 
   it("strict-maps a FAILURE reply to a thrown ToolCommandExecutionError", async () => {

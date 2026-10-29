@@ -562,9 +562,18 @@ export const toolRouter = router({
       return_reply: true,
     };
     const reply = await tool.executeCommand(command);
-    if (!reply) {
-      return extractLatch(undefined);
+    // A reply the controller could not read back (missing reply, or a reply
+    // without meta_data) is NOT a confident "not latched" verdict (D-13):
+    // flag it unknown so the card shows the unknown state instead of
+    // pretending to know (WR-02). FAILURE / SUCCESS-with-error-message
+    // replies never reach here — describeToolReply throws for those.
+    if (!reply || reply.meta_data === undefined || reply.meta_data === null) {
+      return {
+        latched: false,
+        unknown: true,
+        raw: {},
+      };
     }
-    return extractLatch(reply.meta_data as Record<string, unknown> | undefined);
+    return extractLatch(reply.meta_data as Record<string, unknown>);
   }),
 });
