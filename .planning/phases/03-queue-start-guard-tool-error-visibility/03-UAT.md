@@ -1,5 +1,5 @@
 ---
-status: complete
+status: diagnosed
 phase: 03-queue-start-guard-tool-error-visibility
 source: [03-VERIFICATION.md]
 started: 2026-10-28T22:54:02Z
@@ -60,5 +60,14 @@ blocked: 0
   reason: "Automated UAT: card content is 230px in a 163px box (internal scroll needed) and the sticky 'Run script' label overlaps the first error line at the default scroll position"
   severity: minor
   test: 3
-  artifacts: []
-  missing: []
+  root_cause: "The fixed 165px card (151px content box) already holds 147-148px of non-error content; 03-06 stacked the error Text vertically below CommandImage (+8px gap +up to 63px), so content reaches 218px (scrollHeight 230 vs clientHeight 163) even for a 1-line error. Once the card overflows, the background-less sticky bottom label pins at card y131-158 and paints over the error text until scrollTop ~60. The UI-SPEC fit claim was never measured."
+  artifacts:
+    - path: "controller/components/runs/list/SwimLaneCommandComponent.tsx"
+      issue: "Error Text added as another vertical VStack child under CommandImage inside a fixed height=165px overflowY=auto card; sticky bottom label overlays content when the card overflows"
+    - path: "controller/components/tools/CommandImage.tsx"
+      issue: "Image block is a fixed 64px (Tool Box IconButton + py=3) / 65px (Image), leaving no vertical room for an error block"
+  missing:
+    - "Card content must fit 151px with a 3-line error (scrollHeight <= clientHeight) without resizing the card, changing the error Text's font size/lineHeight or noOfLines={3}, or changing the label"
+    - "Keep staticScan error-visibility invariants green (stepErrorText(command), noOfLines={3}, whiteSpace=normal, title={errorText}, single COMPLETED CheckCircle, no dangerouslySetInnerHTML)"
+    - "Visual re-check: FAILED and skipped-after-failure cards, 1- and 3-line messages, Tool Box and Image tools, 250-300px card widths"
+  debug_session: .planning/debug/step-card-error-overflow.md
