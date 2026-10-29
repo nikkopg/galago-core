@@ -136,23 +136,34 @@ applies.
 
 ## Typography
 
-Exactly 3 sizes, exactly 2 weights — all already in use by the touched components; nothing new is
-introduced.
+Exactly 3 sizes, exactly 2 weights. The declared weight set is **exactly {400, 700}** — this is the
+complete set, there is no third weight, and no NEW weight may be introduced. All sizes and weights are
+already rendered by the touched components; nothing new is introduced.
 
-| Role | Size | Weight | Line Height |
-|------|------|--------|-------------|
-| Body | 16px (Chakra `Text` default) | 400 | 1.5 (Chakra body default) — modal body, latch result, card description |
-| Label / helper | 14px (`fontSize="sm"`) | 400 | 1.5 — "Failure guid" field label, "Arm inspected?" label, helper/disabled hint, tracked note |
-| Heading | 24px (Chakra `Heading size="md"`) | 600–700 (semibold) | 1.2 — card title "Run Recovery"; use Chakra default heading weight |
-| Heading (sub, optional) | 20px (`Heading size="sm"`) | 600–700 | 1.2 — "Latched failure" sub-heading |
-| Emphasis (bold text) | inherits size | 700 (`fontWeight="bold"`, already forced by theme `Button` baseStyle and `ModalHeader`) | — |
+| Role | Size | Weight | Line Height | Rendering basis (verified, no ambiguity for the executor) |
+|------|------|--------|-------------|------------------------------------------------------------|
+| Body | 16px (Chakra `Text` default) | 400 | 1.5 (Chakra body default) | modal body, latch result, card description |
+| Label / helper | 14px (`fontSize="sm"`) | 400 | 1.5 | "Failure guid" field label, "Arm inspected?" label, helper/disabled hint, tracked note |
+| Heading (card title) | 20px — Chakra `Heading size="md"` resolves to `fontSize "xl"` = 20px (verified in installed `@chakra-ui/theme` 3.3.1, `heading.js` sizes.md) | 700 (bold) | 1.2 | card title "Run Recovery" — renders bold today: the theme's functional `Heading` baseStyle (`customTheme.ts:150-154`, color only) REPLACES Chakra's default heading baseStyle under `extendTheme`, so no class-level font-weight is emitted and the browser's user-agent bold applies to the `h2` element. Leave this as-is; do NOT "normalize" it to semibold |
+| Heading (sub, new) | 16px — `Heading size="sm"` resolves to `fontSize "md"` = 16px (same `heading.js`) | 700 (bold) | 1.2 | new "Latched failure" sub-heading: write it as `Heading size="sm" fontWeight={700}` — the explicit prop pins the same bold the sibling card title already renders, so the weight is deterministic and not dependent on user-agent defaults |
+| Modal header | 20px — `ModalHeader` default `fontSize "xl"` (verified `modal.js` baseStyleHeader; the theme sets no ModalHeader styles) | 700 (bold) | Chakra default | ack header "Acknowledge STACK failure" flows through the SHARED modal's existing `<ModalHeader fontWeight="bold">` prop (`RunControlConfirmModal.tsx:223`) — the bold is forced by that explicit component prop, NOT by the theme (the theme sets no ModalHeader weight); no change |
+| Button labels | inherit size | 700 | Chakra default | forced by theme `Button` baseStyle `fontWeight: "bold"` (`customTheme.ts:55-59`) — applies to every Button on this surface (card CTAs, "Use this guid", Cancel, Confirm) with no change |
+
+Accuracy restatement (supersedes the earlier draft): bold 700 is forced by the theme `Button`
+baseStyle (verified `customTheme.ts:55-59`) and by the shared modal's existing component-level
+`ModalHeader fontWeight="bold"` prop (verified `RunControlConfirmModal.tsx:223`). The THEME itself sets
+no `ModalHeader` or `Heading` weight.
 
 Line height: keep Chakra defaults (body 1.5, headings 1.2). Long-text handling: guid/result values
 render with `wordBreak="break-all"` (raw JSON: `fontFamily="mono"` + `wordBreak="break-all"`); the
 guid input clips at `maxLength={256}` per D-08.
 
+Toast surfaces reuse the untouched app-wide `Toast` module as-is (Chakra Alert defaults); their
+typography is inherited chrome outside this contract's declared set and must not be restyled.
+
 Fonts are NOT locked by the checker as HTML sizes — the lock is: no NEW font sizes beyond
-{14, 16, 20-optional, 24}, no NEW weights beyond {400, 700}, no `sizes` theme edits.
+{14, 16, 20}, no NEW weights beyond {400, 700} (and no third weight of any kind), no `sizes` theme
+edits.
 
 ---
 
@@ -183,6 +194,28 @@ status (red left-accent) which belongs to semantic error, not to the accent.
 
 Text colors: `gray.800` light / `whiteAlpha.900` dark (theme `Text`/`Heading` baseStyles). Borders:
 `border.subtle` in dark, `gray.200`/`gray.300` light (theme Input/Card baseStyles).
+
+---
+
+## Visual Focal Points
+
+One unambiguous focal anchor per surface, declared explicitly:
+
+- **Card focal point: the "Acknowledge failure…" action.** It is the ONLY solid-accent element on the
+  card (the only solid `teal.500 #44518e` fill); every other card element is neutral —
+  "Run Recovery" title and description are text, "Read latch" is a plain default/outline Button, the
+  latch result block is neutral text, and the guid Input is a bordered outline field. Reading order
+  reinforces it: card title (20px bold) → description (16px) → "Latched failure" block (16px bold
+  sub-heading) → "Failure guid" field → the solid CTA at the bottom of the card.
+- **Modal focal point: the guid restatement line.** The body's first sentence
+  (`Acknowledge the most recent failure on this tool using guid "{guid}".`) is the modal's
+  information center — the quoted guid is byte-for-byte verbatim and the line the operator must read
+  before acting; nothing in the modal body competes with it (decision labels are 14px ordinary text,
+  radios are small controls).
+- **Modal terminal accent: "Confirm".** The solid-teal Confirm button in the footer is the modal's
+  only solid-accent control and the last thing the operator touches; it stays disabled (standard
+  Chakra disabled grey) until "Arm inspected?" is answered "Yes", so the accent activates exactly when
+  the send becomes possible.
 
 ---
 
@@ -315,6 +348,17 @@ card, banner↔tool-page link, `protocol.preview` early refusal surfacing, tool-
 - User input this session: none needed — every open question had an upstream answer or a locked
   code-in-place default (the phase is deliberately `--auto`; visual defaults follow the existing
   card/modal exactly).
+
+**Revision (2026-10-29, checker round 1):**
+- Dimension 4 BLOCKER resolved — heading/modal typography rewritten from verified rendering facts:
+  headings render bold **700** (theme's functional `Heading` baseStyle replaces Chakra's default →
+  UA bold applies; verified by executing `extendTheme` against the real `customTheme` and reading
+  installed `@chakra-ui/theme` 3.3.1 `heading.js`), modal header bold comes from the existing
+  `<ModalHeader fontWeight="bold">` component prop (not the theme), Button bold is theme-forced
+  (`customTheme.ts:55-59`). Declared weight set is exactly {400, 700}; sizes corrected to the true
+  Chakra mapping ({14, 16, 20}) — no weight/size contract contradicting the lock.
+- Dimension 2 FLAG resolved — focal anchors declared: card ⇒ "Acknowledge failure…" (only
+  solid-accent element), modal ⇒ guid restatement line with Confirm as terminal accent.
 
 ---
 
