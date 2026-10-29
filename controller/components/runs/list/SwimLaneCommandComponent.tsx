@@ -44,8 +44,10 @@ const SwimLaneCommandComponent: React.FC<LaneCommandComponentProps> = (props) =>
   const skippedTextColor = useColorModeValue("orange.800", "orange.200");
 
   // D-17: the stored error of a FAILED or skipped-after-failure step, read from
-  // the persisted row. A skipped step with an error stays at full opacity so
-  // the failure text is legible; a plain operator Skip keeps the dimmed look.
+  // the persisted row. It sits beside the command image in one row so the fixed
+  // card never scrolls and the sticky label never covers it (G-03-3). A skipped
+  // step with an error stays at full opacity so the failure text is legible; a
+  // plain operator Skip keeps the dimmed look.
   const errorText = stepErrorText(command);
   const dimmed =
     command.status === "COMPLETED" || (command.status === "SKIPPED" && errorText === null);
@@ -154,25 +156,31 @@ const SwimLaneCommandComponent: React.FC<LaneCommandComponentProps> = (props) =>
           </HStack>
         </Box>
         <Center p={0}>
-          <VStack spacing={2}>
-            <CommandImage
-              config={infoQuery.data}
-              command={command}
-              onCommandClick={onCommandClick}
-            />
-            {errorText !== null && (
-              <Text
-                fontSize="sm"
-                color={command.status === "FAILED" ? failedTextColor : skippedTextColor}
-                noOfLines={3}
-                whiteSpace="normal"
-                wordBreak="break-word"
-                textAlign="left"
-                userSelect="text"
-                title={errorText}>
-                {errorText}
-              </Text>
-            )}
+          <VStack spacing={2} width="100%">
+            <HStack spacing={2} width="100%" justifyContent="center">
+              <Box flexShrink={0}>
+                <CommandImage
+                  config={infoQuery.data}
+                  command={command}
+                  onCommandClick={onCommandClick}
+                />
+              </Box>
+              {errorText !== null && (
+                <Text
+                  fontSize="sm"
+                  color={command.status === "FAILED" ? failedTextColor : skippedTextColor}
+                  noOfLines={3}
+                  whiteSpace="normal"
+                  wordBreak="break-word"
+                  textAlign="left"
+                  userSelect="text"
+                  flex="1"
+                  minW={0}
+                  title={errorText}>
+                  {errorText}
+                </Text>
+              )}
+            </HStack>
             <Box bottom={0} position="sticky">
               <Text>{capitalizeFirst(command.commandInfo.command.replaceAll("_", " "))}</Text>
             </Box>
