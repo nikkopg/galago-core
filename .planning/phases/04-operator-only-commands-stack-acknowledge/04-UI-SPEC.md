@@ -1,7 +1,8 @@
 ---
 phase: "4"
 slug: "operator-only-commands-stack-acknowledge"
-status: draft
+status: approved
+reviewed_at: 2026-10-29
 shadcn_initialized: false
 preset: none
 created: "2026-10-29"
