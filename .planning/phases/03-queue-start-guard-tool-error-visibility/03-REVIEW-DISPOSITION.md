@@ -5,20 +5,20 @@ titles: json
 findings:
   - id: WR-01
     severity: warning
-    disposition: fixed
-    title: "Start is silently dropped while the loop is only notifying, so a FAILED-state retry can be swallowed with no operator feedback"
+    disposition: open
+    title: "G-03-3 scan lets `flexShrink={0}` pass when it is not on the image wrapper"
   - id: WR-02
     severity: warning
-    disposition: fixed
-    title: "`getError` now returns `stack` for every error type, including non-tool errors"
+    disposition: open
+    title: "Row adds a stray 8px gap and shifts the error text while `tool.info` loads or for tools without an image"
   - id: IN-01
     severity: info
     disposition: open
-    title: "A brief window can show the previous failure's text under a new FAILED state"
+    title: "Error text is hover-only for the full message"
   - id: IN-02
     severity: info
     disposition: open
-    title: "`updateRunAttributes` is still `async` but now has no `await`"
+    title: "Sticky-label scan is whitespace and prop-order sensitive"
   - id: IN-03
     severity: info
     disposition: open
@@ -31,21 +31,23 @@ findings:
     severity: info
     disposition: fixed
     title: "Running-step comment orphaned above the new isStartInProgress getter"
-open: 3
+open: 5
 total: 7
-recorded: 2026-10-28T22:50:31.000Z
+recorded: 2026-10-29T04:29:36.518Z
 ---
 
 # Phase 03: Code Review Disposition
 
 | Finding | Severity | Disposition | Source |
 |---------|----------|-------------|--------|
-| WR-01 | warning | fixed | 5191ffe |
-| WR-02 | warning | fixed | 5191ffe |
+| WR-01 | warning | open | - |
+| WR-02 | warning | open | - |
 | IN-01 | info | open | - |
 | IN-02 | info | open | - |
-| IN-03 | info | open | - |
-| IN-04 | info | fixed | 06fc3ea |
-| IN-05 | info | fixed | 06fc3ea |
+| IN-03 | info | open | - (not in the current review) |
+| IN-04 | info | fixed | 06fc3ea (not in the current review) |
+| IN-05 | info | fixed | 06fc3ea (not in the current review) |
 
-WR-01 note: fixing it reverses CONTEXT D-02 ("no toast for an ignored Start") at the user's request on 2026-10-29; an ignored Start now shows a warning toast.
+Dispositions: `open` (recorded, not yet triaged), `fixed`, `skipped`, `deferred`.
+Set `deferred` by hand and put the reason in the Source cell; both are preserved. A `|` in the reason is kept as prose and escaped on the next run.
+Re-running the gate keeps every row it can. A row the current review no longer reports is kept and its Source cell flagged, so a finding does not leave this record silently. ONE exception: when a finding id is REUSED by a different finding, the earlier decision cannot keep a row — the id is taken — and it is dropped. A RECORDED decision (anything but `open`) is named on the console when that happens; a row still at `open` is replaced silently, because `open` records no decision to lose.
