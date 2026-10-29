@@ -160,13 +160,22 @@ const RunControlConfirmModalBody: React.FC<{
 }) => {
   const cancelRef = useRef<HTMLButtonElement>(null);
   const bgColor = useColorModeValue("white", "surface.section");
-  const spec = getActionSpec(request.toolType, request.action);
-  // A recovery request whose action is declared by the recovery spec (plan
-  // 04-01) — the STACK acknowledge surface today — renders its declared
-  // non-guid choices from that spec. The guid kind is DATA the card carried
-  // in request.params and is restated in the body text, never an input here.
+  // The spec family follows target.kind: a recovery target resolves its
+  // displayed decision surface through the recovery spec — by construction
+  // the same shape the send gate validates — so the two families can never
+  // silently diverge. A running-step target resolves through runControl.
+  const spec =
+    request.target.kind === "recovery"
+      ? undefined
+      : getActionSpec(request.toolType, request.action);
+  // A recovery request renders the recovery spec's declared non-guid choices
+  // (plan 04-01) — the STACK acknowledge surface today. The guid kind is
+  // DATA the card carried in request.params and is restated in the body
+  // text, never an input here.
   const recoverySpec =
-    spec === undefined ? getRecoverySpec(request.toolType, request.action) : undefined;
+    request.target.kind === "recovery"
+      ? getRecoverySpec(request.toolType, request.action)
+      : undefined;
   const recoveryChoiceNames =
     recoverySpec === undefined
       ? []
