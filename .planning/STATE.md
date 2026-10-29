@@ -5,11 +5,11 @@ milestone_name: STACK tool support — codegen, operator acknowledge, error visi
 current_phase: 4
 current_phase_name: Operator-only Commands & STACK Acknowledge
 status: planning
-stopped_at: Phase 4 context gathered
-last_updated: "2026-10-29T04:58:05.152Z"
+stopped_at: Phase 4 UI-SPEC approved
+last_updated: "2026-10-29T05:21:45.432Z"
 last_activity: 2026-10-29
 last_activity_desc: Phase 03 complete, transitioned to Phase 4
-state_head: 468531e65f1ede496ca4e0882633ab0a1521e062
+state_head: 4e34c00d3d44779bb986fcacccbf579c2427ba3b
 progress:
   total_phases: 3
   completed_phases: 1
@@ -147,9 +147,9 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-29T04:58:05.109Z
-Stopped at: Phase 4 context gathered
-Resume file: .planning/phases/04-operator-only-commands-stack-acknowledge/04-CONTEXT.md
+Last session: 2026-10-29T05:21:45.395Z
+Stopped at: Phase 4 UI-SPEC approved
+Resume file: .planning/phases/04-operator-only-commands-stack-acknowledge/04-UI-SPEC.md
 
 ## Operator Next Steps
 
