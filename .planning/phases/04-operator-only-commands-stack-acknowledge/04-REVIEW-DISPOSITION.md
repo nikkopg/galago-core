@@ -25,25 +25,25 @@ findings:
     title: "`run.create` leaves `numberOfRuns` unvalidated — negative/zero silently no-op, large values enqueue unbounded instrument runs"
   - id: IN-01
     severity: info
-    disposition: open
+    disposition: fixed
     title: "`RECOVERY_STRICT_SUCCESS[String(toolType)]` uses a prototype-exposed lookup, violating the module family's own D-04 discipline"
   - id: IN-02
     severity: info
-    disposition: open
+    disposition: fixed
     title: "Dead field — `RunStore.nextRunId` is never used"
   - id: IN-03
     severity: info
-    disposition: open
+    disposition: fixed
     title: "`readClick` awaits `latchQuery.refetch()` without a catch — a rejecting refetch escapes as an unhandled rejection"
   - id: IN-04
     severity: info
-    disposition: open
+    disposition: fixed
     title: "`/api/runs` POST default branch leaks raw internal error text to clients with status 500"
   - id: IN-05
     severity: info
-    disposition: open
+    disposition: fixed
     title: "Confirm modal resolves the action spec from `runControl` regardless of `target.kind` — latent silent-refusal trap"
-open: 5
+open: 0
 total: 10
 recorded: 2026-10-29T12:00:00.000Z
 ---
@@ -57,11 +57,11 @@ recorded: 2026-10-29T12:00:00.000Z
 | WR-03 | warning | fixed (requires human verification) | 3a5cbc8 |
 | WR-04 | warning | fixed (requires human verification) | b0dcc40 |
 | WR-05 | warning | fixed (bound 1–100 is a human-confirmable product choice) | fcfc0b3 |
-| IN-01 | info | open | - |
-| IN-02 | info | open | - |
-| IN-03 | info | open | - |
-| IN-04 | info | open | - |
-| IN-05 | info | open | - |
+| IN-01 | info | fixed | 10b9ae3 |
+| IN-02 | info | fixed | 2e5d7e5 |
+| IN-03 | info | fixed | 2205395 |
+| IN-04 | info | fixed | 5a1e317 |
+| IN-05 | info | fixed (requires human verification) | 7e4f9fd |
 
 Dispositions: `open` (recorded, not yet triaged), `fixed`, `skipped`, `deferred`.
 Set `deferred` by hand and put the reason in the Source cell; both are preserved. A `|` in the reason is kept as prose and escaped on the next run.
