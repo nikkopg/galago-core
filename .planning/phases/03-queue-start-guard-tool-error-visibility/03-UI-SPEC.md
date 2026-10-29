@@ -196,10 +196,14 @@ colorScheme="red"`, `Details` button (`size="sm"`, `colorScheme="red"`, `variant
 ### S3. Step card error text (ERR-03, D-17)
 
 In `SwimLaneCommandComponent`, render `stepErrorText(command)` (null for any status other than FAILED, or
-SKIPPED carrying a stored error). Placement: inside the existing inner `VStack`, **between `CommandImage` and
-the sticky command-label `Box`**, so it scrolls with the card content and never sits behind the sticky label
-**[assumed; resolves research Pitfall 5 vs CONTEXT "under the command label"]**. Do not change the card size
-or the sticky label.
+SKIPPED carrying a stored error). Placement: `CommandImage` and the error `Text` share one `HStack` row inside
+the existing inner `VStack`: image left in a non-shrinking `Box` (`flexShrink={0}`), text right with `flex="1"`
+and `minW={0}`, the row centred when there is no error. The unchanged sticky command-label `Box` follows the row;
+DOM order stays image, text, label. The row is as tall as the image block (64/65px), so the 3-line text (63px)
+adds no height and the card never scrolls. History: the first placement (text stacked under the image)
+overflowed the card by 67px and the pinned label covered the first error line (UAT test 3, gap G-03-3,
+`.planning/debug/step-card-error-overflow.md`); amended by 03-07. Do not change the card size or the sticky
+label.
 
 | Status | Copy | Style |
 |--------|------|-------|
@@ -307,7 +311,7 @@ empty/error states lives in the Copywriting Contract; rows here reference it.
 
 - { statement: "S1 overflow of copy at narrow modal widths wraps without clipping the existing warning text", verification: backstop }
 - { statement: "S2 overflow: a 160px scrolling message region with a long tool message keeps the close button and code badge visible", verification: backstop }
-- { statement: "S3 overflow: three clamped lines plus the command image fit inside the fixed 165px step card", verification: backstop }
+- { statement: "S3 overflow: three clamped lines plus the command image fit inside the fixed 165px step card", verification: backstop }  <!-- G-03-3: this statement was false for the stacked placement (the card overflowed by 67px); re-checked by the 03-07 UAT test 3 retest -->
 - { statement: "S4 partial: a run whose skipped-failure step is followed by COMPLETED steps still shows the orange badge on screen", verification: backstop }
 - { statement: "S4 overflow: the Skipped failure badge beside the run name wraps cleanly at narrow widths", verification: backstop }
 
@@ -349,7 +353,7 @@ empty/error states lives in the Copywriting Contract; rows here reference it.
 | # | Assumption | Source of the choice |
 |---|------------|----------------------|
 | UA1 | Tool is `none` (Chakra), shadcn is not initialised | Existing Chakra screens; no `components.json` |
-| UA2 | Step-card error text sits between `CommandImage` and the sticky label | Research Pitfall 5 over CONTEXT D-17 wording |
+| UA2 | Step-card error text sits beside `CommandImage` in one row, between it and the sticky label in DOM order (amended by 03-07 for G-03-3) | Research Pitfall 5 over CONTEXT D-17 wording; stacked placement overflowed the card |
 | UA3 | A SKIPPED-with-error card uses opacity 1 | ERR-05 intent: a skipped failure must stay readable |
 | UA4 | Run badge text `Skipped failure`, orange, with the long form in a `title` | D-18 allows the planner to name it; short label fits the row |
 | UA5 | The "step(s) still running" line in S1 | Research A6, discretionary under D-05 |
