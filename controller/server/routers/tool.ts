@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { procedure, router } from "@/server/trpc";
 import { db } from "@/db/client";
+import type { ToolCommandInfo } from "@/types";
 import { findOne, findMany, getSelectedWorkcellId, INVENTORY_TOOL_MAP } from "@/db/helpers";
 import { tools, logs, robotArmMotionProfiles, robotArmGripParams, nests } from "@/db/schema";
 import { eq } from "drizzle-orm";
@@ -8,6 +9,7 @@ import { TRPCError } from "@trpc/server";
 import Tool from "@/server/tools";
 import CommandQueue from "@/server/command_queue";
 import { recoveryControl } from "@/server/recoveryControl";
+import { LATCH_READ_COMMAND, extractLatch } from "@/server/recoveryActions";
 import { normalizeToolKey as normalize } from "@/server/toolKey";
 import { Config } from "gen-interfaces/tools/grpc_interfaces/tool_base";
 import { ToolType } from "gen-interfaces/controller";
@@ -506,7 +508,8 @@ export const toolRouter = router({
     }),
 
   // Crash-recovery control (D-06, D-23): sends a recovery action declared by
-  // server/recoveryActions.ts to a tool by id when no queue step is tracking
+  // server/recoveryActions.ts (isRecoveryAction) to a tool by id when no
+  // queue step is tracking
   // it. action stays z.string() at the schema level (not restricted to the
   // declared recovery actions) so an undeclared action attempt still reaches
   // recoveryControl's own refusal and gets logged, the same reasoning as
@@ -532,4 +535,36 @@ export const toolRouter = router({
         params: input.params ?? {},
       });
     }),
+
+  // Structured latch read for the STACK Run Recovery card (D-11, D-13): the
+  // tool.latchStatus query has toolId-only input and sends ONE fixed command
+  // constant (LATCH_READ_COMMAND in
+  // server/recoveryActions.ts) through Tool.executeCommand — never
+  // Tool.controlCommand (the .controlCommand( caller pin stays exactly
+  // command_queue.ts + this file's recoveryControl mutation) and never the
+  // operator ack path (D-11). Input is toolId ONLY: zToolType rejects "stack"
+  // until Phase 5, so toolType derives from the DB row exactly like the
+  // recovery mutation above. FAILURE / SUCCESS-with-error-message mapping
+  // (describeToolReply inside executeCommand) is inherited for free; the raw
+  // reply is interpreted once, client-side, by the pure extractLatch (D-13).
+  latchStatus: procedure.input(z.object({ toolId: z.string() })).query(async ({ input }) => {
+    const record = await getToolFromDB(input.toolId);
+    const tool = Tool.forId(record.name, record.ip, record.port, record.type as ToolType);
+
+    // return_reply is set in the command info so the tool's reply carries
+    // its meta_data; instance executeCommand returns the reply only when
+    // return_reply is present on it (server/tools.ts), undefined otherwise.
+    const command: ToolCommandInfo & { return_reply: true } = {
+      toolId: tool.id,
+      toolType: record.type as ToolType,
+      command: LATCH_READ_COMMAND,
+      params: {},
+      return_reply: true,
+    };
+    const reply = await tool.executeCommand(command);
+    if (!reply) {
+      return extractLatch(undefined);
+    }
+    return extractLatch(reply.meta_data as Record<string, unknown> | undefined);
+  }),
 });

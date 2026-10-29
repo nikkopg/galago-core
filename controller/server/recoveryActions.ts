@@ -203,3 +203,82 @@ export function validateRecoveryRequest(
 export const RECOVERY_STRICT_SUCCESS: Readonly<Record<string, readonly string[]>> = deepFreeze({
   stack: ["acknowledge_failure"],
 });
+
+// ===================== Latch read (D-11, D-13) =====================
+// The server sends ONE fixed command constant through Tool.executeCommand
+// (tool.latchStatus in routers/tool.ts) — never the operator control path,
+// never a client-chosen command. This keeps the Run Recovery card from ever
+// becoming a generic command sender (ACK-AND-F3.md §3.3).
+
+// PLACEHOLDER name until galago-tools Phase 4 freezes the proto command name
+// (D-13/A1). Exactly one constant owns the name; Phase 5's contract test
+// (GEN-04) pins this constant against the generated stack.Command oneof.
+export const LATCH_READ_COMMAND = "latch_status";
+
+export interface LatchInfo {
+  latched: boolean;
+  guid?: string;
+  kind?: string;
+  explanation?: string;
+  unknown: boolean;
+  raw: Record<string, unknown>;
+}
+
+// Pure, shape-tolerant interpreter for the latch reply (D-13): galago-tools'
+// wire shape is NOT frozen yet ({"kind","latched","guid","resultKind","reason",
+// "explanation"} per its G2 row), so the guid is looked up as a string at the
+// top level, under `latch`, or under `result` — the FIRST candidate carrying a
+// non-empty string guid wins. No proto imports of any kind: unit-testable
+// against plain objects. Never trims or coerces (same D-08 rule).
+export function extractLatch(meta: Record<string, unknown> | undefined): LatchInfo {
+  const raw: Record<string, unknown> = meta ?? {};
+  if (Object.keys(raw).length === 0) {
+    return { latched: false, unknown: false, raw: {} };
+  }
+
+  const candidates = [raw, readCandidate(raw, "latch"), readCandidate(raw, "result")];
+
+  for (const candidate of candidates) {
+    if (!candidate) {
+      continue;
+    }
+    const guid = candidate.guid;
+    if (typeof guid === "string" && guid !== "") {
+      return {
+        latched: true,
+        guid,
+        kind: preferredString(candidate, ["kind", "resultKind"]),
+        explanation: preferredString(candidate, ["explanation", "reason"]),
+        unknown: false,
+        raw,
+      };
+    }
+  }
+
+  // A non-empty object whose shapes this module cannot interpret as a latch
+  // guid: flagged unknown so the card shows the full raw object in the
+  // collapsible instead of pretending to know (D-13).
+  return { latched: false, unknown: true, raw };
+}
+
+function readCandidate(
+  raw: Record<string, unknown>,
+  key: string,
+): Record<string, unknown> | undefined {
+  const value = Object.prototype.hasOwnProperty.call(raw, key) ? raw[key] : undefined;
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : undefined;
+}
+
+// kind/explanation read preferentially over resultKind/reason (galago-tools
+// shape space carries both); only plain string fields are carried, verbatim.
+function preferredString(candidate: Record<string, unknown>, keys: string[]): string | undefined {
+  for (const key of keys) {
+    const value = candidate[key];
+    if (typeof value === "string" && value !== "") {
+      return value;
+    }
+  }
+  return undefined;
+}
