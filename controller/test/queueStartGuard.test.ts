@@ -88,7 +88,9 @@ describe("queue start guard", () => {
     expect(queue.runningStep).toBeDefined();
     const inFlightQueueId = queue.runningStep!.queueId;
 
-    await expect(commandQueueRouter.createCaller({}).restart()).resolves.toBeUndefined();
+    await expect(commandQueueRouter.createCaller({}).restart()).resolves.toEqual({
+      accepted: false,
+    });
     await vi.advanceTimersByTimeAsync(3000);
 
     expect(spy).toHaveBeenCalledTimes(1);
@@ -195,6 +197,43 @@ describe("queue start guard", () => {
     expect(spy).toHaveBeenCalledTimes(3);
     expect(spy.mock.calls.map(([info]) => (info as any).params.tag)).toEqual(["r1", "r2", "r3"]);
   });
+
+  it("restart reports accepted when nothing owns the queue", async () => {
+    holdStep().mockResolvedValue(undefined);
+    await queue.commands.push(row("run-1", "r1"));
+
+    await expect(commandQueueRouter.createCaller({}).restart()).resolves.toEqual({
+      accepted: true,
+    });
+    await vi.advanceTimersByTimeAsync(3000);
+    expect(logs("Queue Start Ignored")).toHaveLength(0);
+  });
+
+  it("a pending failure alert does not hold the queue: the retry Start is accepted (WR-01)", async () => {
+    // The Slack/email alert never settles; before WR-01 the loop awaited it and
+    // kept the single-flight claim, so the operator's retry Start was ignored.
+    vi.spyOn(queue as any, "_notifyFailure").mockReturnValue(new Promise(() => {}));
+    const spy = holdStep();
+    spy.mockRejectedValueOnce(new Error("tool refused"));
+    await queue.commands.push(row("run-1", "r1"));
+
+    const l1 = start();
+    await vi.advanceTimersByTimeAsync(3000);
+    await l1;
+    expect(queue.state).toBe(ToolStatus.FAILED);
+    expect(queue.isStartInProgress).toBe(false);
+
+    spy.mockResolvedValue(undefined);
+    await expect(commandQueueRouter.createCaller({}).restart()).resolves.toEqual({
+      accepted: true,
+    });
+    await vi.advanceTimersByTimeAsync(3000);
+
+    expect(logs("Queue Start Ignored")).toHaveLength(0);
+    expect(spy).toHaveBeenCalledTimes(2);
+    expect((spy.mock.calls[1][0] as any).params.tag).toBe("r1");
+  });
+
   describe("queue start listing", () => {
     // No Tool.executeCommand spy here: the real reply path runs against FakeGrpc.
     it("queuedRowsSync returns the paginated order and drops completed rows", async () => {

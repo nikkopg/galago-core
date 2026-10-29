@@ -284,6 +284,11 @@ export class CommandQueue {
   }
 
   // Read-only accessor for the in-memory running-step record (D-01).
+  // True while a busy loop owns the queue, i.e. when _start would be ignored.
+  get isStartInProgress(): boolean {
+    return this._runningPromise !== undefined;
+  }
+
   get runningStep(): Readonly<RunningStep> | undefined {
     return this._runningStep;
   }
@@ -941,7 +946,9 @@ export class CommandQueue {
       const failure = e instanceof Error ? e : new Error("Execution failed");
       this._recordFailure(failure);
       this._setState(ToolStatus.FAILED);
-      await this._notifyFailure({ error: failure });
+      // Not awaited (WR-01): the alert must not hold the busy-loop claim, or an
+      // operator Start on the FAILED queue would be ignored while it sends.
+      void this._notifyFailure({ error: failure });
     } finally {
       this._runningPromise = undefined;
       if (this.state === ToolStatus.BUSY) {
@@ -1436,7 +1443,10 @@ export class CommandQueue {
               : ""),
         });
 
-        await this._notifyFailure({
+        // Not awaited (WR-01): the Slack/email alert must not keep the loop (and
+        // so the single-flight claim) alive after the queue is already FAILED.
+        // _notifyFailure catches its own errors.
+        void this._notifyFailure({
           error: failure,
           runId: nextCommand.runId,
           toolId: nextCommand.commandInfo?.toolId,

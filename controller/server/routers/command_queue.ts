@@ -5,6 +5,8 @@ import { ToolCommandExecutionError } from "../tools";
 
 // One plain payload for every error. The operator text is composed once, at the
 // source (describeToolReply), so nothing here rewrites it (ERR-02, D-12).
+// The stack stays server-side (logger.error records it); this router has no
+// auth, so it is never sent to the client (WR-02).
 function queueErrorPayload(error: Error, seq: number) {
   if (error instanceof ToolCommandExecutionError) {
     return {
@@ -13,7 +15,6 @@ function queueErrorPayload(error: Error, seq: number) {
       code: error.code,
       codeString: String(error.code),
       name: error.name,
-      stack: error.stack,
       seq,
     };
   }
@@ -22,7 +23,6 @@ function queueErrorPayload(error: Error, seq: number) {
     message: error.message,
     userFriendlyMessage: error.message,
     name: error.name,
-    stack: error.stack,
     seq,
     ...(typeof code === "number" || typeof code === "string" ? { code } : {}),
   };
@@ -32,8 +32,13 @@ export const commandQueueRouter = router({
   state: procedure.query(async () => {
     return CommandQueue.global.state;
   }),
+  // Reports whether this Start was accepted, so an ignored Start (the busy loop
+  // still owns the queue) is visible to the operator, not only in Logs (WR-01).
   restart: procedure.mutation(() => {
-    CommandQueue.global._start();
+    const queue = CommandQueue.global;
+    const accepted = !queue.isStartInProgress;
+    queue._start();
+    return { accepted };
   }),
   stop: procedure.mutation(() => {
     CommandQueue.global.stop();

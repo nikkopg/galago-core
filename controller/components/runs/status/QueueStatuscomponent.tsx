@@ -16,6 +16,7 @@ import {
   Icon,
 } from "@chakra-ui/react";
 import { trpc } from "@/utils/trpc";
+import { warningToast } from "@/components/ui/Toast";
 import { ToolStatus } from "gen-interfaces/tools/grpc_interfaces/tool_base";
 import {
   Play, // replaces FaPlay
@@ -51,7 +52,19 @@ export const QueueStatusComponent: React.FC<QueueStatusComponent> = ({
     },
   };
   const queue = trpc.commandQueue;
-  const restartMutation = queue.restart.useMutation(stateMutationOpts);
+  // WR-01: an ignored Start (the queue is still finishing its previous step)
+  // would otherwise look like success; say so instead of only logging it.
+  const restartMutation = queue.restart.useMutation({
+    ...stateMutationOpts,
+    onSuccess: (result) => {
+      if (result && !result.accepted) {
+        warningToast(
+          "Start ignored",
+          "The queue is still finishing its previous step, so nothing was started. Press Run again in a moment.",
+        );
+      }
+    },
+  });
   const stopMutation = queue.stop.useMutation(stateMutationOpts);
   const clearAllMutation = queue.clearAll.useMutation(stateMutationOpts);
   const { isOpen, onOpen, onClose } = useDisclosure();

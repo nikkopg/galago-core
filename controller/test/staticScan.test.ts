@@ -516,3 +516,21 @@ describe("error visibility invariants (ERR-03, ERR-04, ERR-05)", () => {
     }
   });
 });
+
+describe("Review fixes WR-01 / WR-02", () => {
+  it("the failure alert is never awaited while the busy loop holds the queue (WR-01)", () => {
+    const src = stripComments(read("server/command_queue.ts"));
+    expect(src).not.toMatch(/await\s+this\._notifyFailure\(/);
+  });
+
+  it("an ignored Start is reported to the client and shown to the operator (WR-01)", () => {
+    expect(stripComments(read("server/routers/command_queue.ts"))).toMatch(/return \{ accepted \}/);
+    expect(stripComments(read("components/runs/status/QueueStatuscomponent.tsx"))).toMatch(
+      /!result\.accepted/,
+    );
+  });
+
+  it("getError never sends a stack to the client (WR-02)", () => {
+    expect(stripComments(read("server/routers/command_queue.ts"))).not.toMatch(/stack:/);
+  });
+});

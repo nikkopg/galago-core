@@ -332,6 +332,22 @@ describe("errorPath", () => {
     });
   });
 
+  it("getError never sends the server stack to the client (WR-02)", async () => {
+    await pushRow();
+    grpc.executeCommand.mockResolvedValueOnce({
+      response: ResponseCode.INVALID_ARGUMENTS,
+      error_message: "x",
+    });
+    await drive();
+    expect(await caller().getError()).not.toHaveProperty("stack");
+
+    newQueue();
+    await pushRow();
+    grpc.executeCommand.mockRejectedValueOnce(new Error("socket hang up"));
+    await drive();
+    expect(await caller().getError()).not.toHaveProperty("stack");
+  });
+
   it("covers every ResponseCode", () => {
     expect(Object.keys(EXPECT).sort()).toEqual(Object.values(ResponseCode).sort());
     expect(Object.keys(EXPECT)).toHaveLength(9);
