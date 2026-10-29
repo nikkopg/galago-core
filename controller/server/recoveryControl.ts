@@ -107,8 +107,19 @@ export async function recoveryControl(args: {
   // acknowledge. Present means the raw field is anything but ""; a
   // whitespace-only message is present. Fast resume/abort keep
   // Tool.controlCommand's original result untouched.
+  // Own-property lookup (D-04 discipline mirrors): every sibling lookup in
+  // this phase is guarded the same way — an unguarded
+  // RECOVERY_STRICT_SUCCESS[String(toolType)] resolves to an inherited
+  // Function for toolType values like "toString" or "constructor", and the
+  // trailing includes would throw instead of rendering a graceful refusal.
   const messagePresent = typeof result.message === "string" && result.message !== "";
-  if (result.ok && messagePresent && RECOVERY_STRICT_SUCCESS[String(toolType)]?.includes(action)) {
+  const strictSuccessActions = Object.prototype.hasOwnProperty.call(
+    RECOVERY_STRICT_SUCCESS,
+    String(toolType),
+  )
+    ? RECOVERY_STRICT_SUCCESS[String(toolType)]
+    : undefined;
+  if (result.ok && messagePresent && strictSuccessActions?.includes(action)) {
     await logAction({
       level: "warning",
       action: "Tool Recovery Control Refused",
