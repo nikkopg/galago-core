@@ -46,7 +46,10 @@ export const runRouter = router({
     .input(
       z.object({
         protocolId: z.number(),
-        numberOfRuns: z.number().optional(),
+        // Bounded loop input (WR-05): 0/negative counts are rejected instead
+        // of silently no-oping, and the upper bound keeps one request from
+        // enqueuing an unbounded flood of instrument runs.
+        numberOfRuns: z.number().int().min(1).max(100).optional(),
         parameters: z.record(z.string(), z.string()).optional(),
       }),
     )
