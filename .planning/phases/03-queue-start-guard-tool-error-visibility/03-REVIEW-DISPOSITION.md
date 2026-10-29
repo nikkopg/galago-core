@@ -5,11 +5,11 @@ titles: json
 findings:
   - id: WR-01
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "G-03-3 scan lets `flexShrink={0}` pass when it is not on the image wrapper"
   - id: WR-02
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "Row adds a stray 8px gap and shifts the error text while `tool.info` loads or for tools without an image"
   - id: IN-01
     severity: info
@@ -31,7 +31,7 @@ findings:
     severity: info
     disposition: fixed
     title: "Running-step comment orphaned above the new isStartInProgress getter"
-open: 5
+open: 3
 total: 7
 recorded: 2026-10-29T04:29:36.518Z
 ---
@@ -40,8 +40,8 @@ recorded: 2026-10-29T04:29:36.518Z
 
 | Finding | Severity | Disposition | Source |
 |---------|----------|-------------|--------|
-| WR-01 | warning | open | - |
-| WR-02 | warning | open | - |
+| WR-01 | warning | fixed | 2246f41 |
+| WR-02 | warning | fixed | 2246f41 |
 | IN-01 | info | open | - |
 | IN-02 | info | open | - |
 | IN-03 | info | open | - (not in the current review) |
