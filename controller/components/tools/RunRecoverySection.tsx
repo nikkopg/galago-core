@@ -18,6 +18,7 @@ import {
   Spinner,
   VStack,
   Collapse,
+  Box,
   useColorModeValue,
 } from "@chakra-ui/react";
 import Link from "next/link";
@@ -44,8 +45,8 @@ export interface RunRecoverySectionProps {
 type RecoveryUIAction = "resume" | "abort" | "acknowledge_failure";
 
 // Bounded renderer backstop for an unknown latch reply (T-04-12): the raw
-// object renders as a single JSON line the card's collapsible clips at the
-// layout level, never a loop or a list.
+// object renders as a single JSON line that shows only inside the bounded
+// LatchRawJson panel below, never a loop or a list.
 function formatLatchRaw(raw: Record<string, unknown>): string {
   try {
     return JSON.stringify(raw);
@@ -56,6 +57,47 @@ function formatLatchRaw(raw: Record<string, unknown>): string {
       return "{}";
     }
   }
+}
+
+interface LatchRawJsonProps {
+  raw: Record<string, unknown>;
+  isOpen: boolean;
+  onToggle: () => void;
+}
+
+// The one place a raw latch reply renders, for both the latched and the
+// unrecognized state. The tool page centres the card, so the card is sized by
+// its content: the zero-width basis keeps a long raw line out of the card's
+// intrinsic width, min width 100% fills the card's real width, and max height
+// with internal scroll bounds the length (G-04-2, T-04-12). "0px" is written
+// with a unit because a bare 0 goes through Chakra's fraction transform and
+// becomes 0%, a cyclic percentage that would let the line count again.
+// Display-only: no hooks, no state, nothing here touches the guid or the send.
+function LatchRawJson({ raw, isOpen, onToggle }: LatchRawJsonProps) {
+  return (
+    <>
+      <Button variant="link" size="sm" onClick={onToggle} aria-expanded={isOpen}>
+        Raw JSON
+      </Button>
+      <Collapse in={isOpen}>
+        <Box
+          w="0px"
+          minW="100%"
+          maxH="160px"
+          overflowY="auto"
+          mt={2}
+          p={2}
+          bg="surface.panel"
+          borderWidth="1px"
+          borderColor="border.subtle"
+          borderRadius="md">
+          <Text fontFamily="mono" fontSize="sm" wordBreak="break-all" whiteSpace="pre-wrap">
+            {formatLatchRaw(raw)}
+          </Text>
+        </Box>
+      </Collapse>
+    </>
+  );
 }
 
 // UI-SPEC copy pinned as constants (Read latch / Use this guid / No failure
@@ -102,6 +144,7 @@ export const RunRecoverySection: React.FC<RunRecoverySectionProps> = ({ toolName
   const readClick = async () => {
     if (readPending) return;
     setReadPending(true);
+    setRawOpen(false);
     try {
       const refetched = await latchQuery.refetch();
       setLatchResult(refetched.error ? null : (refetched.data ?? null));
@@ -215,7 +258,8 @@ export const RunRecoverySection: React.FC<RunRecoverySectionProps> = ({ toolName
                     /* D-13: a reply the interpreter could not read is flagged
                        unknown, so the card never presents a confident "No
                        failure latched" for data it could not interpret.
-                       Render-only raw text — it never gates the ack (D-12). */
+                       Render-only raw text in the bounded collapsible — it never
+                       gates the ack (D-12). */
                     <>
                       <Heading size="sm" fontWeight={700}>
                         Unrecognized latch reply
@@ -224,9 +268,11 @@ export const RunRecoverySection: React.FC<RunRecoverySectionProps> = ({ toolName
                         The tool replied, but the latch state could not be interpreted. Inspect the
                         raw reply below; do not assume no failure is latched.
                       </Text>
-                      <Text fontFamily="mono" wordBreak="break-all" fontSize="xs">
-                        {formatLatchRaw(latchResult.raw)}
-                      </Text>
+                      <LatchRawJson
+                        raw={latchResult.raw}
+                        isOpen={rawOpen}
+                        onToggle={() => setRawOpen(!rawOpen)}
+                      />
                     </>
                   ) : !latchResult.latched ? (
                     <>
@@ -249,14 +295,11 @@ export const RunRecoverySection: React.FC<RunRecoverySectionProps> = ({ toolName
                       {latchResult.explanation && (
                         <Text fontSize="sm">explanation: {latchResult.explanation}</Text>
                       )}
-                      <Button variant="link" size="sm" onClick={() => setRawOpen(!rawOpen)}>
-                        Raw JSON
-                      </Button>
-                      <Collapse in={rawOpen}>
-                        <Text fontFamily="mono" wordBreak="break-all" fontSize="xs">
-                          {formatLatchRaw(latchResult.raw)}
-                        </Text>
-                      </Collapse>
+                      <LatchRawJson
+                        raw={latchResult.raw}
+                        isOpen={rawOpen}
+                        onToggle={() => setRawOpen(!rawOpen)}
+                      />
                       {/* D-12: fills the guid input ONLY — verbatim guid, no trim, no send,
                           no modal, no auto-acknowledge. The operator still presses
                           "Acknowledge failure…" and confirms. */}
