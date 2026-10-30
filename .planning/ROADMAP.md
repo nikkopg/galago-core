@@ -127,7 +127,7 @@ a real failure path). No dependency on `stack.proto`: built on string tool types
   5. Static scans fail the suite if any code path acknowledges on its own, if the `acknowledge_failure`
      literal appears outside an exact file list, if it is added to `commandFields` or `runControl`, if the
      guard leaves `executeCommand` or lands in `controlCommand`, or if the latch read feeds the send path.
-**Plans:** 6/7 plans executed
+**Plans:** 7/7 plans executed
 
 Plans:
 **Wave 1**
@@ -145,7 +145,7 @@ Plans:
 
 **Wave 5 — gap closure** *(UAT gaps G-04-5 blocker, G-04-6, G-04-2, G-04-7; blocked on Wave 4 completion)*
 - [x] 04-06-PLAN.md — (wave 5, gap closure) Recovery card: guid hint as a string constant so `next build` lint passes, `next lint` + clean image build as gates (G-04-5); STACK card shows only declared actions and new description (G-04-6); raw latch reply in one bounded collapsible for both states (G-04-2); UAT tests 2/5/6 retest (OPR-01, OPR-03)
-- [ ] 04-07-PLAN.md — (wave 5, gap closure) run.create maps all four errors by name, not class identity, so a next-dev recompile no longer turns the operator-only refusal into a 500; `vi.resetModules()` regression; UAT test 7 retest (OPR-04)
+- [x] 04-07-PLAN.md — (wave 5, gap closure) run.create maps all four errors by name, not class identity, so a next-dev recompile no longer turns the operator-only refusal into a 500; `vi.resetModules()` regression; UAT test 7 retest (OPR-04)
 
 **UI hint**: yes
 **Notes**: Planner must read ACK-AND-F3.md §1.2 so nobody "just adds `stack` to `runControl`" (it would start
@@ -206,7 +206,7 @@ Phases execute in numeric order: 3 → 4 → 5 (Phase 5 waits on galago-tools Ph
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 3. Queue Start Guard & Tool Error Visibility | v2 | 7/7 | Complete    | 2026-10-29 |
-| 4. Operator-only Commands & STACK Acknowledge | v2 | 6/7 | In Progress | - |
+| 4. Operator-only Commands & STACK Acknowledge | v2 | 7/7 | In Progress | - |
 | 5. STACK Codegen & Command Forms | v2 | 0/TBD | Not started (gated on galago-tools Phase 4) | - |
 
 ## Backlog

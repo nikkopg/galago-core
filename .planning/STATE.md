@@ -5,16 +5,16 @@ milestone_name: STACK tool support — codegen, operator acknowledge, error visi
 current_phase: 04
 current_phase_name: Operator-only Commands & STACK Acknowledge
 status: executing
-stopped_at: Completed 04-06-PLAN.md
-last_updated: "2026-10-30T03:56:57.665Z"
+stopped_at: Completed 04-07-PLAN.md
+last_updated: "2026-10-30T04:01:37.956Z"
 last_activity: 2026-10-30
 last_activity_desc: Phase 04 execution started
-state_head: 44ae56dcb05c311a1181f5d462dcf0e499a2e5c2
+state_head: a13dece5cd8cd3a8f0a248370a7b2d42bd20ec44
 progress:
   total_phases: 3
   completed_phases: 1
   total_plans: 14
-  completed_plans: 13
+  completed_plans: 14
   percent: 33
 ---
 
@@ -31,8 +31,8 @@ decides every recovery action; the web app never acts on its own or pre-selects 
 ## Current Position
 
 Phase: 04 (Operator-only Commands & STACK Acknowledge) — EXECUTING
-Plan: 6 of 7 complete (gap closure; 04-07 remaining)
-Status: Executing gap-closure plans
+Plan: 7 of 7 complete (gap closure done; UAT test 7 retest pending in /gsd-verify-work)
+Status: Gap-closure plans complete; awaiting verification
 Last activity: 2026-10-30 — Phase 04 execution started
 
 Progress: [███░░░░░░░] 33%
@@ -85,6 +85,7 @@ Progress: [███░░░░░░░] 33%
 | Phase 04 P04 | 14min | 2 tasks | 4 files |
 | Phase 04 P05 | 286 | 2 tasks | 1 files |
 | Phase 04 P06 | 6 min | 3 tasks | 3 files |
+| Phase 04 P07 | 6 min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -125,6 +126,7 @@ Recent decisions affecting current work:
 - [Phase 04]: 04-05: findMatchingRels helper enforces walk-order enumeration with in-memory fixture support; determinism backstop runs without real files
 - [Phase 04]: 04-06: G-04-5 fixed via GUID_BLANK_HINT JS string constant (not &apos;) so rendered copy and controlDecision pin are unchanged; next lint --no-cache --quiet is the inherited lint gate
 - [Phase 04]: 04-06: STACK recovery buttons hidden via isRecoveryAction (spec-derived); raw latch replies bounded in LatchRawJson (160px, w=0px + minW=100%)
+- [Phase 04]: 04-07: classify run.create errors by Error.name via exported guards (not class identity), so the mapping survives next dev module-copy drift; RunStore/CommandQueue stay on global
 
 ### Pending Todos
 
@@ -168,8 +170,8 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-30T03:56:57.615Z
-Stopped at: Completed 04-06-PLAN.md
+Last session: 2026-10-30T04:01:37.906Z
+Stopped at: Completed 04-07-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
