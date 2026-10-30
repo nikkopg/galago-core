@@ -2,19 +2,19 @@
 gsd_state_version: "1.0"
 milestone: v2
 milestone_name: STACK tool support — codegen, operator acknowledge, error visibility, F5
-current_phase: 4
+current_phase: 04
 current_phase_name: Operator-only Commands & STACK Acknowledge
-status: verifying
-stopped_at: Completed 04-05-PLAN.md
-last_updated: "2026-10-29T07:13:45.509Z"
-last_activity: 2026-10-29
-last_activity_desc: Phase 4 execution started
-state_head: 584f06754b9eb8556afe796d38c04bcbaf8ad15e
+status: executing
+stopped_at: Completed 04-06-PLAN.md
+last_updated: "2026-10-30T03:56:57.665Z"
+last_activity: 2026-10-30
+last_activity_desc: Phase 04 execution started
+state_head: 44ae56dcb05c311a1181f5d462dcf0e499a2e5c2
 progress:
   total_phases: 3
   completed_phases: 1
-  total_plans: 12
-  completed_plans: 12
+  total_plans: 14
+  completed_plans: 13
   percent: 33
 ---
 
@@ -26,14 +26,14 @@ See: .planning/PROJECT.md (updated 2026-10-29)
 
 **Core value:** While an instrument step runs, the operator sees what the instrument is doing and
 decides every recovery action; the web app never acts on its own or pre-selects a physical decision.
-**Current focus:** Phase 4 — Operator-only Commands & STACK Acknowledge
+**Current focus:** Phase 04 — Operator-only Commands & STACK Acknowledge
 
 ## Current Position
 
-Phase: 4 (Operator-only Commands & STACK Acknowledge) — EXECUTING
-Plan: 5 of 5
-Status: Phase complete — ready for verification
-Last activity: 2026-10-29 — Phase 4 execution started
+Phase: 04 (Operator-only Commands & STACK Acknowledge) — EXECUTING
+Plan: 6 of 7 complete (gap closure; 04-07 remaining)
+Status: Executing gap-closure plans
+Last activity: 2026-10-30 — Phase 04 execution started
 
 Progress: [███░░░░░░░] 33%
 
@@ -84,6 +84,7 @@ Progress: [███░░░░░░░] 33%
 | Phase 04 P03 | 11min | 2 tasks | 5 files |
 | Phase 04 P04 | 14min | 2 tasks | 4 files |
 | Phase 04 P05 | 286 | 2 tasks | 1 files |
+| Phase 04 P06 | 6 min | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -122,6 +123,8 @@ Recent decisions affecting current work:
 - [Phase 04]: 04-05: ack-literal closed set pinned to the four ACTUAL carrier files (RunRecoverySection card included), not the plan's three — invariant is the fenced set, not the count
 - [Phase 04]: 04-05: instance executeCommand disambiguated by guard-first body regex (guard is the first statement at HEAD), plus guard-before-substitution ordering assertion
 - [Phase 04]: 04-05: findMatchingRels helper enforces walk-order enumeration with in-memory fixture support; determinism backstop runs without real files
+- [Phase 04]: 04-06: G-04-5 fixed via GUID_BLANK_HINT JS string constant (not &apos;) so rendered copy and controlDecision pin are unchanged; next lint --no-cache --quiet is the inherited lint gate
+- [Phase 04]: 04-06: STACK recovery buttons hidden via isRecoveryAction (spec-derived); raw latch replies bounded in LatchRawJson (160px, w=0px + minW=100%)
 
 ### Pending Todos
 
@@ -165,8 +168,8 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-29T07:13:45.427Z
-Stopped at: Completed 04-05-PLAN.md
+Last session: 2026-10-30T03:56:57.615Z
+Stopped at: Completed 04-06-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
