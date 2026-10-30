@@ -10,7 +10,11 @@ import { eq, and } from "drizzle-orm";
 import type { ProtocolParameter } from "@/protocols/params";
 import { executeProtocolScript } from "@/server/scripting/protocol-script-executor";
 import { resolveToolTypes } from "@/server/scripting/resolve-tool-types";
-import { isOperatorOnlyCommand, OperatorOnlyCommandError } from "./operatorOnlyCommands";
+import {
+  isOperatorOnlyCommand,
+  isOperatorOnlyCommandError,
+  OperatorOnlyCommandError,
+} from "./operatorOnlyCommands";
 
 // Helper function to get tool from database
 async function getToolFromDB(toolId: string) {
@@ -265,10 +269,10 @@ export default class RunStore {
     } catch (error) {
       // Re-throw our custom errors
       if (
-        error instanceof ProtocolNotFoundError ||
-        error instanceof ProtocolGenerationFailedError ||
-        error instanceof OperatorOnlyCommandError ||
-        error instanceof ProtocolParamsInvalidError
+        isProtocolNotFoundError(error) ||
+        isProtocolGenerationFailedError(error) ||
+        isOperatorOnlyCommandError(error) ||
+        isProtocolParamsInvalidError(error)
       ) {
         throw error;
       }
@@ -304,4 +308,19 @@ export class ProtocolGenerationFailedError extends Error {
     super(`Could not generate commands for protocol ID '${protocolId}'.`);
     this.name = "ProtocolGenerationFailedError";
   }
+}
+
+// Classify by error name, not class identity: in next dev RunStore.global is
+// pinned on `global` and can belong to an older module copy than the caller,
+// so it throws classes the caller's module does not recognise (G-04-7).
+export function isProtocolParamsInvalidError(e: unknown): e is ProtocolParamsInvalidError {
+  return e instanceof Error && e.name === "ProtocolParamsInvalidError";
+}
+
+export function isProtocolNotFoundError(e: unknown): e is ProtocolNotFoundError {
+  return e instanceof Error && e.name === "ProtocolNotFoundError";
+}
+
+export function isProtocolGenerationFailedError(e: unknown): e is ProtocolGenerationFailedError {
+  return e instanceof Error && e.name === "ProtocolGenerationFailedError";
 }

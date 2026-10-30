@@ -1,9 +1,10 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import RunStore, {
-  ProtocolGenerationFailedError,
+  isProtocolGenerationFailedError,
+  isProtocolNotFoundError,
+  isProtocolParamsInvalidError,
   ProtocolNotFoundError,
-  ProtocolParamsInvalidError,
   upsertParameterVariables,
 } from "../runs";
 import { isOperatorOnlyCommandError } from "../operatorOnlyCommands";
@@ -84,7 +85,7 @@ export const runRouter = router({
         }
         return runs;
       } catch (e) {
-        if (e instanceof ProtocolNotFoundError) {
+        if (isProtocolNotFoundError(e)) {
           throw new TRPCError({
             code: "NOT_FOUND",
             message: "No protocol found for this ID.",
@@ -96,13 +97,13 @@ export const runRouter = router({
             message: e.message,
           });
         }
-        if (e instanceof ProtocolGenerationFailedError) {
+        if (isProtocolGenerationFailedError(e)) {
           throw new TRPCError({
             code: "BAD_REQUEST",
             message: "Could not generate commands for the given params.",
           });
         }
-        if (e instanceof ProtocolParamsInvalidError) {
+        if (isProtocolParamsInvalidError(e)) {
           throw e.cause;
         }
         throw e;
