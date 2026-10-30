@@ -97,7 +97,7 @@ createStandaloneToast useColorModeValue` — COUNT=21
 | Heading | `@chakra-ui/react` | `size="md"` card title "Run Recovery"; new `size="sm"` sub-heading "Latched failure" |
 | Text | `@chakra-ui/react` | Cards/modal copy; `fontSize="sm"` for labels and helper text |
 | Input | `@chakra-ui/react` | The guid input (theme `Input.outline` variant is styled by `customTheme.ts`); `value=""` initial, `maxLength={256}` |
-| Button / ButtonGroup | `@chakra-ui/react` | Card CTA row (`spacing={4}`); modal footer Cancel ghost + Confirm solid |
+| Button / ButtonGroup | `@chakra-ui/react` | Card CTA row (`spacing={4}`); modal footer Cancel ghost + Confirm solid. Resume/Abort render only for actions declared by the tool type's recovery spec (`isRecoveryAction`), so a STACK card has no ButtonGroup (G-04-6) |
 | RadioGroup / Radio | `@chakra-ui/react` | The Arm inspected confirmation; `value=""` initial — nothing preselected |
 | Modal family (Modal…ModalFooter) | `@chakra-ui/react` | Shared RunControlConfirmModal; `initialFocusRef={cancelRef}` stays (banned only in QueueStatuscomponent.tsx) |
 | HStack / VStack | `@chakra-ui/react` | Row/column layout, `spacing={2}` / `spacing={4}` |
@@ -179,7 +179,7 @@ must work in both).
 | Dominant (60%) | `surface.canvas` = white / `#15171c` dark | Page background (already set by theme global styles) |
 | Secondary (30%) | Card/modal = `surface.section` / `#23252b` dark; panel = `surface.panel` / `#1d2027` dark | Run Recovery card, confirm modal, guid Input field bg (dark), raw-JSON pre block (`surface.panel` with `border.subtle` border) |
 | Accent (10%) | `teal.500` = **`#44518e`** (the theme REPLACES Chakra's default teal with this indigo/blue) | Primary-action fills only |
-| Destructive | `red.500` (Chakra red) | Existing Abort button and its confirm only — no new destructive element in this phase |
+| Destructive | `red.500` (Chakra red) | Existing Abort button and its confirm only — no new destructive element in this phase. Abort appears on F.A.S.T. cards only (G-04-6) |
 
 **Accent `teal.500 #44518e` is reserved for exactly these elements (list is closed):**
 1. "Acknowledge failure…" button (card, solid teal) — disabled state is Chakra's standard disabled
@@ -232,7 +232,7 @@ copy surfaces (static scan).
 | Element | Copy |
 |---------|------|
 | Primary CTA (card) | **"Acknowledge failure…"** (solid teal; disabled until the guid passes the client check `^[^\s\u0000-\u001f\u007f]{1,256}$`) |
-| Card heading / description (existing, adjusted) | Heading "Run Recovery" (unchanged). Description for a STACK tool page: "Read the failure latched on this tool, acknowledge it, or resume/abort an instrument run that no run step is tracking." (F.A.S.T. tool pages keep the existing sentence.) |
+| Card heading / description (existing, adjusted) | Heading "Run Recovery" (unchanged). Description for a STACK tool page: "Read the failure latched on this tool and acknowledge it." (amended by 04-06, G-04-6: STACK declares no resume/abort, so the card offers neither). (F.A.S.T. tool pages keep the existing sentence.) |
 | Sub-heading (new block) | **"Latched failure"** |
 | Explicit read CTA | **"Read latch"** (plain/default Button, no colorScheme; explicit click only — no polling, no timer) |
 | Latch result — empty state heading | **"No failure latched"** |
