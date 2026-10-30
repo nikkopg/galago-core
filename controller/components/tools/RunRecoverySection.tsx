@@ -1,9 +1,10 @@
 // Crash-recovery UI for the tool page (D-21, D-22, D-23, UI-07). Always
 // rendered for a runControl tool type, independent of any running step
 // (Pitfall 10) — visibility is a function of the tool TYPE alone. Resume and
-// Abort are disabled only while a run step is tracking THIS tool; otherwise
-// they stay enabled, including when the run state is unknown or not yet
-// loaded.
+// Abort render only for tool types whose recovery spec declares them
+// (G-04-6); where rendered, they are disabled only while a run step is
+// tracking THIS tool or a send is pending; otherwise they stay enabled,
+// including when the run state is unknown or not yet loaded.
 import React, { useState } from "react";
 import {
   Card,
@@ -28,7 +29,7 @@ import {
   isToolTrackedByRunningStep,
   needsGuidEntry,
 } from "@/components/runs/controlDecision";
-import { isValidRecoveryGuid, type LatchInfo } from "@/server/recoveryActions";
+import { isRecoveryAction, isValidRecoveryGuid, type LatchInfo } from "@/server/recoveryActions";
 import { persistentErrorToast } from "@/components/ui/Toast";
 import {
   RunControlConfirmModal,
@@ -133,6 +134,13 @@ export const RunRecoverySection: React.FC<RunRecoverySectionProps> = ({ toolName
   // hard-coded tool type list (D-05).
   const showGuidField = needsGuidEntry(toolType);
 
+  // Each recovery button renders only for actions the tool type's recovery
+  // spec declares (F.A.S.T. declares resume and abort; STACK declares only
+  // the acknowledge), derived from the spec like needsGuidEntry. The
+  // server's refusal of undeclared actions remains the backstop (G-04-6).
+  const showResume = isRecoveryAction(toolType, "resume");
+  const showAbort = isRecoveryAction(toolType, "abort");
+
   const tracked = isToolTrackedByRunningStep(runControlQuery.data, toolName);
   const disabled = tracked || pendingAction !== null;
 
@@ -161,25 +169,31 @@ export const RunRecoverySection: React.FC<RunRecoverySectionProps> = ({ toolName
         </Heading>
         <Text fontSize="sm" mb={4}>
           {toolType === "stack"
-            ? "Read the failure latched on this tool, acknowledge it, or resume/abort an instrument run that no run step is tracking."
+            ? "Read the failure latched on this tool and acknowledge it."
             : "Resume or abort an instrument run that no run step is tracking, for example after galago-web restarted."}
         </Text>
-        <ButtonGroup spacing={4}>
-          <Button
-            colorScheme="teal"
-            leftIcon={<Play size={16} />}
-            isDisabled={disabled}
-            onClick={() => openConfirm("resume")}>
-            Resume
-          </Button>
-          <Button
-            colorScheme="red"
-            leftIcon={<StopCircle size={16} />}
-            isDisabled={disabled}
-            onClick={() => openConfirm("abort")}>
-            Abort
-          </Button>
-        </ButtonGroup>
+        {(showResume || showAbort) && (
+          <ButtonGroup spacing={4}>
+            {showResume && (
+              <Button
+                colorScheme="teal"
+                leftIcon={<Play size={16} />}
+                isDisabled={disabled}
+                onClick={() => openConfirm("resume")}>
+                Resume
+              </Button>
+            )}
+            {showAbort && (
+              <Button
+                colorScheme="red"
+                leftIcon={<StopCircle size={16} />}
+                isDisabled={disabled}
+                onClick={() => openConfirm("abort")}>
+                Abort
+              </Button>
+            )}
+          </ButtonGroup>
+        )}
         {showGuidField && (
           <>
             <VStack align="stretch" spacing={2} mt={4}>
