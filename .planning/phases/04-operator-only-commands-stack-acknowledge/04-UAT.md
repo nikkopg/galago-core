@@ -1,5 +1,5 @@
 ---
-status: complete
+status: diagnosed
 phase: 04-operator-only-commands-stack-acknowledge
 source: [04-01-SUMMARY.md, 04-02-SUMMARY.md, 04-03-SUMMARY.md, 04-04-SUMMARY.md, 04-05-SUMMARY.md]
 started: 2026-10-29T12:00:00.000Z
@@ -95,8 +95,15 @@ blocked: 0
   reason: "Automated UAT: unknown-state raw is printed inline (not collapsible); a ~3 KB reply grew the card to 1226px wide / ~940px tall; a latched reply's long Raw JSON line widened the card 761 -> 821px"
   severity: minor
   test: 2
-  artifacts: []
-  missing: []
+  root_cause: "The unknown-state branch renders the raw reply as a plain inline mono Text (RunRecoverySection.tsx ~207-209), outside any Collapse and without a size bound; the latched branch puts raw in a Collapse but with no max width/height, so a long unbreakable line can still push the card width."
+  artifacts:
+    - path: "controller/components/tools/RunRecoverySection.tsx"
+      issue: "unknown branch: raw Text rendered inline, unbounded; latched branch: Collapse without maxH/overflow/maxW"
+  missing:
+    - "Unknown-state raw reply lives in the same 'Raw JSON' collapsible (or an equally bounded region: max height + internal scroll)"
+    - "Raw JSON in either state never widens or grows the card beyond a fixed bound (minW=0 / maxW=100% / overflow auto)"
+    - "Keep the 'Unrecognized latch reply' heading and do-not-assume warning visible without expanding; update staticScan pins if they cover this block"
+  debug_session: ""
 
 - gap_id: G-04-5
   truth: "The production image builds from the current tree (next build lint/type gate passes)"
@@ -104,8 +111,15 @@ blocked: 0
   reason: "Automated UAT: next build fails — RunRecoverySection.tsx 268:82 react/no-unescaped-entities (unescaped ' in \"failed step's error\")"
   severity: blocker
   test: 5
-  artifacts: []
-  missing: []
+  root_cause: 'RunRecoverySection.tsx line 268 contains an unescaped apostrophe in JSX text ("failed step''s error"), which the next build eslint gate (react/no-unescaped-entities, error level) rejects; vitest/tsc do not run that rule, so the suite stayed green.'
+  artifacts:
+    - path: "controller/components/tools/RunRecoverySection.tsx"
+      issue: "line 268: unescaped ' in JSX text"
+  missing:
+    - "Escape the apostrophe (&apos;) without changing rendered copy"
+    - "Run `npx next lint` (or next build) over controller and fix any other error-level findings in phase files"
+    - "Optionally add a lint run to the phase gate so build-breaking lint errors are caught"
+  debug_session: ""
 
 - gap_id: G-04-6
   truth: "A STACK tool's Run Recovery card shows no Resume/Abort controls (STACK declares only acknowledge_failure)"
@@ -113,8 +127,17 @@ blocked: 0
   reason: "Automated UAT: enabled Resume/Abort on the STACK card open a 'This action is not available for this tool.' modal with Confirm disabled"
   severity: minor
   test: 6
-  artifacts: []
-  missing: []
+  root_cause: "RunRecoverySection renders the Resume and Abort buttons unconditionally for every recovery-capable tool type; only acknowledge is gated by needsGuidEntry. For stack, listRecoveryActions returns only acknowledge_failure, so Resume/Abort open a modal whose spec is undefined (copy: This action is not available for this tool.)."
+  artifacts:
+    - path: "controller/components/tools/RunRecoverySection.tsx"
+      issue: "Resume/Abort ButtonGroup not gated on the tool type's declared recovery actions; STACK description copy mentions resume/abort"
+    - path: ".planning/phases/04-operator-only-commands-stack-acknowledge/04-UI-SPEC.md"
+      issue: "STACK description copy says 'or resume/abort an instrument run'"
+  missing:
+    - "Render each recovery button only when listRecoveryActions(toolType) includes that action (fast keeps Resume/Abort; stack shows only the acknowledge surface)"
+    - "Adjust the STACK card description so it no longer offers resume/abort"
+    - "Server-side refusal of stack resume/abort stays as the backstop; add/adjust a static-scan or unit pin"
+  debug_session: ""
 
 - gap_id: G-04-7
   truth: "tRPC run.create maps OperatorOnlyCommandError to BAD_REQUEST with the refusal's own message"
@@ -122,5 +145,16 @@ blocked: 0
   reason: "Automated UAT: live tRPC run.create returned HTTP 500 INTERNAL_SERVER_ERROR with the raw error; REST /api/runs returned 400 correctly"
   severity: minor
   test: 7
-  artifacts: []
-  missing: []
+  root_cause: "Dev-only: run.ts's catch maps errors by instanceof, but RunStore.global is a singleton on global created by an older module copy; after any next-dev recompile the router is a fresh module copy with new error classes, so all four instanceof branches miss and the error falls through as INTERNAL_SERVER_ERROR. Production next start returns 400 correctly (verified on a scratch prod build). Pre-existing weakness that Phase 04's new branch exposed."
+  artifacts:
+    - path: "controller/server/routers/run.ts"
+      issue: "lines 86-108: instanceof mapping (ProtocolNotFoundError, OperatorOnlyCommandError, ProtocolGenerationFailedError, ProtocolParamsInvalidError) on errors from a global singleton"
+    - path: "controller/server/runs.ts"
+      issue: "lines 162-169: RunStore.global stores the whole instance (methods + class refs) on global"
+    - path: "controller/test/operatorOnly.test.ts"
+      issue: "~330: asserts BAD_REQUEST in a single module graph, cannot catch the reload case"
+  missing:
+    - "run.create error mapping is module-copy independent for all four branches (match e.name like pages/api/runs, or exported isXError guards / Symbol.for brand)"
+    - "After a dev recompile run.create still returns BAD_REQUEST with the refusal message and NOT_FOUND for an unknown protocol"
+    - "Vitest regression: vi.resetModules() around RunStore.global creation, then a freshly imported runRouter.createCaller expects BAD_REQUEST and NOT_FOUND (scratch RED test saved at .planning/debug/devReloadIdentity.test.ts.txt)"
+  debug_session: ".planning/debug/run-create-operator-only-500.md"

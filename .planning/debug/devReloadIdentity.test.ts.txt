@@ -1,0 +1,41 @@
+// Scratch-only repro (NOT in repo): simulate Next dev's require-cache purge with vi.resetModules().
+import { describe, it, expect, vi, beforeEach } from "vitest";
+
+const { dbMock, fakeQueue } = vi.hoisted(() => {
+  const dbMock: Record<string, any> = { select: vi.fn(), from: vi.fn(), where: vi.fn(), limit: vi.fn() };
+  const fakeQueue = { commands: { runPush: vi.fn(), push: vi.fn() }, enqueueRun: vi.fn(), state: undefined };
+  return { dbMock, fakeQueue };
+});
+vi.mock("@/db/client", () => ({ db: dbMock, sqlite: {} }));
+vi.mock("@/server/runs", async (importOriginal) => await importOriginal<typeof import("@/server/runs")>());
+vi.mock("@/server/scripting/protocol-script-executor", () => ({ executeProtocolScript: vi.fn() }));
+vi.mock("@/server/scripting/resolve-tool-types", () => ({ resolveToolTypes: vi.fn(async (c: unknown[]) => c) }));
+vi.mock("@/server/command_queue", () => ({ default: class { static get global() { return fakeQueue; } } }));
+
+const row = { id: 101, name: "visual-ack", mode: "visual", workcellId: 1,
+  commands: [{ toolId: "stack-1", toolType: "stack", command: "acknowledge_failure", params: {} }] };
+
+async function callCreate() {
+  const { runRouter } = await import("@/server/routers/run");
+  dbMock.limit.mockResolvedValueOnce([row]);
+  try { await runRouter.createCaller({}).create({ protocolId: 101 }); return undefined; }
+  catch (e: any) { return { ctor: e?.constructor?.name, code: e?.code }; }
+}
+
+describe("dev reload identity split (scratch)", () => {
+  beforeEach(() => {
+    delete (globalThis as any).__global_run_store_key;
+    dbMock.select.mockImplementation(() => dbMock);
+    dbMock.from.mockImplementation(() => dbMock);
+    dbMock.where.mockImplementation(() => dbMock);
+  });
+  it("control: same module instance -> BAD_REQUEST", async () => {
+    expect(await callCreate()).toEqual({ ctor: "TRPCError", code: "BAD_REQUEST" });
+  });
+  it("after resetModules (singleton pinned to old instance) -> BAD_REQUEST expected", async () => {
+    vi.resetModules();
+    (await import("@/server/runs")).default.global; // module instance A creates the singleton
+    vi.resetModules();                              // Next dev purge -> module instance B
+    expect(await callCreate()).toEqual({ ctor: "TRPCError", code: "BAD_REQUEST" });
+  });
+});
