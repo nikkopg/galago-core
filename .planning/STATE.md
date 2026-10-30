@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-10-29)
 
 **Core value:** While an instrument step runs, the operator sees what the instrument is doing and
 decides every recovery action; the web app never acts on its own or pre-selects a physical decision.
-**Current focus:** Phase 03 — Queue Start Guard & Tool Error Visibility
+**Current focus:** Phase 04 — Operator-only Commands & STACK Acknowledge
 
 ## Current Position
 
@@ -170,7 +170,7 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-30T04:01:37.906Z
+Last session: 2026-10-30T07:45:00.000Z
 Stopped at: Phase 03 complete, ready to verify Phase 04
 Resume file: None
 
