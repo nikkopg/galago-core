@@ -795,3 +795,68 @@ describe("recovery card offers only the tool type's declared actions (G-04-6)", 
     expect(flatSrc).not.toContain("resume/abort");
   });
 });
+
+describe("latch raw reply stays in one bounded collapsible (G-04-2)", () => {
+  const cardSrc = stripComments(read("components/tools/RunRecoverySection.tsx"));
+
+  it("both latch states render raw text only through the bounded LatchRawJson panel", () => {
+    const renderer = extractBracedRegion(cardSrc, /function LatchRawJson\(/);
+    expect(renderer.length).toBeGreaterThan(0);
+    for (const needle of [
+      "Raw JSON",
+      "aria-expanded={isOpen}",
+      "<Collapse in={isOpen}>",
+      'w="0px"',
+      'minW="100%"',
+      'maxH="160px"',
+      'overflowY="auto"',
+      'bg="surface.panel"',
+      'borderColor="border.subtle"',
+      'fontFamily="mono"',
+      'fontSize="sm"',
+      'wordBreak="break-all"',
+      'whiteSpace="pre-wrap"',
+      "formatLatchRaw(raw)",
+    ]) {
+      expect(renderer).toContain(needle);
+    }
+
+    const collapseAt = renderer.indexOf("<Collapse in={isOpen}>");
+    const boundAt = renderer.indexOf('maxH="160px"');
+    const formatAt = renderer.indexOf("formatLatchRaw(raw)");
+    expect(collapseAt).toBeLessThan(boundAt);
+    expect(boundAt).toBeLessThan(formatAt);
+
+    // Display-only: the renderer never fills the guid, opens the modal or reads the latch.
+    expect(renderer).not.toMatch(/setGuid|openConfirm|latchStatus|mutate/);
+
+    expect((cardSrc.match(/formatLatchRaw\(/g) ?? []).length).toBe(2);
+    expect((cardSrc.match(/<LatchRawJson\b/g) ?? []).length).toBe(2);
+
+    const unknownAt = cardSrc.indexOf("latchResult.unknown ?");
+    const notLatchedAt = cardSrc.indexOf("!latchResult.latched ?");
+    const useGuidAt = cardSrc.indexOf("setGuid(latchResult.guid");
+    expect(unknownAt).toBeGreaterThan(-1);
+    expect(notLatchedAt).toBeGreaterThan(unknownAt);
+    expect(useGuidAt).toBeGreaterThan(notLatchedAt);
+
+    const unknownBranch = cardSrc.slice(unknownAt, notLatchedAt);
+    expect(unknownBranch).toContain("Unrecognized latch reply");
+    expect(unknownBranch.indexOf("Unrecognized latch reply")).toBeLessThan(
+      unknownBranch.indexOf("<LatchRawJson"),
+    );
+    expect(unknownBranch).not.toContain("formatLatchRaw(");
+
+    const latchedBranch = cardSrc.slice(notLatchedAt, useGuidAt);
+    expect(latchedBranch).toContain("<LatchRawJson");
+
+    // Tool text stays a React child (auto-escaped), never injected markup.
+    expect(cardSrc).not.toMatch(/dangerouslySetInnerHTML/);
+  });
+
+  it("every explicit read starts with Raw JSON collapsed", () => {
+    const readBody = extractBracedRegion(cardSrc, /const readClick = async \(\) => /);
+    expect(readBody.length).toBeGreaterThan(0);
+    expect(readBody).toContain("setRawOpen(false)");
+  });
+});
