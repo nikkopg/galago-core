@@ -58,10 +58,15 @@ function formatLatchRaw(raw: Record<string, unknown>): string {
 }
 
 // UI-SPEC copy pinned as constants (Read latch / Use this guid / No failure
-// latched) so the display contract is greppable at the source level.
+// latched / the blank-guid hint) so the display contract is greppable at the
+// source level. The hint is a JS string, not JSX text: an apostrophe in JSX
+// text fails next build's react/no-unescaped-entities lint gate (G-04-5), and
+// a JS string renders the same text.
 const READ_LATCH_LABEL = "Read latch";
 const USE_THIS_GUID_LABEL = "Use this guid";
 const NO_FAILURE_LATCHED_LABEL = "No failure latched";
+const GUID_BLANK_HINT =
+  "A guid cannot be blank. Enter the guid shown in the failed step's error or via Read latch.";
 
 export const RunRecoverySection: React.FC<RunRecoverySectionProps> = ({ toolName, toolType }) => {
   const bgColor = useColorModeValue("white", "surface.section");
@@ -263,12 +268,7 @@ export const RunRecoverySection: React.FC<RunRecoverySectionProps> = ({ toolName
               <Text fontSize="sm">
                 Sent exactly as typed. Spaces and control characters are not allowed.
               </Text>
-              {!isValidRecoveryGuid(guid) && (
-                <Text fontSize="sm">
-                  A guid cannot be blank. Enter the guid shown in the failed step's error or via
-                  Read latch.
-                </Text>
-              )}
+              {!isValidRecoveryGuid(guid) && <Text fontSize="sm">{GUID_BLANK_HINT}</Text>}
             </VStack>
           </>
         )}
