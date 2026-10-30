@@ -102,7 +102,7 @@ createStandaloneToast useColorModeValue` — COUNT=21
 | Modal family (Modal…ModalFooter) | `@chakra-ui/react` | Shared RunControlConfirmModal; `initialFocusRef={cancelRef}` stays (banned only in QueueStatuscomponent.tsx) |
 | HStack / VStack | `@chakra-ui/react` | Row/column layout, `spacing={2}` / `spacing={4}` |
 | Spinner | `@chakra-ui/react` | `size="sm"` pending states ("Reading latch…", "Acknowledging…") |
-| Collapse | `@chakra-ui/react` | Raw latch JSON collapsible (`fontFamily="mono"`, `wordBreak="break-all"`); new use, existing Chakra primitive |
+| Collapse | `@chakra-ui/react` | Raw latch JSON collapsible for BOTH the latched and the unrecognized reply, inside a bounded panel (max height 160px, internal scroll, zero-width basis with min width 100% so it never widens the card), `surface.panel` background, `border.subtle` border, mono 14px, `break-all`, `pre-wrap`, collapsed on every new read (G-04-2); new use, existing Chakra primitive |
 | useColorModeValue | `@chakra-ui/react` | Light/dark surfaces per `customTheme.ts` |
 | Play, StopCircle (existing), no new icon | `lucide-react` | Existing card icons at `size={16}`; the new "Read latch" / "Acknowledge failure…" buttons need NO icon (keep icons rare in the card) |
 
@@ -144,7 +144,7 @@ already rendered by the touched components; nothing new is introduced.
 | Role | Size | Weight | Line Height | Rendering basis (verified, no ambiguity for the executor) |
 |------|------|--------|-------------|------------------------------------------------------------|
 | Body | 16px (Chakra `Text` default) | 400 | 1.5 (Chakra body default) | modal body, latch result, card description |
-| Label / helper | 14px (`fontSize="sm"`) | 400 | 1.5 | "Failure guid" field label, "Arm inspected?" label, helper/disabled hint, tracked note |
+| Label / helper | 14px (`fontSize="sm"`) | 400 | 1.5 | "Failure guid" field label, "Arm inspected?" label, helper/disabled hint, tracked note, raw JSON panel text (mono, G-04-2) |
 | Heading (card title) | 20px — Chakra `Heading size="md"` resolves to `fontSize "xl"` = 20px (verified in installed `@chakra-ui/theme` 3.3.1, `heading.js` sizes.md) | 700 (bold) | 1.2 | card title "Run Recovery" — renders bold today: the theme's functional `Heading` baseStyle (`customTheme.ts:150-154`, color only) REPLACES Chakra's default heading baseStyle under `extendTheme`, so no class-level font-weight is emitted and the browser's user-agent bold applies to the `h2` element. Leave this as-is; do NOT "normalize" it to semibold |
 | Heading (sub, new) | 16px — `Heading size="sm"` resolves to `fontSize "md"` = 16px (same `heading.js`) | 700 (bold) | 1.2 | new "Latched failure" sub-heading: write it as `Heading size="sm" fontWeight={700}` — the explicit prop pins the same bold the sibling card title already renders, so the weight is deterministic and not dependent on user-agent defaults |
 | Modal header | 20px — `ModalHeader` default `fontSize "xl"` (verified `modal.js` baseStyleHeader; the theme sets no ModalHeader styles) | 700 (bold) | Chakra default | ack header "Acknowledge STACK failure" flows through the SHARED modal's existing `<ModalHeader fontWeight="bold">` prop (`RunControlConfirmModal.tsx:223`) — the bold is forced by that explicit component prop, NOT by the theme (the theme sets no ModalHeader weight); no change |
@@ -156,8 +156,8 @@ baseStyle (verified `customTheme.ts:55-59`) and by the shared modal's existing c
 no `ModalHeader` or `Heading` weight.
 
 Line height: keep Chakra defaults (body 1.5, headings 1.2). Long-text handling: guid/result values
-render with `wordBreak="break-all"` (raw JSON: `fontFamily="mono"` + `wordBreak="break-all"`); the
-guid input clips at `maxLength={256}` per D-08.
+render with `wordBreak="break-all"` (raw JSON: `fontFamily="mono"` + `wordBreak="break-all"`, and it wraps inside the bounded 160px
+scrolling panel so it never resizes the card, G-04-2); the guid input clips at `maxLength={256}` per D-08.
 
 Toast surfaces reuse the untouched app-wide `Toast` module as-is (Chakra Alert defaults); their
 typography is inherited chrome outside this contract's declared set and must not be restyled.
@@ -237,6 +237,7 @@ copy surfaces (static scan).
 | Explicit read CTA | **"Read latch"** (plain/default Button, no colorScheme; explicit click only — no polling, no timer) |
 | Latch result — empty state heading | **"No failure latched"** |
 | Latch result — empty state body | "This tool has no failure latched. An acknowledge is not possible until a STACK step fails and ends." |
+| Latch result — unrecognized reply | Heading **"Unrecognized latch reply"**; body "The tool replied, but the latch state could not be interpreted. Inspect the raw reply below; do not assume no failure is latched."; raw reply only inside the "Raw JSON" panel (G-04-2) |
 | Latch result — populated | `guid:` {verbatim guid, selectable Text}; `kind/explanation:` shown when present (plugin `existing patterns` plain lines); "Raw JSON" disclosure (Collapse) labelled **"Raw JSON"** |
 | Latch result — loading | `Spinner size="sm"` + **"Reading latch…"** |
 | "Use this guid" button | **"Use this guid"** (fills the guid input only; never sends). After filling: leave focus/selection untouched — no auto-ghost-click, no auto open of the modal |
@@ -303,9 +304,9 @@ Applicable state considerations resolved: **6 covered, 1 backstop, 0 unresolved.
 | empty (guid) | Guid Input + "Acknowledge failure…" | ✅ covered | Input renders `value=""` (blank state, no default); "Acknowledge failure…" is disabled with the documented helper text; blank/whitespace-only refused and never trimmed |
 | loading | Latch read + ack send | ✅ covered | Per-click "Reading latch…" / "Acknowledging…" Spinner states; no timer/polling (modal body unmounts per D-07 closeOnDispatch); pending state belongs to the card, not the modal |
 | error | Every acknowledge attempt (refused/transport/SUCCESS+message) | ✅ covered | Persistent "Action refused" toast with server text; audit via server `logAction` only — the UI shows it but is not the audit surface; refusals never disable the card permanently |
-| partial / unknown-shape reply | Latch result | ✅ covered | Kind/explanation shown when present; unknown shapes always renderable via the "Raw JSON" Collapse; `extractLatch` tolerates top-level/`latch`/`result` shapes |
+| partial / unknown-shape reply | Latch result | ✅ covered | Kind/explanation shown when present; unknown shapes always renderable via the "Raw JSON" Collapse (04-06, G-04-2: the unrecognized reply's raw text moved from inline into the bounded panel; card width is re-checked by the 04-06 UAT test 2 retest); `extractLatch` tolerates top-level/`latch`/`result` shapes |
 | zero-one-many (latched failures) | Latch block | ✅ covered | A tool latches at most one failure — the CONTRACT is exactly one result or "No failure latched"; no list rendering ever |
-| long-text / overflow | Guid (≤256 chars), kind, explanation, raw JSON | 🧪 backstop | Word-break (`break-all`) + mono JSON block; exercised by the repo's static scans (no jsdom/RTL in this repo), held-out as the visual retest during verification |
+| long-text / overflow | Guid (≤256 chars), kind, explanation, raw JSON | 🧪 backstop | Word-break (`break-all`) + mono JSON block; exercised by the repo's static scans (no jsdom/RTL in this repo), held-out as the visual retest during verification; raw JSON now sits in a bounded panel and card width is re-checked by the 04-06 UAT test 2 retest (G-04-2) |
 | ack while a step runs | Card buttons | ✅ covered | Buttons stay enabled (no greyed card — D-09); the server refusal text surfaces in the persistent toast; no UI run-state check exists at all |
 
 **Out of scope here (deferred per CONTEXT.md):** `commandQueue.runningStep`-based grey/disabled
