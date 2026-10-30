@@ -4,12 +4,12 @@ milestone: v2
 milestone_name: STACK tool support — codegen, operator acknowledge, error visibility, F5
 current_phase: 04
 current_phase_name: Operator-only Commands & STACK Acknowledge
-status: executing
-stopped_at: Completed 04-07-PLAN.md
-last_updated: "2026-10-30T04:01:37.956Z"
+status: verifying
+stopped_at: Phase 03 complete, ready to verify Phase 04
+last_updated: "2026-10-30T07:36:26.537Z"
 last_activity: 2026-10-30
-last_activity_desc: Phase 04 execution started
-state_head: a13dece5cd8cd3a8f0a248370a7b2d42bd20ec44
+last_activity_desc: Phase 03 complete, transitioned to Phase 04
+state_head: 8a915630928b1f6e64d48d7ba01e4a5d523f2fcd
 progress:
   total_phases: 3
   completed_phases: 1
@@ -26,14 +26,14 @@ See: .planning/PROJECT.md (updated 2026-10-29)
 
 **Core value:** While an instrument step runs, the operator sees what the instrument is doing and
 decides every recovery action; the web app never acts on its own or pre-selects a physical decision.
-**Current focus:** Phase 04 — Operator-only Commands & STACK Acknowledge
+**Current focus:** Phase 03 — Queue Start Guard & Tool Error Visibility
 
 ## Current Position
 
-Phase: 04 (Operator-only Commands & STACK Acknowledge) — EXECUTING
-Plan: 7 of 7 complete (gap closure done; UAT test 7 retest pending in /gsd-verify-work)
-Status: Gap-closure plans complete; awaiting verification
-Last activity: 2026-10-30 — Phase 04 execution started
+Phase: 04 — Operator-only Commands & STACK Acknowledge
+Plan: 7
+Status: Phase complete — ready for verification
+Last activity: 2026-10-30 — Phase 03 complete, transitioned to Phase 04
 
 Progress: [███░░░░░░░] 33%
 
@@ -171,7 +171,7 @@ Items acknowledged and deferred at milestone close, most recent first:
 ## Session Continuity
 
 Last session: 2026-10-30T04:01:37.906Z
-Stopped at: Completed 04-07-PLAN.md
+Stopped at: Phase 03 complete, ready to verify Phase 04
 Resume file: None
 
 ## Operator Next Steps
