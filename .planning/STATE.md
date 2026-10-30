@@ -2,45 +2,45 @@
 gsd_state_version: "1.0"
 milestone: v2
 milestone_name: STACK tool support — codegen, operator acknowledge, error visibility, F5
-current_phase: 04
-current_phase_name: Operator-only Commands & STACK Acknowledge
-status: verifying
-stopped_at: Phase 03 complete, ready to verify Phase 04
-last_updated: "2026-10-30T07:36:26.537Z"
+current_phase: 5
+current_phase_name: STACK Codegen & Command Forms
+status: planning
+stopped_at: Phase 04 complete, ready to plan Phase 5
+last_updated: "2026-10-30T08:29:05.379Z"
 last_activity: 2026-10-30
-last_activity_desc: Phase 03 complete, transitioned to Phase 04
-state_head: 8a915630928b1f6e64d48d7ba01e4a5d523f2fcd
+last_activity_desc: Phase 04 complete, transitioned to Phase 5
+state_head: 48819d4009abcbd6e783cc77804ef959abd2c7e0
 progress:
   total_phases: 3
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 14
   completed_plans: 14
-  percent: 33
+  percent: 67
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-10-29)
+See: .planning/PROJECT.md (updated 2026-10-30)
 
 **Core value:** While an instrument step runs, the operator sees what the instrument is doing and
 decides every recovery action; the web app never acts on its own or pre-selects a physical decision.
-**Current focus:** Phase 04 — Operator-only Commands & STACK Acknowledge
+**Current focus:** Phase 5 — STACK Codegen & Command Forms
 
 ## Current Position
 
-Phase: 04 — Operator-only Commands & STACK Acknowledge
-Plan: 7
-Status: Phase complete — ready for verification
-Last activity: 2026-10-30 — Phase 03 complete, transitioned to Phase 04
+Phase: 5 — STACK Codegen & Command Forms
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-10-30 — Phase 04 complete, transitioned to Phase 5
 
-Progress: [███░░░░░░░] 33%
+Progress: [███████░░░] 67%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 18
+- Total plans completed: 25
 - Average duration: -
 - Total execution time: 0 hours
 
@@ -51,6 +51,7 @@ Progress: [███░░░░░░░] 33%
 | 01 | 5 | - | - |
 | 02 | 6 | - | - |
 | 03 | 7 | - | - |
+| 04 | 7 | - | - |
 
 **Recent Trend:**
 - Last 5 plans: none yet
@@ -138,6 +139,11 @@ Recent decisions affecting current work:
 - [Phase 5]: Hard-gated on galago-tools Phase 4 pushing the frozen `stack.proto` to `feat/stack-tool`
   (not there yet). A needed `stack.proto` change or a stack-automation-layer gap stops the work and is
   noted for the user; it is never patched here.
+- [Phase 5]: STACK wire payloads were not proven in Phase 4 UAT — every STACK recovery payload
+  reached the fake ToolDriver as an empty command {} (ToolType.stack codegen lands in Phase 5), and
+  the tool page shows the pre-Phase-5 "Invalid Tool Type" banner; prove the real wire in Phase 5.
+  (not there yet). A needed `stack.proto` change or a stack-automation-layer gap stops the work and is
+  noted for the user; it is never patched here.
 - [Phase 2]: Re-review on 2026-10-16 (`02-REVIEW.md`, diff since 3cfb240) left 4 warnings and 1 info
   open in `02-REVIEW-DISPOSITION.md`: WR-01 `goto` accepts null/"" targetIndex as 0; WR-02 an
   accepted abort whose step then resolves does not dequeue the rest of the run; WR-03
@@ -170,10 +176,10 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-30T07:45:00.000Z
-Stopped at: Phase 03 complete, ready to verify Phase 04
+Last session: 2026-10-30
+Stopped at: Phase 04 complete, ready to plan Phase 5
 Resume file: None
 
 ## Operator Next Steps
 
-- Plan Phase 4 with /gsd-plan-phase 4 (or /gsd-discuss-phase 4 first)
+- Plan Phase 5 with /gsd-plan-phase 5 (or /gsd-discuss-phase 5 first)

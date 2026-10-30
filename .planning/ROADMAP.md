@@ -37,7 +37,7 @@ phases are always written "galago-tools Phase N" here because its numbering (4-7
 - [x] **Phase 3: Queue Start Guard & Tool Error Visibility** - A Start never dispatches a row already in (completed 2026-10-29)
   flight, the operator sees what a Start will run, and a failed step shows the tool's own message and is
   never shown as success (F5, DEP-03c; F3, DEP-03b).
-- [ ] **Phase 4: Operator-only Commands & STACK Acknowledge** - Only an operator, from the tool page, can
+- [x] **Phase 4: Operator-only Commands & STACK Acknowledge** - Only an operator, from the tool page, can (completed 2026-10-30)
   acknowledge a STACK failure; no protocol, script or queue row can (DEP-03a).
 - [ ] **Phase 5: STACK Codegen & Command Forms** - Build against the frozen `stack.proto`, offer every STACK
   command as a form, and prove the acknowledge work on the real wire (DEP-02).
@@ -127,7 +127,7 @@ a real failure path). No dependency on `stack.proto`: built on string tool types
   5. Static scans fail the suite if any code path acknowledges on its own, if the `acknowledge_failure`
      literal appears outside an exact file list, if it is added to `commandFields` or `runControl`, if the
      guard leaves `executeCommand` or lands in `controlCommand`, or if the latch read feeds the send path.
-**Plans:** 7/7 plans executed
+**Plans:** 7/7 plans complete
 
 Plans:
 **Wave 1**
@@ -206,7 +206,7 @@ Phases execute in numeric order: 3 → 4 → 5 (Phase 5 waits on galago-tools Ph
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 3. Queue Start Guard & Tool Error Visibility | v2 | 7/7 | Complete    | 2026-10-29 |
-| 4. Operator-only Commands & STACK Acknowledge | v2 | 7/7 | In Progress | - |
+| 4. Operator-only Commands & STACK Acknowledge | v2 | 7/7 | Complete    | 2026-10-30 |
 | 5. STACK Codegen & Command Forms | v2 | 0/TBD | Not started (gated on galago-tools Phase 4) | - |
 
 ## Backlog

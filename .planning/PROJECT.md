@@ -82,12 +82,17 @@ stack-automation-layer core gaps are fixed there via `/gsd-quick`, never here.
   with a message counts as an error), shown in a re-arming run-page banner, on the step card (beside
   the image, 3-line clamp, full text on hover) and in the run outcome; a skipped failure shows an
   orange "Skipped failure" badge, never success — Phase 3 (UAT 5/5, 2026-10-29)
+- ✓ DEP-03a — v2: operator-only STACK AcknowledgeFailure — recovery-card acknowledge flow (guid
+  entry, born-empty radios, verbatim guid restatement, audited single-send), an explicit Read Latch
+  query (no polling), server-side attempt gating while a STACK step runs (refused with audit, card
+  itself stays enabled), queue refuses a queued `stack.acknowledge_failure`, run creation refuses
+  operator-only steps as BAD_REQUEST, and the STACK card presents only the actions STACK declares —
+  Phase 4 (UAT 3/3 passed + 4 diagnosed gaps closed by plans 04-06/04-07, UAT complete 2026-10-30)
 
 ### Active
 
 v2 requirements in `.planning/REQUIREMENTS.md`.
 
-- [ ] Operator-only STACK AcknowledgeFailure (recovery card), refused from the queue
 - [ ] STACK codegen and command forms (DEP-02)
 
 ### Out of Scope
@@ -153,6 +158,10 @@ v2 requirements in `.planning/REQUIREMENTS.md`.
 | v2: run outcome `COMPLETED_WITH_SKIPPED_FAILURE` is client-only, derived from polled rows; `RunStatus` not widened | No schema change; FAILED takes precedence over a COMPLETED last row | ✓ Phase 3 |
 | v2: step-card error sits beside the image in one row (amends D-17/UA2) | The stacked layout overflowed the fixed 165px card (G-03-3) | ✓ Phase 3 (03-07; live fit retest waived by the user as minor) |
 | v2: skip the 4-researcher pass; research only F5 root cause and the acknowledge fit | F.A.S.T. support (`128bbd7`, `d4c3c23`, `tool.recoveryControl`) is the template | — Pending |
+| Guid char class excludes U+0085 (NEL) explicitly; JS `\s` misses it | The planned guid regex would otherwise accept a NEL control char (04-01) | ✓ Phase 4 |
+| Operator-only command matching is trim + lowercase exact equality (D-04); action-availability is the first server refusal (D-06 reroute) | Deny-by-list never invents a match; type-aware BAD_REQUEST comes before the run-state gate (04-01) | ✓ Phase 4 |
+| Recovery card buttons are spec-derived per tool type; raw latch replies render bounded (LatchRawJson) | STACK declares only acknowledge_failure, so resume/abort never show for stack; a ~3 KB unknown reply must not blow out the card (04-06, G-04-2/6) | ✓ Phase 4 |
+| `run.create` maps protocol/op errors by `Error.name` guards, not `instanceof`, plus a `next lint` gate on the build | The dev recompile module-copy drift broke class-identity checks against `RunStore.global` singletons (04-07, G-04-5/7) | ✓ Phase 4 |
 | Use quick tasks for post-phase fixes instead of inserting decimal phases | Small, test-backed queue fixes (f48, h0q, o44, t9e) | ✓ Good — but leaves earlier phase verifications stale; re-verify after |
 
 ## Evolution
@@ -173,4 +182,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-10-29 after Phase 3*
+*Last updated: 2026-10-30 after Phase 4*
