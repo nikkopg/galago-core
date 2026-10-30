@@ -49,3 +49,11 @@ export class OperatorOnlyCommandError extends Error {
     this.name = "OperatorOnlyCommandError";
   }
 }
+
+// Classify this refusal by name, not class identity: in next dev the RunStore
+// singleton is pinned on `global` and can throw a class from an older module
+// copy than the caller's (G-04-7). Same approach as pages/api/runs and tRPC's
+// own TRPCError check.
+export function isOperatorOnlyCommandError(e: unknown): e is OperatorOnlyCommandError {
+  return e instanceof Error && e.name === "OperatorOnlyCommandError";
+}
