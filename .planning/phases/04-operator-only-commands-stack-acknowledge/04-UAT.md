@@ -1,9 +1,9 @@
 ---
-status: diagnosed
+status: complete
 phase: 04-operator-only-commands-stack-acknowledge
 source: [04-01-SUMMARY.md, 04-02-SUMMARY.md, 04-03-SUMMARY.md, 04-04-SUMMARY.md, 04-05-SUMMARY.md]
 started: 2026-10-29T12:00:00.000Z
-updated: 2026-10-30T00:52:30.729Z
+updated: 2026-10-30T08:07:17.712Z
 ---
 
 ## Current Test
@@ -91,7 +91,9 @@ blocked: 0
 
 - gap_id: G-04-2
   truth: "An unrecognized latch reply's raw text renders inside the bounded Raw JSON collapsible, and raw JSON never resizes the card"
-  status: failed
+  status: resolved
+  resolved_by: 04-06-PLAN.md
+  resolved_at: 2026-10-30
   reason: "Automated UAT: unknown-state raw is printed inline (not collapsible); a ~3 KB reply grew the card to 1226px wide / ~940px tall; a latched reply's long Raw JSON line widened the card 761 -> 821px"
   severity: minor
   test: 2
@@ -107,7 +109,9 @@ blocked: 0
 
 - gap_id: G-04-5
   truth: "The production image builds from the current tree (next build lint/type gate passes)"
-  status: failed
+  status: resolved
+  resolved_by: 04-06-PLAN.md
+  resolved_at: 2026-10-30
   reason: "Automated UAT: next build fails — RunRecoverySection.tsx 268:82 react/no-unescaped-entities (unescaped ' in \"failed step's error\")"
   severity: blocker
   test: 5
@@ -123,7 +127,9 @@ blocked: 0
 
 - gap_id: G-04-6
   truth: "A STACK tool's Run Recovery card shows no Resume/Abort controls (STACK declares only acknowledge_failure)"
-  status: failed
+  status: resolved
+  resolved_by: 04-06-PLAN.md
+  resolved_at: 2026-10-30
   reason: "Automated UAT: enabled Resume/Abort on the STACK card open a 'This action is not available for this tool.' modal with Confirm disabled"
   severity: minor
   test: 6
@@ -141,7 +147,9 @@ blocked: 0
 
 - gap_id: G-04-7
   truth: "tRPC run.create maps OperatorOnlyCommandError to BAD_REQUEST with the refusal's own message"
-  status: failed
+  status: resolved
+  resolved_by: 04-07-PLAN.md
+  resolved_at: 2026-10-30
   reason: "Automated UAT: live tRPC run.create returned HTTP 500 INTERNAL_SERVER_ERROR with the raw error; REST /api/runs returned 400 correctly"
   severity: minor
   test: 7
