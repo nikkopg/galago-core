@@ -753,3 +753,45 @@ describe("operator-only ack invariants (OPR-05)", () => {
     ]);
   });
 });
+
+describe("recovery card offers only the tool type's declared actions (G-04-6)", () => {
+  const cardSrc = stripComments(read("components/tools/RunRecoverySection.tsx"));
+
+  it("Resume and Abort render only when the recovery spec declares them", () => {
+    expect(cardSrc).toMatch(/const showResume = isRecoveryAction\(toolType, "resume"\);/);
+    expect(cardSrc).toMatch(/const showAbort = isRecoveryAction\(toolType, "abort"\);/);
+
+    for (const [flag, action] of [
+      ["showResume", "resume"],
+      ["showAbort", "abort"],
+    ]) {
+      const gateAt = cardSrc.indexOf("{" + flag + " && (");
+      const clickAt = cardSrc.indexOf('openConfirm("' + action + '")');
+      expect(gateAt).toBeGreaterThan(-1);
+      expect(clickAt).toBeGreaterThan(gateAt);
+      const between = cardSrc.slice(gateAt, clickAt);
+      expect(between).not.toContain("</Button>");
+      expect((between.match(/<Button\b/g) ?? []).length).toBe(1);
+    }
+
+    expect(cardSrc.split('openConfirm("resume")').length - 1).toBe(1);
+    expect(cardSrc.split('openConfirm("abort")').length - 1).toBe(1);
+
+    const groupAt = cardSrc.indexOf("<ButtonGroup");
+    expect(groupAt).toBeGreaterThan(-1);
+    expect(cardSrc.slice(cardSrc.lastIndexOf("{", groupAt), groupAt)).toMatch(
+      /^\{\(showResume \|\| showAbort\) && \(\s*$/,
+    );
+
+    expect(cardSrc).not.toMatch(/toolType === "fast"/);
+  });
+
+  it("the STACK description offers only the latch read and the acknowledge", () => {
+    const flatSrc = cardSrc.replace(/\s+/g, " ");
+    expect(flatSrc).toContain("Read the failure latched on this tool and acknowledge it.");
+    expect(flatSrc).toContain(
+      "Resume or abort an instrument run that no run step is tracking, for example after galago-web restarted.",
+    );
+    expect(flatSrc).not.toContain("resume/abort");
+  });
+});
