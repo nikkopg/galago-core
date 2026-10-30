@@ -5,66 +5,64 @@ titles: json
 findings:
   - id: WR-01
     severity: warning
-    disposition: fixed
-    title: "`extractLatch`'s `unknown` state is never rendered — uninterpretable latch replies display as \"No failure latched\""
+    disposition: open
+    title: "Log-forging fix is incomplete — enqueue-time operator-only audit record interpolates `c.toolId` unsanitized"
   - id: WR-02
     severity: warning
-    disposition: fixed
-    title: "`tool.latchStatus` maps a reply without `meta_data` to a confident NOT-latched result"
+    disposition: open
+    title: "`extractLatch({})` still yields a confident \"No failure latched\", contradicting the WR-02 router fix and D-13"
   - id: WR-03
     severity: warning
-    disposition: fixed
-    title: "`validateRecoveryRequest`'s first check is dead in production and semantically inverted — a blank tool type reports \"No step is currently running.\""
+    disposition: open
+    title: "Acknowledge button is not disabled while a send is pending; a repeat click silently clears the in-progress indicator"
   - id: WR-04
     severity: warning
-    disposition: fixed
-    title: "Client-controlled `action` is interpolated unsanitized into audit-log details (log forging)"
+    disposition: open
+    title: "`tool.latchStatus` sends the latch command to any registered tool type"
   - id: WR-05
     severity: warning
-    disposition: fixed
-    title: "`run.create` leaves `numberOfRuns` unvalidated — negative/zero silently no-op, large values enqueue unbounded instrument runs"
+    disposition: open
+    title: "`createFromProtocol` wraps every unexpected failure in `ProtocolGenerationFailedError` with the wrong constructor argument, so server faults surface as a client 400 with the real cause lost"
   - id: IN-01
     severity: info
-    disposition: fixed
-    title: "`RECOVERY_STRICT_SUCCESS[String(toolType)]` uses a prototype-exposed lookup, violating the module family's own D-04 discipline"
+    disposition: open
+    title: "Name-based type guards are not sound, and `throw e.cause` assumes a ZodError"
   - id: IN-02
     severity: info
-    disposition: fixed
-    title: "Dead field — `RunStore.nextRunId` is never used"
+    disposition: open
+    title: "GUID hint says \"cannot be blank\" for every invalid guid"
   - id: IN-03
     severity: info
-    disposition: fixed
-    title: "`readClick` awaits `latchQuery.refetch()` without a catch — a rejecting refetch escapes as an unhandled rejection"
+    disposition: open
+    title: "`sanitizeLogText` covers C0 controls only"
   - id: IN-04
     severity: info
-    disposition: fixed
-    title: "`/api/runs` POST default branch leaks raw internal error text to clients with status 500"
+    disposition: open
+    title: "`/api/runs` maps client-fault errors to 500"
   - id: IN-05
     severity: info
-    disposition: fixed
-    title: "Confirm modal resolves the action spec from `runControl` regardless of `target.kind` — latent silent-refusal trap"
-open: 0
+    disposition: open
+    title: "`extractLatch` ignores an explicit `latched` field"
+open: 10
 total: 10
-recorded: 2026-10-29T12:00:00.000Z
+recorded: 2026-10-30T04:08:30.882Z
 ---
 
 # Phase 04: Code Review Disposition
 
 | Finding | Severity | Disposition | Source |
 |---------|----------|-------------|--------|
-| WR-01 | warning | fixed | 34d616d |
-| WR-02 | warning | fixed | 5a7789f |
-| WR-03 | warning | fixed (requires human verification) | 3a5cbc8 |
-| WR-04 | warning | fixed (requires human verification) | b0dcc40 |
-| WR-05 | warning | fixed (bound 1–100 is a human-confirmable product choice) | fcfc0b3 |
-| IN-01 | info | fixed | 10b9ae3 |
-| IN-02 | info | fixed | 2e5d7e5 |
-| IN-03 | info | fixed | 2205395 |
-| IN-04 | info | fixed | 5a1e317 |
-| IN-05 | info | fixed (requires human verification) | 7e4f9fd |
+| WR-01 | warning | open | - |
+| WR-02 | warning | open | - |
+| WR-03 | warning | open | - |
+| WR-04 | warning | open | - |
+| WR-05 | warning | open | - |
+| IN-01 | info | open | - |
+| IN-02 | info | open | - |
+| IN-03 | info | open | - |
+| IN-04 | info | open | - |
+| IN-05 | info | open | - |
 
 Dispositions: `open` (recorded, not yet triaged), `fixed`, `skipped`, `deferred`.
 Set `deferred` by hand and put the reason in the Source cell; both are preserved. A `|` in the reason is kept as prose and escaped on the next run.
 Re-running the gate keeps every row it can. A row the current review no longer reports is kept and its Source cell flagged, so a finding does not leave this record silently. ONE exception: when a finding id is REUSED by a different finding, the earlier decision cannot keep a row — the id is taken — and it is dropped. A RECORDED decision (anything but `open`) is named on the console when that happens; a row still at `open` is replaced silently, because `open` records no decision to lose.
-
-Reviewer context: 0 Critical, 0 blockers. All six locked design decisions (D-01, D-08, D-09, D-10, D-12, D-23) were cross-checked by the reviewer and honored — none flagged; findings are all outside the locked decisions.
