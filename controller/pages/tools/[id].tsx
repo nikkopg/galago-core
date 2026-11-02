@@ -30,6 +30,7 @@ import { capitalizeFirst } from "@/utils/parser";
 import Head from "next/head";
 import { TeachPendant } from "@/components/tools/advanced/teach_pendant/TeachPendant";
 import { commandFields } from "@/components/tools/constants";
+import { omitBlankParams } from "@/components/tools/commandParams";
 import { loadingToast } from "@/components/ui/Toast";
 import { Tool } from "@/types";
 
@@ -164,7 +165,12 @@ export default function Page() {
       toolId: config.name,
       toolType: config.type,
       command: selectedCommand,
-      params: formValues,
+      // D-04 (planner decision: omit blanks): a STACK send strips
+      // empty-string/undefined/null params before the mutation — an
+      // operator-typed 0 or false passes through. Every other tool type keeps
+      // params verbatim so F.A.S.T. wire behavior is byte-identical to today;
+      // 05-03's blank-optional wire case pins the chosen STACK behaviour.
+      params: String(config?.type) === "stack" ? omitBlankParams(formValues) : formValues,
     };
 
     executeCommandWithToast(selectedCommand, toolCommand);
@@ -260,11 +266,15 @@ export default function Page() {
             {field.type == "boolean" ? (
               <Input
                 type="boolean"
+                // Born-empty display (UI-SPEC AC-4): an untouched value (the
+                // born-empty "") renders empty — never a painted "false"; a
+                // genuinely typed value, including a real false, renders as
+                // before. Nullish coalescing, not ||: only null/undefined are
+                // absent, a real false is not.
                 value={String(
                   (parentField
-                    ? (formValues[parentField] as Record<string, AtomicFormValues>)?.[field.name] ||
-                      "false"
-                    : formValues[field.name]) || "false",
+                    ? (formValues[parentField] as Record<string, AtomicFormValues>)?.[field.name]
+                    : formValues[field.name]) ?? "",
                 )}
                 onChange={(e) =>
                   handleInputChange(field.name, field.type, e.target.value, parentField)
@@ -303,12 +313,15 @@ export default function Page() {
               />
             ) : (
               <NumberInput
-                value={Number(
-                  (parentField
-                    ? (formValues[parentField] as Record<string, AtomicFormValues>)?.[field.name] ||
-                      0
-                    : formValues[field.name]) || 0,
-                )}
+                // Born-empty display (UI-SPEC AC-4): an untouched value (the
+                // born-empty "") renders empty — never a painted 0; a genuinely
+                // typed 0 renders as before. Nullish coalescing, not ||: only
+                // null/undefined are absent, a real 0 is not.
+                value={
+                  ((parentField
+                    ? (formValues[parentField] as Record<string, AtomicFormValues>)?.[field.name]
+                    : formValues[field.name]) ?? "") as string | number
+                }
                 onChange={(_valueString, valueNumber) =>
                   handleInputChange(field.name, field.type, valueNumber, parentField)
                 }>

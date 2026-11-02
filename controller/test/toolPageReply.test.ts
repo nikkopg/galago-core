@@ -90,9 +90,7 @@ describe("tool page reply panel (GEN-03, UI-SPEC AC-3)", () => {
   });
 
   it("renders the reply through the shared BoundedRawJson component", () => {
-    expect(src).toMatch(
-      /import \{ BoundedRawJson \} from "@\/components\/ui\/BoundedRawJson";/,
-    );
+    expect(src).toMatch(/import \{ BoundedRawJson \} from "@\/components\/ui\/BoundedRawJson";/);
     expect(src).toContain("<BoundedRawJson");
   });
 
@@ -113,5 +111,21 @@ describe("tool page reply panel (GEN-03, UI-SPEC AC-3)", () => {
     const fnEnd = src.indexOf("const handleSubmit");
     const fnBody = src.slice(fnStart, fnEnd);
     expect(fnBody).toContain("setReplyOpen(false)");
+  });
+});
+
+describe("born-empty display contract (UI-SPEC AC-4)", () => {
+  const src = stripComments(read(PAGE));
+
+  it("no painted false/0 fallback remains in renderFields", () => {
+    expect(src).not.toContain('|| "false"');
+    expect(src).not.toContain("|| 0");
+    expect((src.match(/\?\? ""/g) ?? []).length).toBe(2);
+  });
+
+  it("the STACK send strips blanks; every other tool type sends formValues verbatim", () => {
+    expect(src).toMatch(
+      /params:\s*String\(config\?\.type\) === "stack"\s*\?\s*omitBlankParams\(formValues\)\s*:\s*formValues/,
+    );
   });
 });
