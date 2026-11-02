@@ -5,16 +5,16 @@ milestone_name: STACK tool support — codegen, operator acknowledge, error visi
 current_phase: 05
 current_phase_name: STACK Codegen & Command Forms
 status: executing
-stopped_at: Completed 05-01-PLAN.md
-last_updated: "2026-11-02T03:04:58.826Z"
+stopped_at: Completed 05-02-PLAN.md
+last_updated: "2026-11-02T03:15:48.714Z"
 last_activity: 2026-11-02
 last_activity_desc: Phase 05 execution started
-state_head: 693f4888e4a3574a970d6e12aef31a2989260c8a
+state_head: f2994d0e28cf7e4c10044f59d55f6eafc421feec
 progress:
   total_phases: 3
   completed_phases: 2
   total_plans: 17
-  completed_plans: 15
+  completed_plans: 16
   percent: 67
 ---
 
@@ -31,7 +31,7 @@ decides every recovery action; the web app never acts on its own or pre-selects 
 ## Current Position
 
 Phase: 05 (STACK Codegen & Command Forms) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
 Last activity: 2026-11-02 — Phase 05 execution started
 
@@ -88,6 +88,7 @@ Progress: [███████░░░] 67%
 | Phase 04 P06 | 6 min | 3 tasks | 3 files |
 | Phase 04 P07 | 6 min | 2 tasks | 4 files |
 | Phase 05 P01 | 7 min | 3 tasks | 12 files |
+| Phase 05 P02 | 5 min | 3 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -133,6 +134,11 @@ Recent decisions affecting current work:
 - [Phase 05]: Codegen pinning mechanism: scratch-dir ts-proto 1.151.1 + explicit --plugin= (venv grpcio-tools 1.85.1), never node_modules 1.153.2 — RESEARCH spike-proven recipe; T-05-01 mitigation
 - [Phase 05]: commandFields.stack: 9 commands in proto declaration order, born-empty fields, no select; ack literal nowhere in constants.ts; OPR-05 scan flipped positive in the same commit — D-03 + RESEARCH Pitfall 1
 - [Phase 05]: LATCH_READ_COMMAND renamed to the frozen oneof key get_failure_latch; wire tests prove the ack payload and latch read on the real tool_base.Command encoder — D-07a/b, RESEARCH Pitfall 2
+- [Phase 05]: 05-02: BoundedRawJson extraction uses an alias import (BoundedRawJson as LatchRawJson) so every RunRecoverySection usage site, prop and copy constant stays byte-identical — D-08 do-not-restructure honored through the extraction — Keeps the D-06 extraction mechanical; the card's pins and behaviour are untouched
+- [Phase 05]: 05-02: staticScan G-04-2 renderer pins re-targeted to components/ui/BoundedRawJson.tsx; usage pins stay on the card — The extraction necessarily removed the pinned renderer from RunRecoverySection — the plan's action and its 'unmodified scan' criterion contradicted each other (Rule 3); the invariant's intent (one bounded display) is preserved and now covers the tool page too
+- [Phase 05]: 05-02: lastReply is a tri-state (undefined = born hidden / null = completed send without data / reply object), set ONLY from runCommand onSuccess as data ?? null; onError leaves the panel untouched — Satisfies the born-hidden rule AND Pitfall 6's legible empty state with one variable; the error toast stays the only error surface (UI-SPEC rule 5)
+- [Phase 05]: 05-02: omitBlankParams (pure, keeps 0/false, one-level nested strip, no mutation) is applied ONLY when String(config?.type) === 'stack'; every other tool type sends formValues verbatim — D-04 planner decision is scoped to STACK — proto3 optional encodes on presence, so omitted blanks are wire-absent; F.A.S.T. wire bytes unchanged; 05-03's blank-optional wire case pins the STACK behaviour
+- [Phase 05]: 05-02: Born-empty display fallbacks: boolean and NumberInput branches use ?? '' instead of ||-painting 0/false; untouched fields render empty, real typed 0/false render as before; no Switch, no placeholder, formValues semantics unchanged — UI-SPEC option (a) — fixing the shared renderFields fallbacks also de-paints F.A.S.T. born number/boolean displays (display-only); the no-unchosen-value rule is the project core value
 
 ### Pending Todos
 
@@ -181,8 +187,8 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-02T03:04:58.667Z
-Stopped at: Completed 05-01-PLAN.md
+Last session: 2026-11-02T03:15:35.174Z
+Stopped at: Completed 05-02-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

@@ -68,7 +68,7 @@ not one row three times. The real defect is an unguarded re-entrant `_start()`.
 - [ ] **GEN-02**: `commandFields.stack` covers every STACK command except `acknowledge_failure`; required
   strings are `text` fields with no `defaultValue`; no `select` pre-fills; the STACK tool's Config
   (host/port) is configurable from the tool page
-- [ ] **GEN-03**: The tool-page command panel shows a command's reply `meta_data` read-only, so STACK
+- [x] **GEN-03**: The tool-page command panel shows a command's reply `meta_data` read-only, so STACK
   reads are usable
 - [ ] **GEN-04**: Activation tests run on the generated types: a real-encoder wire test of the
   acknowledge payload, the latch read, and the operator-only refusal keyed on `ToolType.stack`
@@ -113,7 +113,7 @@ not one row three times. The real defect is an unguarded re-entrant `_start()`.
 | OPR-05 | Phase 4 | Complete |
 | GEN-01 | Phase 5 | Complete |
 | GEN-02 | Phase 5 | Pending |
-| GEN-03 | Phase 5 | Pending |
+| GEN-03 | Phase 5 | Complete |
 | GEN-04 | Phase 5 | Pending |
 
 **Coverage:**

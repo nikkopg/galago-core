@@ -196,3 +196,11 @@ None - no external service configuration required.
 ---
 *Phase: 05-stack-codegen-command-forms*
 *Completed: 2026-11-02*
+
+## Self-Check: PASSED
+
+- All 5 created files exist on disk (verified with `[ -f ]`).
+- All 4 commits (d461742, 181f34a, 5bc8375, f2994d0) are ancestors of HEAD.
+- `gsd-tools check evaluation-scope --plan 05-02 --commits-only` → resolved, 4 commits on this branch.
+- Full unit suite at close: 28 files / 588 tests passed; `tsc --noEmit` 0 errors; `prettier . --check` clean.
+
