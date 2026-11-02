@@ -25,7 +25,7 @@ See: .planning/PROJECT.md (updated 2026-11-02)
 
 **Core value:** While an instrument step runs, the operator sees what the instrument is doing and
 decides every recovery action; the web app never acts on its own or pre-selects a physical decision.
-**Current focus:** Milestone v2 complete — ready for `/gsd-complete-milestone v2`
+**Current focus:** Planning next milestone — start with `/gsd-new-milestone`
 
 ## Current Position
 
