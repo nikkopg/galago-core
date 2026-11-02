@@ -2,6 +2,7 @@ import { describe, it, expect, afterEach, vi } from "vitest";
 import { ToolType } from "gen-interfaces/controller";
 import { ToolStatus } from "gen-interfaces/tools/grpc_interfaces/tool_base";
 import { logAction } from "@/server/logger";
+import Tool from "@/server/tools";
 import { installFakeTool, removeFakeTool } from "./helpers/fakeTool";
 
 describe("heartbeat", () => {
@@ -133,5 +134,24 @@ describe("heartbeat", () => {
       tool.stopHeartbeat();
       await removeFakeTool(toolId);
     }
+  });
+});
+
+// GEN-02 (D-05): the STACK Config is edited through the EXISTING generic
+// tool-page config path — getToolConfigDefinition dynamically imports the
+// generated stack module and calls Config.create({}). This case proves that
+// path resolves for the real generated types with ZERO config code written
+// anywhere in this phase (the createBaseConfig output is spike-verified from
+// the frozen proto). If this cannot pass, the generated stack module lacks
+// Config — a galago-tools gap, never hand-rolled here.
+describe("getToolConfigDefinition (D-05 zero-UI config path)", () => {
+  it("resolves ToolType.stack to the exact 4-key generated Config default", async () => {
+    const definition = await Tool.getToolConfigDefinition(ToolType.stack);
+    expect(definition).toStrictEqual({
+      host: "",
+      port: 0,
+      transfer_timeout_s: 0,
+      ledger_dir: "",
+    });
   });
 });
