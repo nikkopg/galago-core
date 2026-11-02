@@ -176,7 +176,7 @@ to `feat/stack-tool` (it is not there yet). This phase cannot start until it is.
   4. Running a STACK read from the tool page shows the reply's `meta_data` read-only under the command form.
   5. Activation tests pass on the generated types: a real-encoder wire test of the acknowledge payload and
      the latch read, and the operator-only refusal keyed on `ToolType.stack`.
-**Plans:** 3/3 plans executed
+**Plans:** 4 plans (3 executed + 1 gap closure)
 
 Plans:
 **Wave 1**
@@ -185,6 +185,9 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 - [x] 05-03-PLAN.md — (wave 2) Activation tests on generated types: 7 D-08 cast retrofits + real-enum operator-only refusal (GEN-04e), `getToolConfigDefinition("stack")` config proof (D-05), commandFields sweeps (D-07c), `zToolCreate` accepts "stack" (D-07d), blank-optional wire pin (D-04) + full phase gate (GEN-02, GEN-04)
+
+**Wave 1 — gap closure** *(verification gap CR-01/WR-01: page boolean/cleared-number value pipeline)*
+- [ ] 05-04-PLAN.md — (wave 1, gap closure) Coerce STACK boolean fields to real booleans before the strip (keeping `Input type="boolean"`, 05-UI-SPEC AC-4) so a typed `false` reaches the wire as `false`; treat a cleared NumberInput/NaN as blank so an emptied field is omitted; real-encoder boolean wire test + updated source pins + full phase gate (GEN-02)
 **UI hint**: yes
 **Notes**: Mechanical, following `128bbd7`. Stop condition: if the frozen proto renames `guid` /
 `arm_inspected`, has no latch-read command, or lets an adapter reply break the empty-message-on-SUCCESS rule
@@ -215,7 +218,7 @@ Phases execute in numeric order: 3 → 4 → 5 (Phase 5 waits on galago-tools Ph
 |-------|-----------|----------------|--------|-----------|
 | 3. Queue Start Guard & Tool Error Visibility | v2 | 7/7 | Complete    | 2026-10-29 |
 | 4. Operator-only Commands & STACK Acknowledge | v2 | 7/7 | Complete    | 2026-10-30 |
-| 5. STACK Codegen & Command Forms | v2 | 3/3 | In Progress (gated on galago-tools Phase 4) | - |
+| 5. STACK Codegen & Command Forms | v2 | 3/4 | In Progress (gap closure 05-04: CR-01/WR-01) | - |
 
 ## Backlog
 
