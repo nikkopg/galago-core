@@ -122,13 +122,13 @@ describe("operator-only execute-time guard (D-02a)", () => {
   });
 
   it("refuses stack.acknowledge_failure at the Tool instance with zero gRPC and an audited warning (OPR-04 execute)", async () => {
-    const fake = installFakeTool("stack-1", "stack" as ToolType);
+    const fake = installFakeTool("stack-1", ToolType.stack);
     grpc = fake.grpc;
 
     await expect(
       fake.tool.executeCommand({
         toolId: "stack-1",
-        toolType: "stack" as unknown as ToolType,
+        toolType: ToolType.stack,
         command: "acknowledge_failure",
         params: {},
       }),
@@ -148,8 +148,38 @@ describe("operator-only execute-time guard (D-02a)", () => {
     expect(details).toContain("toolId=stack-1");
   });
 
+  // GEN-04(e) activation: the same refusal keyed on the REAL generated
+  // ToolType.stack (no cast) — the guard is the first statement of
+  // executeCommand, so nothing is ever sent (zero gRPC) and the refusal is
+  // audited exactly as at the string-typed call site above.
+  it("refuses stack.acknowledge_failure keyed on the real ToolType.stack with zero gRPC and an audited warning (GEN-04e)", async () => {
+    const fake = installFakeTool("stack-1", ToolType.stack);
+    grpc = fake.grpc;
+
+    await expect(
+      fake.tool.executeCommand({
+        toolId: "stack-1",
+        toolType: ToolType.stack,
+        command: "acknowledge_failure",
+        params: { guid: "act-guid", arm_inspected: "yes" },
+      }),
+    ).rejects.toThrow(/is an operator action/);
+
+    expect(grpc.executeCommand).toHaveBeenCalledTimes(0); // zero sends — the guard fires before any gRPC
+    expect(logAction).toHaveBeenCalledTimes(1);
+    expect(logAction).toHaveBeenCalledWith(
+      expect.objectContaining({
+        level: "warning",
+        action: "Operator-Only Command Refused",
+      }),
+    );
+    const details = vi.mocked(logAction).mock.calls[0][0].details;
+    expect(details).toContain("stage=execute");
+    expect(details).toContain("command=acknowledge_failure");
+  });
+
   it("refuses through the tRPC runCommand caller too — the caller's claimed toolType never rescues it", async () => {
-    const fake = installFakeTool("stack-1", "stack" as ToolType);
+    const fake = installFakeTool("stack-1", ToolType.stack);
     grpc = fake.grpc;
     const caller = toolRouter.createCaller({});
 
@@ -166,7 +196,7 @@ describe("operator-only execute-time guard (D-02a)", () => {
   });
 
   it("keys on the Tool instance's real type — a mislabelled command.toolType is still refused (anti-pattern: keying on command.toolType)", async () => {
-    const fake = installFakeTool("stack-1", "stack" as ToolType);
+    const fake = installFakeTool("stack-1", ToolType.stack);
     grpc = fake.grpc;
 
     await expect(
@@ -204,7 +234,7 @@ describe("operator-only execute-time guard (D-02a)", () => {
   });
 
   it("never touches controlCommand — the operator path sends exactly one unguarded gRPC (D-02 carve-out)", async () => {
-    const fake = installFakeTool("stack-1", "stack" as ToolType);
+    const fake = installFakeTool("stack-1", ToolType.stack);
     grpc = fake.grpc;
     grpc.executeCommand.mockResolvedValue({
       response: ResponseCode.SUCCESS,

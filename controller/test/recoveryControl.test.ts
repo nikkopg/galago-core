@@ -58,7 +58,7 @@ describe("recoveryControl", () => {
 
     fastGrpc = installFakeTool("fast-1", ToolType.fast).grpc;
     pf400Grpc = installFakeTool("pf400-1", ToolType.pf400).grpc;
-    stackGrpc = installFakeTool("stack-1", "stack" as ToolType).grpc;
+    stackGrpc = installFakeTool("stack-1", ToolType.stack).grpc;
     fastGrpc.executeCommand.mockResolvedValue({
       response: ResponseCode.SUCCESS,
       return_reply: true,
@@ -404,7 +404,7 @@ describe("recoveryControl", () => {
         queueId: 1,
         runId: "run-1",
         toolId: "STACK 1",
-        toolType: "stack" as ToolType,
+        toolType: ToolType.stack,
         command: "transfer",
         startedAt: 0,
       });

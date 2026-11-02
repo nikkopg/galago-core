@@ -142,7 +142,7 @@ describe("tool.latchStatus query (D-11)", () => {
     vi.mocked(getSelectedWorkcellId).mockResolvedValue(1);
     vi.mocked(findMany).mockResolvedValue([STACK_TOOL_ROW]);
 
-    stackGrpc = installFakeTool("stack-1", "stack" as ToolType).grpc;
+    stackGrpc = installFakeTool("stack-1", ToolType.stack).grpc;
     stackGrpc.executeCommand.mockResolvedValue({
       response: ResponseCode.SUCCESS,
       return_reply: true,
