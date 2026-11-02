@@ -17,8 +17,6 @@ import {
   Input,
   Spinner,
   VStack,
-  Collapse,
-  Box,
   useColorModeValue,
 } from "@chakra-ui/react";
 import Link from "next/link";
@@ -37,68 +35,19 @@ import {
   type RunControlConfirmModalRequest,
 } from "@/components/runs/RunControlConfirmModal";
 
+// D-06 (phase 5): the bounded raw-JSON display was extracted into the shared
+// components/ui/BoundedRawJson.tsx (with its formatLatchRaw fallback chain).
+// The card renders through that one shared component under its local
+// LatchRawJson name — same component, same styling, same "Raw JSON" label
+// (UI-SPEC AC-3); no second styled copy exists.
+import { BoundedRawJson as LatchRawJson } from "@/components/ui/BoundedRawJson";
+
 export interface RunRecoverySectionProps {
   toolName: string;
   toolType: string;
 }
 
 type RecoveryUIAction = "resume" | "abort" | "acknowledge_failure";
-
-// Bounded renderer backstop for an unknown latch reply (T-04-12): the raw
-// object renders as a single JSON line that shows only inside the bounded
-// LatchRawJson panel below, never a loop or a list.
-function formatLatchRaw(raw: Record<string, unknown>): string {
-  try {
-    return JSON.stringify(raw);
-  } catch {
-    try {
-      return String(raw);
-    } catch {
-      return "{}";
-    }
-  }
-}
-
-interface LatchRawJsonProps {
-  raw: Record<string, unknown>;
-  isOpen: boolean;
-  onToggle: () => void;
-}
-
-// The one place a raw latch reply renders, for both the latched and the
-// unrecognized state. The tool page centres the card, so the card is sized by
-// its content: the zero-width basis keeps a long raw line out of the card's
-// intrinsic width, min width 100% fills the card's real width, and max height
-// with internal scroll bounds the length (G-04-2, T-04-12). "0px" is written
-// with a unit because a bare 0 goes through Chakra's fraction transform and
-// becomes 0%, a cyclic percentage that would let the line count again.
-// Display-only: no hooks, no state, nothing here touches the guid or the send.
-function LatchRawJson({ raw, isOpen, onToggle }: LatchRawJsonProps) {
-  return (
-    <>
-      <Button variant="link" size="sm" onClick={onToggle} aria-expanded={isOpen}>
-        Raw JSON
-      </Button>
-      <Collapse in={isOpen}>
-        <Box
-          w="0px"
-          minW="100%"
-          maxH="160px"
-          overflowY="auto"
-          mt={2}
-          p={2}
-          bg="surface.panel"
-          borderWidth="1px"
-          borderColor="border.subtle"
-          borderRadius="md">
-          <Text fontFamily="mono" fontSize="sm" wordBreak="break-all" whiteSpace="pre-wrap">
-            {formatLatchRaw(raw)}
-          </Text>
-        </Box>
-      </Collapse>
-    </>
-  );
-}
 
 // UI-SPEC copy pinned as constants (Read latch / Use this guid / No failure
 // latched / the blank-guid hint) so the display contract is greppable at the

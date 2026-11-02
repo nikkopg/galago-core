@@ -797,10 +797,15 @@ describe("recovery card offers only the tool type's declared actions (G-04-6)", 
 });
 
 describe("latch raw reply stays in one bounded collapsible (G-04-2)", () => {
+  // D-06 (phase 5, plan 05-02): the bounded renderer was extracted into the
+  // shared components/ui/BoundedRawJson.tsx and the card renders through it
+  // via the LatchRawJson alias. The styling needles pin the shared file; the
+  // usage pins stay on the card — still exactly one bounded display.
   const cardSrc = stripComments(read("components/tools/RunRecoverySection.tsx"));
+  const sharedSrc = stripComments(read("components/ui/BoundedRawJson.tsx"));
 
-  it("both latch states render raw text only through the bounded LatchRawJson panel", () => {
-    const renderer = extractBracedRegion(cardSrc, /function LatchRawJson\(/);
+  it("both latch states render raw text only through the bounded shared panel", () => {
+    const renderer = extractBracedRegion(sharedSrc, /function BoundedRawJson\(/);
     expect(renderer.length).toBeGreaterThan(0);
     for (const needle of [
       "Raw JSON",
@@ -830,7 +835,7 @@ describe("latch raw reply stays in one bounded collapsible (G-04-2)", () => {
     // Display-only: the renderer never fills the guid, opens the modal or reads the latch.
     expect(renderer).not.toMatch(/setGuid|openConfirm|latchStatus|mutate/);
 
-    expect((cardSrc.match(/formatLatchRaw\(/g) ?? []).length).toBe(2);
+    expect((sharedSrc.match(/formatLatchRaw\(/g) ?? []).length).toBe(2);
     expect((cardSrc.match(/<LatchRawJson\b/g) ?? []).length).toBe(2);
 
     const unknownAt = cardSrc.indexOf("latchResult.unknown ?");
