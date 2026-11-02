@@ -1,5 +1,38 @@
 # Milestones
 
+## v2 STACK tool support — codegen, operator acknowledge, error visibility, F5 (Shipped: 2026-11-02)
+
+**Delivered:** galago-core sends every STACK command from born-empty tool-page forms (codegen from
+the frozen `stack.proto` commit `bcbbf8e`), shows every STACK error as an error, a Start can never
+dispatch a queue row already in flight, and only the operator — from the tool page, guid + explicit
+`"yes"` — can acknowledge a STACK failure, audited and unreachable from any protocol or queue row.
+
+**Phases completed:** 3 phases, 18 plans, 30 tasks
+**Git range:** fbf4557 → cb21916 (194 commits, 2026-10-28 → 2026-11-02)
+**Code changes:** 57 files, +8,096 / −522 (excluding `.planning/`)
+**Closeout:** override_closeout
+**Known verification overrides:** 2 newly acknowledged, 2 carried forward from a prior close (see STATE.md Deferred Items)
+- Phases 3 & 4 VERIFICATION.md digests stale — Phase 5 edits (`05-02` BoundedRawJson extraction, `05-03` cast retrofits, `05-04`/`bf928c0` coercion) touched files they cover; Phase 5's 2026-11-02 verification (20/20, fresh 608/608 full-suite gate at HEAD) re-covered the shared truths. User accepted.
+- v2-MILESTONE-AUDIT.md: status `tech_debt` — 17/17 requirements satisfied, 19/19 exports wired, 4/4 E2E flows, 0 blockers; 2 diagnosed debug sessions acknowledged (fixes shipped in 03-07/04-07); advisory items (Phase-4 WR-01..WR-05 incl. 2 security-category, Phase-3 IN-01..03, Phase-5 IN-03 + user-locked WR-03) recorded as tech debt.
+
+**Key accomplishments:**
+- Single-flight `_start` guard that ignores and audits a second Start while a step is in flight, plus a "Queue Started" log that lists the queue_ids and run_ids the Start will run, with retry-after-failure untouched.
+- A 45-case table test that drives every tool ResponseCode through a real queue start against a FakeGrpc tool and pins the getError payload, stored row error, both error log lines, the thrown error's code name and the failure seq, committed red (30 failed, 15 passed) until plan 03-04.
+- Run confirmation modal now states, read-only, how many queued steps a Start will run, how many are FAILED retries and how many distinct runs, from a pure counts/copy module fed by the queue-joined `commands` query.
+- Pure run-outcome derivation (FAILED precedence, SKIPPED-with-error becomes COMPLETED_WITH_SKIPPED_FAILURE) wired into the run row as an orange "Skipped failure" badge and Progress bar, with the single-command call-site bug fixed.
+- Error banner re-armed per failure via a seq-based dismissedSeq predicate that shows the tool's own text and real code, plus a stored-error line on failed and skipped-after-failure step cards, closed out by the phase's static scans and full regression gate.
+- Step-card error text moved into the CommandImage row (image left in a non-shrinking Box, clamped text right with flex 1 / minW 0) so the fixed 165px card no longer overflows and the sticky label stops covering the error.
+- The STACK Run Recovery card now accepts the typed guid verbatim, gates "Acknowledge failure…" on the server's own validator, and sends `{ guid, arm_inspected: "yes" }` through one confirmed-send path only after an explicit, non-defaulted "Yes" — the decision layer itself became recovery-spec-driven (`completeRecoveryEntries`), replacing the hard-coded fast allowlist.
+- The operator can now read the tool's latched failure with one explicit "Read latch" click — the server sends one fixed constant (`LATCH_READ_COMMAND`) through `tool.executeCommand`, a pure shape-tolerant `extractLatch` interprets the reply once, and the result is pure display data that fills the guid input only ("Use this guid") and never gates or feeds the acknowledge.
+- Fenced the ack literal, guard placement and single latch reader into failing-suite static scans — OPR-05 is no longer prose; any future drift (self-acknowledging path, wider literal set, guard in controlCommand, second latch reader, Enter-bound card) turns the suite red.
+- The Run Recovery card now passes the production lint gate (guid hint as a JS string constant), shows Resume/Abort only where the tool's recovery spec declares them (none on STACK), and renders raw latch replies of both kinds in one bounded 160px scrolling collapsible that cannot resize the card.
+- tRPC run.create now classifies its four mapped errors by `Error.name` through exported guards, so the operator-only refusal returns BAD_REQUEST (not a 500) even when next dev leaves RunStore.global on an older module copy.
+- Submodule pinned to the frozen stack.proto commit `bcbbf8e` and regenerated with the pinned ts-proto 1.151.1 plugin; `commandFields.stack` covers 9 commands born-empty in proto order, the OPR-05 scan flipped positive in the same commit, `LATCH_READ_COMMAND` renamed to the frozen `get_failure_latch` oneof key, and the acknowledge payload proven on the real generated encoder.
+- STACK tool pages now render born-empty command fields, a born-hidden Reply meta_data panel through the ONE shared bounded raw-JSON display, and a blank-omitting STACK send that leaves F.A.S.T. wire behavior byte-identical
+- Phase 4's string-based acknowledge/latch scaffolding proven on the real generated types: 8 mechanical cast retrofits, real-enum operator-only refusal with zero sends, the zero-UI STACK config path, commandFields.stack D-03 sweeps, schema/enum activation, and the omit-blank wire pin — 599/599 tests green.
+
+---
+
 ## v1 Live Run Control (Shipped: 2026-10-16)
 
 **Delivered:** Operator-confirmed live Pause/Resume/Abort of a running F.A.S.T. step from the run

@@ -2,19 +2,19 @@
 gsd_state_version: "1.0"
 milestone: v2
 milestone_name: STACK tool support — codegen, operator acknowledge, error visibility, F5
-current_phase: 05
-status: completed
+status: Awaiting next milestone
 stopped_at: Phase 05 complete — all phases complete
-last_updated: "2026-11-02T06:00:00.000Z"
+last_updated: "2026-11-02T07:21:48.903Z"
 last_activity: 2026-11-02
-last_activity_desc: Phase 05 complete
-state_head: e9c5cf569429cd72653e21e29f8e73c6893b2f34
+last_activity_desc: Milestone v2 completed and archived
+state_head: cb21916c69583c4c5f4acb35e991215a90c7d409
 progress:
   total_phases: 3
   completed_phases: 3
   total_plans: 18
   completed_plans: 18
   percent: 100
+current_phase: 05
 ---
 
 # Project State
@@ -29,12 +29,10 @@ decides every recovery action; the web app never acts on its own or pre-selects 
 
 ## Current Position
 
-Phase: 05
-Plan: Not started
-Status: All phases complete
-Last activity: 2026-11-02 — Phase 05 complete
-
-Progress: [██████████] 100%
+Phase: Milestone v2 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-11-02 — Milestone v2 completed and archived
 
 ## Performance Metrics
 
@@ -190,6 +188,8 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 | Category | Item | Status | Deferred At | Milestone |
 |----------|------|--------|-------------|-----------|
+| debug_sessions | run-create-operator-only-500 | diagnosed | 2026-11-02 | v2 |
+| debug_sessions | step-card-error-overflow | diagnosed | 2026-11-02 | v2 |
 | todos | 2026-10-15-evaluate-whether-expected-tray-id-is-still-needed.md | (presence-only) | 2026-10-16 | v1 |
 | todos | 2026-10-15-fetch-f-a-s-t-plate-list-for-source-dest-plate-dropdowns.md | (presence-only) | 2026-10-16 | v1 |
 
@@ -201,4 +201,5 @@ Resume file: None
 
 ## Operator Next Steps
 
-- Plan Phase 5 with /gsd-plan-phase 5 (or /gsd-discuss-phase 5 first)
+
+- Start the next milestone with /gsd-new-milestone
