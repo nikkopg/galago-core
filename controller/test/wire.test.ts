@@ -6,7 +6,7 @@ import { describe, it, expect, afterEach } from "vitest";
 import { ToolType } from "gen-interfaces/controller";
 import * as tool_base from "gen-interfaces/tools/grpc_interfaces/tool_base";
 import { installFakeTool, removeFakeTool } from "./helpers/fakeTool";
-import { omitBlankParams } from "@/components/tools/commandParams";
+import { omitBlankParams, coerceBooleanParams } from "@/components/tools/commandParams";
 import { extractRunState } from "@/server/runState";
 
 describe("wire contract", () => {
@@ -123,6 +123,78 @@ describe("wire contract", () => {
     expect(unstrippedDecoded.stack?.transfer?.robot).toBe("r1");
     expect(unstrippedDecoded.stack?.transfer?.step_key).toBe(""); // present WITH the empty string
     expect(unstrippedDecoded.stack?.transfer?.step_key).toBeDefined();
+  });
+
+  // CR-01 (05-04 gap closure): the page stores the operator's typed value in a
+  // boolean field as the STRING "false" (<Input type="boolean"> falls back to a
+  // text input), and protobufjs Writer.bool is value ? 1 : 0 — so the
+  // uncoerced string encodes as true and NO input could send false. Proven on
+  // the REAL generated encoder through the page-shaped params the page actually
+  // produces: coercion (coerceBooleanParams) then the blank strip
+  // (omitBlankParams) — exactly the handleSubmit STACK pipeline order. Fakes
+  // only — no STACK motion.
+  it("sends a real boolean for a STACK refresh field: a typed 'false' decodes false after coercion (and still decodes true without it)", () => {
+    const { tool } = installFakeTool("wire-stack", ToolType.stack);
+
+    // Exactly as the page would send list_devices after the operator typed
+    // into the boolean text field: the stored value is the STRING "false".
+    const booleanFields = [{ name: "refresh", type: "boolean" }];
+    const pageParams: Record<string, unknown> = { refresh: "false" };
+
+    const uncoercedPayload = tool._payloadForCommand({
+      toolId: "wire-stack",
+      toolType: ToolType.stack,
+      command: "list_devices",
+      params: omitBlankParams(pageParams),
+    });
+    const uncoercedDecoded = tool_base.Command.decode(
+      tool_base.Command.encode(uncoercedPayload).finish(),
+    );
+    // The pinned CR-01 defect is now in the test: WITHOUT coercion the truthy
+    // string encodes as 1 and decodes true — this is what the coercion closes.
+    expect(uncoercedDecoded.stack?.list_devices?.refresh).toBe(true);
+
+    // The fixed page pipeline: coerce boolean-typed strings first, then strip.
+    const coercedParams = omitBlankParams(coerceBooleanParams(pageParams, booleanFields));
+    const coercedPayload = tool._payloadForCommand({
+      toolId: "wire-stack",
+      toolType: ToolType.stack,
+      command: "list_devices",
+      params: coercedParams,
+    });
+    const coercedDecoded = tool_base.Command.decode(
+      tool_base.Command.encode(coercedPayload).finish(),
+    );
+    expect(coercedDecoded.stack?.list_devices?.refresh).toBe(false); // the operator's actual choice
+
+    // A typed "true" keeps decoding true through the same pipeline.
+    const trueParams = omitBlankParams(
+      coerceBooleanParams({ refresh: "true" }, booleanFields),
+    );
+    const truePayload = tool._payloadForCommand({
+      toolId: "wire-stack",
+      toolType: ToolType.stack,
+      command: "list_devices",
+      params: trueParams,
+    });
+    const trueDecoded = tool_base.Command.decode(
+      tool_base.Command.encode(truePayload).finish(),
+    );
+    expect(trueDecoded.stack?.list_devices?.refresh).toBe(true);
+
+    // An untouched '' stays born-empty through coercion and is blank-stripped:
+    // it decodes ABSENT (undefined) — never sent.
+    const untouchedParams = omitBlankParams(coerceBooleanParams({ refresh: "" }, booleanFields));
+    const untouchedPayload = tool._payloadForCommand({
+      toolId: "wire-stack",
+      toolType: ToolType.stack,
+      command: "list_devices",
+      params: untouchedParams,
+    });
+    const untouchedDecoded = tool_base.Command.decode(
+      tool_base.Command.encode(untouchedPayload).finish(),
+    );
+    expect(untouchedDecoded.stack?.list_devices?.refresh).toBeUndefined();
   });
 
   it("carries run_state through StatusReply into the runState envelope", () => {

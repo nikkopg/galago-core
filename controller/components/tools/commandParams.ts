@@ -17,6 +17,18 @@ function isPlainRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+// TDD RED scaffold (05-04 Task 1): pass-through stub so the coerceBooleanParams
+// tests fail on ASSERTION (a typed "false" stays the string "false") rather than
+// on a missing export — an invalid-RED parser/module error would not authorize
+// GREEN. The real coercion replaces this body in the feat commit.
+export function coerceBooleanParams<T extends Record<string, unknown>>(
+  params: T,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _fields: ReadonlyArray<{ name: string; type: unknown }>,
+): T {
+  return params;
+}
+
 // Copy of `params` with blank keys dropped: top-level blanks are omitted, and
 // nested plain-object values (parentField groups) get the same drop one level
 // deep. Arrays and every other value pass through verbatim. The input is
