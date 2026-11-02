@@ -69,6 +69,8 @@ created: "2026-11-02"
 |----------|-------------|------------|-------------------|
 | STACK tool page Config (host/port) saves and persists | GEN-02 | UI save flow against a running galago-web + tool server is not unit-testable without jsdom (D-24) | Open a STACK tool page, edit host/port, save, reload, confirm values persist |
 | Command form submits a STACK read and shows `meta_data` reply | GEN-02/03 | Requires a live (or simulated) tool server round trip through the tool page | Run a read from the tool-page command panel; confirm the bounded raw-JSON block shows the reply |
+| Creating a STACK tool through the add flow persists a tool row of type `stack` | GEN-04 | The tRPC add flow writes a DB row through the running tool server; in-memory workcell seeding is not proven harness territory | Use the tool add flow (NewToolModal) to create a tool of type STACK; confirm it appears in the tool list as type stack and survives a page reload |
+| Born-empty display: untouched STACK fields render empty; typed `0`/`false` render as typed | GEN-02 | Field rendering is page UI — the repo has no jsdom/RTL harness | Open a STACK tool page command panel without typing: no field shows a painted 0 or painted false; type 0 into a number field and false into a boolean field and confirm both render as typed |
 
 ---
 

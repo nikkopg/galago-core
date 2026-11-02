@@ -601,7 +601,7 @@ ToolStatusCard (on the tool page) ── EditToolModal renders config.stack per-
 | A3 | grpcio-tools version skew (spike used 1.85.1/libprotoc 35.1) does not change generated output vs whatever the executor installs | Environment Availability | Low: the in-repo regen runs the full `tsc`/suite gate, so any generated-code breakage is caught immediately; re-pin grpcio-tools if protoc features differ |
 | A4 | protobufjs `Writer.bool("")` coerces a blank boolean string to `false`-with-presence | Pitfall 5 | Cosmetic: the D-07 blank-optional wire case pins the actual behavior; no assumption needs to survive the test |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **D-04: omit blank optional fields vs send them as typed?**
    - What we know: proto3 `optional` makes the two choices wire-distinguishable (Pitfall 5); the page
@@ -610,8 +610,16 @@ ToolStatusCard (on the tool page) ── EditToolModal renders config.stack per-
      comment says empty-means-unset for Config; command fields are its Phase 5 domain).
    - Recommendation: omit blanks (pure strip at the payload boundary or before `mutate`), pin with the
      D-07 blank-optional wire case; note the choice in the plan.
+   - **RESOLVED — omit blanks (planner decision per D-04's delegation):** implemented as the pure
+     `omitBlankParams` strip applied at the payload boundary for STACK tool types only (05-02 Task 3),
+     and pinned BOTH ways against the real encoder by the D-07 blank-optional wire case (05-03 Task 3:
+     stripped → untouched fields decode absent; unstripped → empty string decodes present). The wire pin
+     moots the adapter-treatment uncertainty above.
 2. **Pin hash: `bcbbf8e` vs `9592509`** — planner's call (A2); the D-01 gate task must record whichever
    hash it pins and verify the two proto stop conditions against that exact hash.
+   - **RESOLVED — `bcbbf8e` (planner decision):** recorded and verified at that exact hash by the D-01
+     gate task (05-01 Task 1: last commit touching `interfaces/`, per A2; all stop-condition proto facts
+     verified at that hash).
 
 ## Environment Availability
 
