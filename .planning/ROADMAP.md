@@ -176,7 +176,15 @@ to `feat/stack-tool` (it is not there yet). This phase cannot start until it is.
   4. Running a STACK read from the tool page shows the reply's `meta_data` read-only under the command form.
   5. Activation tests pass on the generated types: a real-encoder wire test of the acknowledge payload and
      the latch read, and the operator-only refusal keyed on `ToolType.stack`.
-**Plans**: TBD
+**Plans:** 3 plans
+
+Plans:
+**Wave 1**
+- [ ] 05-01-PLAN.md — (wave 1, tracer) D-01 gate verification at frozen commit bcbbf8e + submodule bump + pinned ts-proto 1.151.1 regen + `commandFields.stack` (9 commands, born-empty) + OPR-05 scan flip in the same commit + `LATCH_READ_COMMAND` → `"get_failure_latch"` + ack wire test (GEN-01, GEN-02, GEN-04a/b)
+- [ ] 05-02-PLAN.md — (wave 1) Tool page renders STACK: shared `BoundedRawJson` extraction (D-06), reply `meta_data` panel read-only under the form (GEN-03), born-empty `renderFields` + blank-omitting STACK send (D-04) (GEN-02, GEN-03)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+- [ ] 05-03-PLAN.md — (wave 2) Activation tests on generated types: 7 D-08 cast retrofits + real-enum operator-only refusal (GEN-04e), `getToolConfigDefinition("stack")` config proof (D-05), commandFields sweeps (D-07c), `zToolCreate` accepts "stack" (D-07d), blank-optional wire pin (D-04) + full phase gate (GEN-02, GEN-04)
 **UI hint**: yes
 **Notes**: Mechanical, following `128bbd7`. Stop condition: if the frozen proto renames `guid` /
 `arm_inspected`, has no latch-read command, or lets an adapter reply break the empty-message-on-SUCCESS rule
