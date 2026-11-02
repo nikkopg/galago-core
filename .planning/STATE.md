@@ -4,16 +4,16 @@ milestone: v2
 milestone_name: STACK tool support — codegen, operator acknowledge, error visibility, F5
 current_phase: 5
 current_phase_name: STACK Codegen & Command Forms
-status: planning
-stopped_at: Phase 5 context gathered
-last_updated: "2026-10-30T08:47:41.216Z"
+status: executing
+stopped_at: Phase 5 UI-SPEC approved
+last_updated: "2026-11-02T02:54:58.744Z"
 last_activity: 2026-10-30
 last_activity_desc: Phase 04 complete, transitioned to Phase 5
-state_head: c7ddb263ab6c2223977867a6fd3d1f6433af247f
+state_head: aac5a94331ec8cc9ee43a1b1b10d07e7d528b84e
 progress:
   total_phases: 3
   completed_phases: 2
-  total_plans: 14
+  total_plans: 17
   completed_plans: 14
   percent: 67
 ---
@@ -30,9 +30,9 @@ decides every recovery action; the web app never acts on its own or pre-selects 
 
 ## Current Position
 
-Phase: 5 — STACK Codegen & Command Forms
+Phase: 5 (STACK Codegen & Command Forms) — READY TO EXECUTE
 Plan: Not started
-Status: Ready to plan
+Status: Ready to execute
 Last activity: 2026-10-30 — Phase 04 complete, transitioned to Phase 5
 
 Progress: [███████░░░] 67%
@@ -176,9 +176,9 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-30T08:47:41.164Z
-Stopped at: Phase 5 context gathered
-Resume file: .planning/phases/05-stack-codegen-command-forms/05-CONTEXT.md
+Last session: 2026-11-02T02:29:50.575Z
+Stopped at: Phase 5 UI-SPEC approved
+Resume file: .planning/phases/05-stack-codegen-command-forms/05-UI-SPEC.md
 
 ## Operator Next Steps
 
