@@ -168,18 +168,14 @@ describe("wire contract", () => {
     expect(coercedDecoded.stack?.list_devices?.refresh).toBe(false); // the operator's actual choice
 
     // A typed "true" keeps decoding true through the same pipeline.
-    const trueParams = omitBlankParams(
-      coerceBooleanParams({ refresh: "true" }, booleanFields),
-    );
+    const trueParams = omitBlankParams(coerceBooleanParams({ refresh: "true" }, booleanFields));
     const truePayload = tool._payloadForCommand({
       toolId: "wire-stack",
       toolType: ToolType.stack,
       command: "list_devices",
       params: trueParams,
     });
-    const trueDecoded = tool_base.Command.decode(
-      tool_base.Command.encode(truePayload).finish(),
-    );
+    const trueDecoded = tool_base.Command.decode(tool_base.Command.encode(truePayload).finish());
     expect(trueDecoded.stack?.list_devices?.refresh).toBe(true);
 
     // An untouched '' stays born-empty through coercion and is blank-stripped:

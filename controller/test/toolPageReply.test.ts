@@ -123,9 +123,17 @@ describe("born-empty display contract (UI-SPEC AC-4)", () => {
     expect((src.match(/\?\? ""/g) ?? []).length).toBe(2);
   });
 
-  it("the STACK send strips blanks; every other tool type sends formValues verbatim", () => {
+  it("the STACK send coerces boolean strings then strips blanks; every other tool type sends formValues verbatim", () => {
+    // CR-01 gap closure (05-04): coercion wraps INSIDE the strip's argument —
+    // coerceBooleanParams runs BEFORE omitBlankParams — and the ternary still
+    // scopes both to STACK only, with the `: formValues` fallback verbatim for
+    // every other tool type.
     expect(src).toMatch(
-      /params:\s*String\(config\?\.type\) === "stack"\s*\?\s*omitBlankParams\(formValues\)\s*:\s*formValues/,
+      /params:\s*String\(config\?\.type\) === "stack"\s*\?\s*omitBlankParams\(\s*coerceBooleanParams\(\s*formValues[\s\S]*?\)\s*,\s*\)\s*:\s*formValues/,
     );
+  });
+
+  it("pins the NumberInput NaN guard: a cleared number stores the born-empty '' (WR-01)", () => {
+    expect(src).toContain('Number.isNaN(valueNumber) ? ""');
   });
 });

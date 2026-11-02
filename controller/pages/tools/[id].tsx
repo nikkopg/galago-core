@@ -169,8 +169,9 @@ export default function Page() {
       // empty-string/undefined/null params before the mutation — an
       // operator-typed 0 or false passes through. Coercion runs BEFORE the
       // strip (CR-01 gap closure, 05-04): a STACK boolean field stores the
-      // operator's typed value as the string "false"/"true" (Input
-      // type="boolean" falls back to a text input), so boolean-typed values
+      // operator's typed value as the string "false"/"true" (the boolean
+      // Input's invalid HTML input type falls back to a text field), so
+      // boolean-typed values
       // are coerced to real booleans first — a typed "false" sends false,
       // never the truthy protojs default of true. Every other tool type keeps
       // params verbatim so F.A.S.T. wire behavior is byte-identical to today;
@@ -340,7 +341,12 @@ export default function Page() {
                   // the born-empty "" instead, so the visually-emptied field is
                   // blank and the STACK strip omits it (isBlank also treats a
                   // NaN as blank for defence in depth).
-                  handleInputChange(field.name, field.type, Number.isNaN(valueNumber) ? "" : valueNumber, parentField)
+                  handleInputChange(
+                    field.name,
+                    field.type,
+                    Number.isNaN(valueNumber) ? "" : valueNumber,
+                    parentField,
+                  )
                 }>
                 <NumberInputField />
               </NumberInput>

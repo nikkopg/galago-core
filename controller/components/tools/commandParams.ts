@@ -59,7 +59,10 @@ export function coerceBooleanParams<T extends Record<string, unknown>>(
       continue;
     }
     if (nested.has(key) && isPlainRecord(value)) {
-      result[key] = coerceBooleanParams(value, nested.get(key) as ReadonlyArray<{ name: string; type: unknown }>);
+      result[key] = coerceBooleanParams(
+        value,
+        nested.get(key) as ReadonlyArray<{ name: string; type: unknown }>,
+      );
       continue;
     }
     result[key] = value;
