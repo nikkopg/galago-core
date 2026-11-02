@@ -2,14 +2,14 @@
 gsd_state_version: "1.0"
 milestone: v2
 milestone_name: STACK tool support — codegen, operator acknowledge, error visibility, F5
-current_phase: 5
+current_phase: 05
 current_phase_name: STACK Codegen & Command Forms
 status: executing
 stopped_at: Phase 5 UI-SPEC approved
-last_updated: "2026-11-02T02:54:58.744Z"
-last_activity: 2026-10-30
-last_activity_desc: Phase 04 complete, transitioned to Phase 5
-state_head: aac5a94331ec8cc9ee43a1b1b10d07e7d528b84e
+last_updated: "2026-11-02T02:56:09.508Z"
+last_activity: 2026-11-02
+last_activity_desc: Phase 05 execution started
+state_head: fb7711ebaad093be00b7293ca33e209d4a8084f3
 progress:
   total_phases: 3
   completed_phases: 2
@@ -26,14 +26,14 @@ See: .planning/PROJECT.md (updated 2026-10-30)
 
 **Core value:** While an instrument step runs, the operator sees what the instrument is doing and
 decides every recovery action; the web app never acts on its own or pre-selects a physical decision.
-**Current focus:** Phase 5 — STACK Codegen & Command Forms
+**Current focus:** Phase 05 — STACK Codegen & Command Forms
 
 ## Current Position
 
-Phase: 5 (STACK Codegen & Command Forms) — READY TO EXECUTE
-Plan: Not started
-Status: Ready to execute
-Last activity: 2026-10-30 — Phase 04 complete, transitioned to Phase 5
+Phase: 05 (STACK Codegen & Command Forms) — EXECUTING
+Plan: 1 of 3
+Status: Executing Phase 05
+Last activity: 2026-11-02 — Phase 05 execution started
 
 Progress: [███████░░░] 67%
 
