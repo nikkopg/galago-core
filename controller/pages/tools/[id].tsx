@@ -1,6 +1,7 @@
 import { ChangeEvent, useEffect, useState } from "react";
 import ToolStatusCard from "@/components/tools/ToolStatusCard";
 import { RunRecoverySection } from "@/components/tools/RunRecoverySection";
+import { BoundedRawJson } from "@/components/ui/BoundedRawJson";
 import {
   Select,
   Button,
@@ -13,15 +14,18 @@ import {
   NumberInputField,
   Heading,
   HStack,
+  Text,
   Alert,
   AlertIcon,
   AlertTitle,
   AlertDescription,
+  useColorModeValue,
 } from "@chakra-ui/react";
 import { useRouter } from "next/router";
 import { trpc } from "@/utils/trpc";
 import { ToolCommandInfo } from "@/types";
 import { ToolType } from "gen-interfaces/controller";
+import type { ExecuteCommandReply } from "gen-interfaces/tools/grpc_interfaces/tool_base";
 import { capitalizeFirst } from "@/utils/parser";
 import Head from "next/head";
 import { TeachPendant } from "@/components/tools/advanced/teach_pendant/TeachPendant";
@@ -33,14 +37,29 @@ import { Tool } from "@/types";
 type AtomicFormValues = string | number | boolean | string[];
 type FormValues = Record<string, AtomicFormValues | Record<string, AtomicFormValues>>;
 
+// UI-SPEC copy pinned as module-top JS string constants (the G-04-5
+// apostrophe-rule convention: rendered copy is never raw JSX text, and the
+// display contract stays greppable at the source level).
+const REPLY_META_DATA_LABEL = "Reply meta_data";
+const NO_REPLY_DATA_LABEL = "No reply data returned.";
+
 export default function Page() {
   const router = useRouter();
+  const mutedColor = useColorModeValue("gray.500", "whiteAlpha.700");
   const [id, setId] = useState<string | null>(null);
   const infoQuery = trpc.tool.info.useQuery({ toolId: id || "" });
   const config = infoQuery.data;
   const [_commandExecutionStatus, setCommandExecutionStatus] = useState<CommandStatus>({});
   const [selectedCommand, setSelectedCommand] = useState<string | undefined>();
   const [formValues, setFormValues] = useState<FormValues>({});
+  // The most recent completed runCommand reply (GEN-03): undefined = nothing
+  // sent yet (the panel is born hidden), null = a completed send with no
+  // reply data (the server did not set return_reply, RESEARCH Pitfall 6),
+  // otherwise the reply with its optional meta_data record. Set ONLY from
+  // the mutation's onSuccess handler — the error toast stays the only error
+  // surface and the panel never feeds a send (UI-SPEC rules 5 and 6).
+  const [lastReply, setLastReply] = useState<ExecuteCommandReply | null | undefined>(undefined);
+  const [replyOpen, setReplyOpen] = useState(false);
 
   // Unused function - commented out (was used by __handleSelectCommand)
   // const doesCommandHaveParameters = (commandName: string) => {
@@ -100,6 +119,9 @@ export default function Page() {
 
   const executeCommandWithToast = (commandName: string, toolCommand: ToolCommandInfo) => {
     setCommandExecutionStatus((prevStatus) => ({ ...prevStatus, [commandName]: "idle" }));
+    // Every new send starts with the reply disclosure collapsed again — one
+    // panel, replaced per send, never a list (UI-SPEC rule 7).
+    setReplyOpen(false);
 
     // Create a promise from the mutation
     const commandPromise = new Promise((resolve, reject) => {
@@ -109,6 +131,11 @@ export default function Page() {
             ...prevStatus,
             [commandName]: "success",
           }));
+          // Keep the reply for the read-only meta_data panel (GEN-03). A
+          // completed send without reply data lands as null so the panel can
+          // degrade legibly; onError leaves the panel untouched (UI-SPEC
+          // rule 5).
+          setLastReply(data ?? null);
           resolve(data);
         },
         onError: (error) => {
@@ -339,6 +366,30 @@ export default function Page() {
                           Send Command
                         </Button>
                       </>
+                    )}
+                    {/* Reply meta_data panel (GEN-03, UI-SPEC AC-3): born hidden —
+                        nothing renders until a completed send produces a reply. The
+                        block is display-only: read-only bounded JSON through the one
+                        shared display, no accent, no table, no editing affordance, no
+                        send path (UI-SPEC rule 6). It shows the most recent completed
+                        send's reply and is replaced per send (rule 7). */}
+                    {lastReply !== undefined && (
+                      <VStack align="stretch" width="100%" spacing={2} mt={4}>
+                        <Heading size="sm" fontWeight={700}>
+                          {REPLY_META_DATA_LABEL}
+                        </Heading>
+                        {lastReply?.meta_data !== undefined ? (
+                          <BoundedRawJson
+                            raw={lastReply.meta_data}
+                            isOpen={replyOpen}
+                            onToggle={() => setReplyOpen(!replyOpen)}
+                          />
+                        ) : (
+                          <Text fontSize="sm" color={mutedColor}>
+                            {NO_REPLY_DATA_LABEL}
+                          </Text>
+                        )}
+                      </VStack>
                     )}
                   </VStack>
                 </FormControl>
