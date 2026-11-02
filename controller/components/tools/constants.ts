@@ -340,4 +340,43 @@ export const commandFields: CommandFields = {
     scan_tips: [{ name: "is_tip_broken", type: "boolean", defaultValue: false }],
     eject_tray: [],
   },
+  // Frozen stack.proto command surface (vendor/galago-tools @ bcbbf8e); field
+  // names pass through snakeToCamel=false unchanged. Every field is born
+  // empty — no defaultValue, no select (D-03).
+  stack: {
+    transfer: [
+      { name: "step_key", type: "text" },
+      { name: "robot", type: "text" },
+      { name: "labware_profile", type: "text" },
+      { name: "source_device", type: "text" },
+      { name: "source_deck", type: "text" },
+      { name: "source_nest", type: "text" },
+      { name: "source_transfer_profile", type: "text" },
+      { name: "destination_device", type: "text" },
+      { name: "destination_deck", type: "text" },
+      { name: "destination_nest", type: "text" },
+      { name: "destination_transfer_profile", type: "text" },
+      // optional seconds; blank/0 = adapter default
+      { name: "timeout_s", type: "number" },
+    ],
+    get_manager_state: [],
+    get_robot_states: [],
+    list_devices: [{ name: "refresh", type: "boolean" }],
+    list_labware_profiles: [{ name: "refresh", type: "boolean" }],
+    list_transfer_profiles: [{ name: "refresh", type: "boolean" }],
+    get_labware_presence: [{ name: "robot", type: "text" }],
+    get_transfer_estimate: [
+      { name: "robot", type: "text" },
+      { name: "labware_profile", type: "text" },
+      { name: "source_device", type: "text" },
+      { name: "source_deck", type: "text" },
+      { name: "source_nest", type: "text" },
+      { name: "source_transfer_profile", type: "text" },
+      { name: "destination_device", type: "text" },
+      { name: "destination_deck", type: "text" },
+      { name: "destination_nest", type: "text" },
+      { name: "destination_transfer_profile", type: "text" },
+    ],
+    get_failure_latch: [],
+  },
 };

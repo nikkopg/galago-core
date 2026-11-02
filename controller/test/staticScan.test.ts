@@ -662,7 +662,7 @@ describe("operator-only ack invariants (OPR-05)", () => {
     ]);
   });
 
-  it("commandFields never grows a stack tool or an acknowledge entry", () => {
+  it("commandFields pins the stack tool and never an acknowledge entry", () => {
     const src = stripComments(read("components/tools/constants.ts"));
     expect(src).not.toContain("acknowledge_failure");
     // Top-level tool keys are the 2-space-indented entries of the exported
@@ -670,7 +670,7 @@ describe("operator-only ack invariants (OPR-05)", () => {
     // parsed source keys, never a runtime import.
     const keys = [...src.matchAll(/^  ([A-Za-z0-9_]+): \{/gm)].map((match) => match[1]);
     expect(keys.length).toBeGreaterThan(0);
-    expect(keys).not.toContain("stack");
+    expect(keys).toContain("stack");
   });
 
   it("runControl.ts never appends an ack to the live-run control spec", () => {

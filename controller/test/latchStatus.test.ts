@@ -189,7 +189,7 @@ describe("tool.latchStatus query (D-11)", () => {
     // D-11: the read never touches the operator control path.
     expect(controlCommand).not.toHaveBeenCalled();
     expect(stackGrpc.executeCommand).toHaveBeenCalledTimes(1);
-    expect(stackGrpc.executeCommand).toHaveBeenCalledWith({ stack: { latch_status: {} } });
+    expect(stackGrpc.executeCommand).toHaveBeenCalledWith({ stack: { get_failure_latch: {} } });
   });
 
   it("flags unknown (never a confident not-latched) when the reply carries no meta_data (WR-02)", async () => {
@@ -232,11 +232,11 @@ describe("tool.latchStatus query (D-11)", () => {
     });
 
     // The stack FakeGrpc received a stack-keyed payload — proof the type came
-    // from the DB row ("stack"), never zToolType (which rejects "stack" until
-    // Phase 5). Query input is the toolId string ONLY.
+    // from the DB row ("stack"), never zToolType. Query input is the toolId
+    // string ONLY.
     const result = await caller().latchStatus({ toolId: "stack-1" });
     expect(result).toMatchObject({ latched: true, guid: "submit-ab12" });
-    expect(stackGrpc.executeCommand).toHaveBeenCalledWith({ stack: { latch_status: {} } });
+    expect(stackGrpc.executeCommand).toHaveBeenCalledWith({ stack: { get_failure_latch: {} } });
   });
 
   it("never calls the .controlCommand( path in the router's latchStatus block", () => {

@@ -205,10 +205,10 @@ export const RECOVERY_STRICT_SUCCESS: Readonly<Record<string, readonly string[]>
 // never a client-chosen command. This keeps the Run Recovery card from ever
 // becoming a generic command sender (ACK-AND-F3.md §3.3).
 
-// PLACEHOLDER name until galago-tools Phase 4 freezes the proto command name
-// (D-13/A1). Exactly one constant owns the name; Phase 5's contract test
-// (GEN-04) pins this constant against the generated stack.Command oneof.
-export const LATCH_READ_COMMAND = "latch_status";
+// The frozen oneof key (galago-tools Phase 4, stack.proto @ bcbbf8e — D-13/A1
+// resolved). Exactly one constant owns the name; the activation test (GEN-04b)
+// pins this constant against the generated stack.Command oneof.
+export const LATCH_READ_COMMAND = "get_failure_latch";
 
 export interface LatchInfo {
   latched: boolean;
