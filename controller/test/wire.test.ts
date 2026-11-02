@@ -6,6 +6,7 @@ import { describe, it, expect, afterEach } from "vitest";
 import { ToolType } from "gen-interfaces/controller";
 import * as tool_base from "gen-interfaces/tools/grpc_interfaces/tool_base";
 import { installFakeTool, removeFakeTool } from "./helpers/fakeTool";
+import { omitBlankParams } from "@/components/tools/commandParams";
 import { extractRunState } from "@/server/runState";
 
 describe("wire contract", () => {
@@ -64,6 +65,64 @@ describe("wire contract", () => {
     const decoded = tool_base.Command.decode(tool_base.Command.encode(payload).finish());
     expect(decoded.stack?.acknowledge_failure?.guid).toBe("task-guid");
     expect(decoded.stack?.acknowledge_failure?.arm_inspected).toBe("yes");
+  });
+
+  // D-04 blank-optional (RESEARCH Pitfall 5): every stack.proto command field
+  // is proto3 optional, and ts-proto encodes those on !== undefined — so a
+  // blank "" is wire-visible while an omitted key is not. The page seeds every
+  // untouched field as "" and the STACK send strips blanks (omitBlankParams,
+  // 05-02). Pinned BOTH ways against the real encoder: stripped, the untouched
+  // fields decode ABSENT and only the operator's typed choice travels;
+  // unstripped, the blank decodes as a present empty string — why the strip
+  // exists. Fakes only — no STACK motion.
+  it("omits blank transfer params for STACK: the typed field decodes present, untouched fields decode absent", () => {
+    const { tool } = installFakeTool("wire-stack", ToolType.stack);
+
+    // Exactly as the page would send transfer: every field seeded "" (the
+    // formValues seeding — no stack field has a defaultValue) and the operator
+    // typed robot.
+    const pageParams: Record<string, unknown> = {
+      step_key: "",
+      robot: "r1",
+      labware_profile: "",
+      source_device: "",
+      source_deck: "",
+      source_nest: "",
+      source_transfer_profile: "",
+      destination_device: "",
+      destination_deck: "",
+      destination_nest: "",
+      destination_transfer_profile: "",
+      timeout_s: "",
+    };
+
+    const strippedPayload = tool._payloadForCommand({
+      toolId: "wire-stack",
+      toolType: ToolType.stack,
+      command: "transfer",
+      params: omitBlankParams(pageParams),
+    });
+    const strippedDecoded = tool_base.Command.decode(
+      tool_base.Command.encode(strippedPayload).finish(),
+    );
+    expect(strippedDecoded.stack?.transfer?.robot).toBe("r1"); // the typed choice travels
+    expect(strippedDecoded.stack?.transfer?.step_key).toBeUndefined(); // blank = omitted, never sent
+    expect(strippedDecoded.stack?.transfer?.timeout_s).toBeUndefined();
+
+    // The same params WITHOUT the strip: proto3 optional encodes on !==
+    // undefined, so the blank reaches the wire as a present empty string.
+    const unstrippedPayload = tool._payloadForCommand({
+      toolId: "wire-stack",
+      toolType: ToolType.stack,
+      command: "transfer",
+      params: pageParams,
+    });
+    const unstrippedDecoded = tool_base.Command.decode(
+      tool_base.Command.encode(unstrippedPayload).finish(),
+    );
+    expect(unstrippedDecoded.stack?.transfer?.robot).toBe("r1");
+    expect(unstrippedDecoded.stack?.transfer?.step_key).toBe(""); // present WITH the empty string
+    expect(unstrippedDecoded.stack?.transfer?.step_key).toBeDefined();
   });
 
   it("carries run_state through StatusReply into the runState envelope", () => {
