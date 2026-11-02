@@ -28,6 +28,7 @@ export enum ToolType {
   clariostar = "clariostar",
   lcus1_relay = "lcus1_relay",
   fast = "fast",
+  stack = "stack",
   UNRECOGNIZED = "UNRECOGNIZED",
 }
 
@@ -102,6 +103,9 @@ export function toolTypeFromJSON(object: any): ToolType {
     case 23:
     case "fast":
       return ToolType.fast;
+    case 24:
+    case "stack":
+      return ToolType.stack;
     case -1:
     case "UNRECOGNIZED":
     default:
@@ -157,6 +161,8 @@ export function toolTypeToJSON(object: ToolType): string {
       return "lcus1_relay";
     case ToolType.fast:
       return "fast";
+    case ToolType.stack:
+      return "stack";
     case ToolType.UNRECOGNIZED:
     default:
       return "UNRECOGNIZED";
@@ -211,6 +217,8 @@ export function toolTypeToNumber(object: ToolType): number {
       return 22;
     case ToolType.fast:
       return 23;
+    case ToolType.stack:
+      return 24;
     case ToolType.UNRECOGNIZED:
     default:
       return -1;
