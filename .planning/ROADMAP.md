@@ -39,7 +39,7 @@ phases are always written "galago-tools Phase N" here because its numbering (4-7
   never shown as success (F5, DEP-03c; F3, DEP-03b).
 - [x] **Phase 4: Operator-only Commands & STACK Acknowledge** - Only an operator, from the tool page, can (completed 2026-10-30)
   acknowledge a STACK failure; no protocol, script or queue row can (DEP-03a).
-- [ ] **Phase 5: STACK Codegen & Command Forms** - Build against the frozen `stack.proto`, offer every STACK
+- [x] **Phase 5: STACK Codegen & Command Forms** - Build against the frozen `stack.proto`, offer every STACK (completed 2026-11-02)
   command as a form, and prove the acknowledge work on the real wire (DEP-02).
 
 ## Phase Details
@@ -176,7 +176,7 @@ to `feat/stack-tool` (it is not there yet). This phase cannot start until it is.
   4. Running a STACK read from the tool page shows the reply's `meta_data` read-only under the command form.
   5. Activation tests pass on the generated types: a real-encoder wire test of the acknowledge payload and
      the latch read, and the operator-only refusal keyed on `ToolType.stack`.
-**Plans:** 4/4 plans executed (3 executed + 1 gap closure)
+**Plans:** 4/4 plans complete (3 executed + 1 gap closure)
 
 Plans:
 **Wave 1**
@@ -218,7 +218,7 @@ Phases execute in numeric order: 3 → 4 → 5 (Phase 5 waits on galago-tools Ph
 |-------|-----------|----------------|--------|-----------|
 | 3. Queue Start Guard & Tool Error Visibility | v2 | 7/7 | Complete    | 2026-10-29 |
 | 4. Operator-only Commands & STACK Acknowledge | v2 | 7/7 | Complete    | 2026-10-30 |
-| 5. STACK Codegen & Command Forms | v2 | 4/4 | In Progress (gap closure 05-04: CR-01/WR-01) | - |
+| 5. STACK Codegen & Command Forms | v2 | 4/4 | Complete    | 2026-11-02 |
 
 ## Backlog
 

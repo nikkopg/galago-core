@@ -88,12 +88,16 @@ stack-automation-layer core gaps are fixed there via `/gsd-quick`, never here.
   itself stays enabled), queue refuses a queued `stack.acknowledge_failure`, run creation refuses
   operator-only steps as BAD_REQUEST, and the STACK card presents only the actions STACK declares —
   Phase 4 (UAT 3/3 passed + 4 diagnosed gaps closed by plans 04-06/04-07, UAT complete 2026-10-30)
+- ✓ DEP-02 — v2: STACK codegen and command forms — `vendor/galago-tools` pinned to the frozen
+  `stack.proto` commit `bcbbf8e`, `gen-interfaces` regenerated with the pinned ts-proto 1.151.1
+  recipe, `commandFields.stack` born-empty for every command except `acknowledge_failure`, command
+  panel renders for STACK with born-empty fields, blank-omitting/boolean-coercing STACK sends, and
+  the Reply `meta_data` panel through the shared bounded display — Phase 5 (verification 20/20,
+  UAT 4/4 live against the rebuilt galago-web + PAC simulator, 2026-11-02)
 
 ### Active
 
-v2 requirements in `.planning/REQUIREMENTS.md`.
-
-- [ ] STACK codegen and command forms (DEP-02)
+No open v2 requirements — all v2 features shipped and verified through Phase 5.
 
 ### Out of Scope
 
@@ -163,6 +167,10 @@ v2 requirements in `.planning/REQUIREMENTS.md`.
 | Recovery card buttons are spec-derived per tool type; raw latch replies render bounded (LatchRawJson) | STACK declares only acknowledge_failure, so resume/abort never show for stack; a ~3 KB unknown reply must not blow out the card (04-06, G-04-2/6) | ✓ Phase 4 |
 | `run.create` maps protocol/op errors by `Error.name` guards, not `instanceof`, plus a `next lint` gate on the build | The dev recompile module-copy drift broke class-identity checks against `RunStore.global` singletons (04-07, G-04-5/7) | ✓ Phase 4 |
 | Use quick tasks for post-phase fixes instead of inserting decimal phases | Small, test-backed queue fixes (f48, h0q, o44, t9e) | ✓ Good — but leaves earlier phase verifications stale; re-verify after |
+| v2 codegen: submodule pinned at stack-proto commit `bcbbf8e` + scratch-dir ts-proto 1.151.1 with an explicit `--plugin=` (never the node_modules 1.153.2) | The pinned frozen proto and plugin are the regen-reproducibility guarantee (05-01) | ✓ Phase 5 |
+| v2 display: tri-state `lastReply` (undefined born hidden / null completed-no-data / reply object) + one shared BoundedRawJson for all raw replies | Born-hidden AND legible empty state from one state variable; a single bounded display instead of a second styled copy (05-02) | ✓ Phase 5 |
+| v2 send pipeline: `omitBlankParams` + `coerceBooleanParams` scoped to STACK sends; NaN treated as blank | Operator-typed `false` reaches the wire; cleared number fields are omitted; other tool types pass verbatim (05-04) | ✓ Phase 5 (CR-01/WR-01 proven live) |
+| Production-build lesson: `next build` fatals on an eslint-disable comment for a rule the config doesn't define | UAT container rebuild surfaced it; `commandParams.ts` disabled-comment replaced by a precise typed cast (bf928c0) | ✓ Phase 5 (found during verification work, re-reviewed 0 critical/warning) |
 
 ## Evolution
 
@@ -182,4 +190,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-10-30 after Phase 4*
+*Last updated: 2026-11-02 after Phase 5*
