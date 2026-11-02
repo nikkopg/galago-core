@@ -1,6 +1,6 @@
 # Milestones
 
-## v2 STACK tool support — codegen, operator acknowledge, error visibility, F5 (Shipped: 2026-11-02)
+## v1.1 STACK tool support — codegen, operator acknowledge, error visibility, F5 (Shipped: 2026-11-02)
 
 **Delivered:** galago-core sends every STACK command from born-empty tool-page forms (codegen from
 the frozen `stack.proto` commit `bcbbf8e`), shows every STACK error as an error, a Start can never
@@ -13,7 +13,7 @@ dispatch a queue row already in flight, and only the operator — from the tool 
 **Closeout:** override_closeout
 **Known verification overrides:** 2 newly acknowledged, 2 carried forward from a prior close (see STATE.md Deferred Items)
 - Phases 3 & 4 VERIFICATION.md digests stale — Phase 5 edits (`05-02` BoundedRawJson extraction, `05-03` cast retrofits, `05-04`/`bf928c0` coercion) touched files they cover; Phase 5's 2026-11-02 verification (20/20, fresh 608/608 full-suite gate at HEAD) re-covered the shared truths. User accepted.
-- v2-MILESTONE-AUDIT.md: status `tech_debt` — 17/17 requirements satisfied, 19/19 exports wired, 4/4 E2E flows, 0 blockers; 2 diagnosed debug sessions acknowledged (fixes shipped in 03-07/04-07); advisory items (Phase-4 WR-01..WR-05 incl. 2 security-category, Phase-3 IN-01..03, Phase-5 IN-03 + user-locked WR-03) recorded as tech debt.
+- v1.1-MILESTONE-AUDIT.md: status `tech_debt` — 17/17 requirements satisfied, 19/19 exports wired, 4/4 E2E flows, 0 blockers; 2 diagnosed debug sessions acknowledged (fixes shipped in 03-07/04-07); advisory items (Phase-4 WR-01..WR-05 incl. 2 security-category, Phase-3 IN-01..03, Phase-5 IN-03 + user-locked WR-03) recorded as tech debt.
 
 **Key accomplishments:**
 - Single-flight `_start` guard that ignores and audits a second Start while a step is in flight, plus a "Queue Started" log that lists the queue_ids and run_ids the Start will run, with retry-after-failure untouched.

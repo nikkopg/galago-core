@@ -1,0 +1,28 @@
+{
+  "contract": "1.0.0",
+  "flavor": "core",
+  "milestone": "v1.1 — STACK tool support — codegen, operator acknowledge, error visibility, F5",
+  "phases": [
+    {
+      "number": "3",
+      "name": "Queue Start Guard & Tool Error Visibility",
+      "status": "complete"
+    },
+    {
+      "number": "4",
+      "name": "Operator-only Commands & STACK Acknowledge",
+      "status": "complete"
+    },
+    {
+      "number": "5",
+      "name": "STACK Codegen & Command Forms",
+      "status": "complete"
+    }
+  ],
+  "next": {
+    "command": "/gsd-progress",
+    "label": "Show progress",
+    "reason": "Unsure of state — showing progress"
+  },
+  "updated_at": "2026-11-02T07:21:48.912Z"
+}

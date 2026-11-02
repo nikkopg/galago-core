@@ -5,7 +5,7 @@ created: 2026-10-29T04:00:00Z
 updated: 2026-10-29T04:30:00Z
 goal: find_root_cause_only
 audit_acknowledged:
-  milestone: v2
+  milestone: v1.1
   at: 2026-11-02
   status: diagnosed
 ---

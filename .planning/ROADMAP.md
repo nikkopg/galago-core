@@ -3,7 +3,7 @@
 ## Milestones
 
 - ✅ **v1 Live Run Control (queue & run page)** — Phases 1-2 (shipped 2026-10-16) — [archive](milestones/v1-ROADMAP.md)
-- ✅ **v2 STACK tool support — codegen, operator acknowledge, error visibility, F5** — Phases 3-5 (shipped 2026-11-02) — [archive](milestones/v2-ROADMAP.md)
+- ✅ **v1.1 STACK tool support — codegen, operator acknowledge, error visibility, F5** — Phases 3-5 (shipped 2026-11-02) — [archive](milestones/v1.1-ROADMAP.md)
 
 ## Phases
 
@@ -16,7 +16,7 @@
 </details>
 
 <details>
-<summary>✅ v2 STACK tool support — codegen, operator acknowledge, error visibility, F5 (Phases 3-5) — SHIPPED 2026-11-02</summary>
+<summary>✅ v1.1 STACK tool support — codegen, operator acknowledge, error visibility, F5 (Phases 3-5) — SHIPPED 2026-11-02</summary>
 
 - [x] Phase 3: Queue Start Guard & Tool Error Visibility (7/7 plans) — completed 2026-10-29
 - [x] Phase 4: Operator-only Commands & STACK Acknowledge (7/7 plans) — completed 2026-10-30

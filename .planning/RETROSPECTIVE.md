@@ -44,7 +44,7 @@
 
 ---
 
-## Milestone: v2 — STACK tool support (codegen, operator acknowledge, error visibility, F5)
+## Milestone: v1.1 — STACK tool support (codegen, operator acknowledge, error visibility, F5)
 
 **Shipped:** 2026-11-02
 **Phases:** 3 | **Plans:** 18
@@ -95,14 +95,14 @@
 | Milestone | Sessions | Phases | Key Change |
 |-----------|----------|--------|------------|
 | v1 | — | 2 | First GSD milestone; tracer-first plans; quick tasks for post-phase fixes |
-| v2 | — | 3 | Research scoped to root-cause docs; RED-first TDD records; static-scan fencing of safety invariants; headless-Chrome UAT harness |
+| v1.1 | — | 3 | Research scoped to root-cause docs; RED-first TDD records; static-scan fencing of safety invariants; headless-Chrome UAT harness |
 
 ### Cumulative Quality
 
 | Milestone | Tests | Coverage | Zero-Dep Additions |
 |-----------|-------|----------|-------------------|
 | v1 | 244 | — | Vitest 2.1.9 + vite-tsconfig-paths (dev only) |
-| v2 | 608 | — | None (ts-proto codegen pinned via scratch venv, no new runtime deps) |
+| v1.1 | 608 | — | None (ts-proto codegen pinned via scratch venv, no new runtime deps) |
 
 ### Top Lessons (Verified Across Milestones)
 

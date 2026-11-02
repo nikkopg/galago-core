@@ -1,12 +1,12 @@
 ---
 gsd_state_version: "1.0"
-milestone: v2
+milestone: v1.1
 milestone_name: STACK tool support — codegen, operator acknowledge, error visibility, F5
 status: Awaiting next milestone
 stopped_at: Phase 05 complete — all phases complete
 last_updated: "2026-11-02T07:21:48.903Z"
 last_activity: 2026-11-02
-last_activity_desc: Milestone v2 completed and archived
+last_activity_desc: Milestone v1.1 completed and archived
 state_head: cb21916c69583c4c5f4acb35e991215a90c7d409
 progress:
   total_phases: 3
@@ -29,10 +29,10 @@ decides every recovery action; the web app never acts on its own or pre-selects 
 
 ## Current Position
 
-Phase: Milestone v2 complete
+Phase: Milestone v1.1 complete
 Plan: —
 Status: Awaiting next milestone
-Last activity: 2026-11-02 — Milestone v2 completed and archived
+Last activity: 2026-11-02 — Milestone v1.1 completed and archived
 
 ## Performance Metrics
 
@@ -98,11 +98,11 @@ Decisions are logged in PROJECT.md Key Decisions table.
 v1 decisions are archived in `milestones/v1-ROADMAP.md` (Milestone Summary) and PROJECT.md.
 Recent decisions affecting current work:
 
-- [Roadmap v2]: Phase order is F5 + F3 (3) → operator acknowledge (4) → STACK codegen (5), the user's
+- [Roadmap v1.1]: Phase order is F5 + F3 (3) → operator acknowledge (4) → STACK codegen (5), the user's
   build order; F5 and F3 merged into one phase (2026-10-28, user decision) since they share files.
-- [Roadmap v2]: Phase 4 is built on string tool types and `"stack" as ToolType` fakes, so it does not wait
+- [Roadmap v1.1]: Phase 4 is built on string tool types and `"stack" as ToolType` fakes, so it does not wait
   for `stack.proto`; only Phase 5 is hard-gated on galago-tools Phase 4.
-- [Roadmap v2]: `stack` is NOT added to `runControl`; the acknowledge uses a recovery-only spec plus one
+- [Roadmap v1.1]: `stack` is NOT added to `runControl`; the acknowledge uses a recovery-only spec plus one
   operator-only command table (ACK-AND-F3.md §1.2, §2.2).
 - [Phase 3]: 03-01: single-flight guard is the first statement of CommandQueue._start; an ignored Start logs 'Queue Start Ignored' and changes nothing
 - [Phase 3]: 03-01: Start listing read via synchronous SqliteQueue.queuedRowsSync (no await before the _runningPromise claim), capped at 50 rows
@@ -188,15 +188,15 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 | Category | Item | Status | Deferred At | Milestone |
 |----------|------|--------|-------------|-----------|
-| debug_sessions | run-create-operator-only-500 | diagnosed | 2026-11-02 | v2 |
-| debug_sessions | step-card-error-overflow | diagnosed | 2026-11-02 | v2 |
+| debug_sessions | run-create-operator-only-500 | diagnosed | 2026-11-02 | v1.1 |
+| debug_sessions | step-card-error-overflow | diagnosed | 2026-11-02 | v1.1 |
 | todos | 2026-10-15-evaluate-whether-expected-tray-id-is-still-needed.md | (presence-only) | 2026-10-16 | v1 |
 | todos | 2026-10-15-fetch-f-a-s-t-plate-list-for-source-dest-plate-dropdowns.md | (presence-only) | 2026-10-16 | v1 |
 
 ## Session Continuity
 
 Last session: 2026-11-02T12:45:00.000Z
-Stopped at: Phase 05 complete — all 3 phases complete, milestone v2 ready to close
+Stopped at: Phase 05 complete — all 3 phases complete, milestone v1.1 ready to close
 Resume file: None
 
 ## Operator Next Steps

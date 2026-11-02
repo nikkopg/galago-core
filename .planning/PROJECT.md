@@ -5,7 +5,7 @@
 The `nikkopg/galago-core` fork of `sciencecorp/galago-core`: Galago's Next.js + tRPC web app
 (`controller/`) that schedules workcell protocols, runs them through its command queue and talks to
 tool servers over gRPC. This GSD project covers the queue, tRPC and run-page work that lets an
-operator control a running instrument step live — and, since v2, STACK tool support: codegen from
+operator control a running instrument step live — and, since v1.1, STACK tool support: codegen from
 the frozen `stack.proto`, born-empty STACK command forms, operator-only STACK error
 acknowledgement, and the queue's single-flight Start guard with full tool-error visibility. The
 F.A.S.T. and STACK tool servers it controls are planned in the galago-tools fork's own GSD project.
@@ -18,14 +18,14 @@ and never pre-selects a physical decision for the operator.
 
 ## Current State
 
-**Shipped:** v2 STACK tool support — 2026-11-02 (Phases 3-5, 18 plans; tag `v2`). galago-core sends
+**Shipped:** v1.1 STACK tool support — 2026-11-02 (Phases 3-5, 18 plans; tag `v1.1`). galago-core sends
 every STACK command from born-empty tool-page forms (codegen from the frozen `stack.proto` commit
 `bcbbf8e`), shows every STACK error as an error (re-arming banner, step-card stored error, real
 code names, skipped failures never plain success), a Start can never dispatch a row already in
 flight, and only the operator — from the tool page, with guid + explicit `"yes"` — can acknowledge
 a STACK failure, audited and never reachable from a protocol or the queue. Full suite at close:
-608/608 tests, tsc clean. Audit: `v2-MILESTONE-AUDIT.md`; archive:
-`milestones/v2-ROADMAP.md`, `milestones/v2-REQUIREMENTS.md`.
+608/608 tests, tsc clean. Audit: `v1.1-MILESTONE-AUDIT.md`; archive:
+`milestones/v1.1-ROADMAP.md`, `milestones/v1.1-REQUIREMENTS.md`.
 
 **Shipped earlier:** v1 Live Run Control (queue & run page) — 2026-10-16 (Phases 1-2, 11 plans;
 tag `v1`): operator pause/resume/abort of a running F.A.S.T. step with explicit, confirmed,
@@ -38,7 +38,7 @@ owns the STACK adapter, the GAL-02 runbook protocol and the supervised live acce
 7, user present). This milestone's DEP-02 delivery unblocks its Phases 6-7.
 
 <details>
-<summary>Milestone v2 scope (shipped) — goal, delivery, carried items</summary>
+<summary>Milestone v1.1 scope (shipped) — goal, delivery, carried items</summary>
 
 **Goal:** galago-core can send every STACK command, shows every STACK error as an error, gives only
 the operator an audited AcknowledgeFailure, and the root cause of F5 (a queued command executed
@@ -50,9 +50,9 @@ more than once) is fixed.
 - DEP-03a — Phase 4: operator-only STACK AcknowledgeFailure on the D-20 pattern (OPR-01..05)
 - DEP-02 — Phase 5: STACK codegen + command forms on the frozen proto (GEN-01..04)
 
-**Carried, not in v2 scope:** F.A.S.T. plate-list dropdowns and `expected_tray_id` (pending todos);
+**Carried, not in v1.1 scope:** F.A.S.T. plate-list dropdowns and `expected_tray_id` (pending todos);
 02-REVIEW-DISPOSITION advisories WR-01..WR-04, IN-01; Phase-4 review advisories WR-01..WR-05
-(recorded in the v2 audit's tech debt); stack-automation-layer core gaps are fixed in galago-tools
+(recorded in the v1.1 audit's tech debt); stack-automation-layer core gaps are fixed in galago-tools
 via `/gsd-quick`, never here.
 
 </details>
@@ -60,8 +60,8 @@ via `/gsd-quick`, never here.
 ## Next Milestone Goals
 
 Not yet defined. Start with `/gsd-new-milestone` (questioning → research → requirements →
-roadmap). Candidates carried from v2: the Future Requirements list (archived at
-`milestones/v2-REQUIREMENTS.md`) and the tech-debt list in `v2-MILESTONE-AUDIT.md`.
+roadmap). Candidates carried from v1.1: the Future Requirements list (archived at
+`milestones/v1.1-REQUIREMENTS.md`) and the tech-debt list in `v1.1-MILESTONE-AUDIT.md`.
 
 ## Requirements
 
@@ -83,21 +83,21 @@ roadmap). Candidates carried from v2: the Future Requirements list (archived at
   plumbing), Stop/Clear All/delete-run routed through a no-timer abort-first dialog, fast
   abort/resume removed from the step editor, and a tool-page Run Recovery card backed by
   `tool.recoveryControl` — Phase 2 (UAT 9/9 against the redeployed galago-tools, 2026-10-15)
-- ✓ QUE-07..QUE-09 (F5) — v2: single-flight Start guard as the first statement of
+- ✓ QUE-07..QUE-09 (F5) — v1.1: single-flight Start guard as the first statement of
   `CommandQueue._start` (an ignored Start logs "Queue Start Ignored", changes nothing and shows a
   warning toast); the Start confirmation lists what will run, read-only, from queue-joined rows —
   Phase 3
-- ✓ ERR-01..ERR-05 (F3) — v2: a tool's `ERROR_FROM_TOOL` message is thrown and persisted (SUCCESS
+- ✓ ERR-01..ERR-05 (F3) — v1.1: a tool's `ERROR_FROM_TOOL` message is thrown and persisted (SUCCESS
   with a message counts as an error), shown in a re-arming run-page banner, on the step card (beside
   the image, 3-line clamp, full text on hover) and in the run outcome; a skipped failure shows an
   orange "Skipped failure" badge, never success — Phase 3 (UAT 5/5, 2026-10-29)
-- ✓ DEP-03a — v2: operator-only STACK AcknowledgeFailure — recovery-card acknowledge flow (guid
+- ✓ DEP-03a — v1.1: operator-only STACK AcknowledgeFailure — recovery-card acknowledge flow (guid
   entry, born-empty radios, verbatim guid restatement, audited single-send), an explicit Read Latch
   query (no polling), server-side attempt gating while a STACK step runs (refused with audit, card
   itself stays enabled), queue refuses a queued `stack.acknowledge_failure`, run creation refuses
   operator-only steps as BAD_REQUEST, and the STACK card presents only the actions STACK declares —
   Phase 4 (UAT 3/3 passed + 4 diagnosed gaps closed by plans 04-06/04-07, UAT complete 2026-10-30)
-- ✓ DEP-02 — v2: STACK codegen and command forms — `vendor/galago-tools` pinned to the frozen
+- ✓ DEP-02 — v1.1: STACK codegen and command forms — `vendor/galago-tools` pinned to the frozen
   `stack.proto` commit `bcbbf8e`, `gen-interfaces` regenerated with the pinned ts-proto 1.151.1
   recipe, `commandFields.stack` born-empty for every command except `acknowledge_failure`, command
   panel renders for STACK with born-empty fields, blank-omitting/boolean-coercing STACK sends, and
@@ -116,7 +116,7 @@ roadmap). Candidates carried from v2: the Future Requirements list (archived at
   action is an operator decision
 - STACK or F.A.S.T. motion from tests — live runs only in galago-tools' supervised Phase 7
 - GAL-02 protocol authoring — a runbook protocol in galago-tools, imported by the operator
-- `stack.proto` changes — frozen for v2 in galago-tools; a needed change stops the work for the user's
+- `stack.proto` changes — frozen for v1.1 in galago-tools; a needed change stops the work for the user's
   sign-off
 - stack-automation-layer core fixes — a gap found here stops the work and is fixed there
 - Upstream PRs to `sciencecorp/galago-core`
@@ -134,9 +134,9 @@ roadmap). Candidates carried from v2: the Future Requirements list (archived at
 - **Build:** `.dockerignore` keeps host `controller/node_modules` out of the image (host-built
   native modules broke `better-sqlite3`).
 - **Gate:** `tsc --noEmit` in `controller/` (0 errors) plus the Vitest unit suite
-  (`npm run test:unit`, 608 tests / 28 files at v2 close); `bin/make test` runs both, with
+  (`npm run test:unit`, 608 tests / 28 files at v1.1 close); `bin/make test` runs both, with
   `prettier --check`. `test/staticScan.test.ts` pins the UI-08 invariants (single send path, no
-  timers, no state checks) plus the v2 safety scans (operator-only refusals, born-empty fields,
+  timers, no state checks) plus the v1.1 safety scans (operator-only refusals, born-empty fields,
   one bounded raw display).
 - **Live control (Phase 1):** `CommandQueue.runningStep` (in-memory, set only around a tool step),
   `toolControl`, `runState`/`RunStateMonitor` (`server/runState.ts`), and `Tool.controlCommand`.
@@ -144,7 +144,7 @@ roadmap). Candidates carried from v2: the Future Requirements list (archived at
   mutation user), `components/runs/controlDecision.ts` (pure decision/send gate), `ControlBar`,
   `RunControlConfirmModal`, `ToolPausedModal`, `InstrumentStopModal`, `stopInterception.ts`,
   `server/recoveryControl.ts` + `tool.recoveryControl`, `components/tools/RunRecoverySection.tsx`.
-- **v2 STACK support:** `server/operatorOnlyCommands.ts` (refuse table + `isOperatorOnlyCommandError`),
+- **v1.1 STACK support:** `server/operatorOnlyCommands.ts` (refuse table + `isOperatorOnlyCommandError`),
   `server/recoveryActions.ts` (recovery-only spec, `LATCH_READ_COMMAND = "get_failure_latch"`),
   `components/tools/commandParams.ts` (`coerceBooleanParams`/`omitBlankParams`, STACK-scoped),
   `components/ui/BoundedRawJson.tsx` (the one bounded raw display), and the generated
@@ -174,18 +174,18 @@ roadmap). Candidates carried from v2: the Future Requirements list (archived at
 | Prove UI-08 with pure-logic tests plus static source scans, no jsdom/RTL | No new UI test dependencies (D-24); rendered behaviour went to UAT | ✓ Phase 2 (13 scan tests; UAT 9/9) |
 | Stop, Clear All and deleting the running run abort first, then act on the queue only after the abort is accepted | Stop must never leave an instrument run untracked; research showed clearing dropped a running step | ✓ Phase 2 |
 | Busy-loop catch treats a step row already removed by Clear All/delete-run as handled | Follow-up can win the race against the step's rejection (audit INT-01) | ✓ Quick task t9e |
-| v2: pull F5 and F3 into scope (reverses the 2026-10-12 deferral) | The STACK queues a second submit and its errors carry the guid the operator needs; the galago-tools step_key ledger is defence in depth, not the fix | ✓ Shipped in Phase 3 (start guard + error visibility) |
-| v2: run outcome `COMPLETED_WITH_SKIPPED_FAILURE` is client-only, derived from polled rows; `RunStatus` not widened | No schema change; FAILED takes precedence over a COMPLETED last row | ✓ Phase 3 |
-| v2: step-card error sits beside the image in one row (amends D-17/UA2) | The stacked layout overflowed the fixed 165px card (G-03-3) | ✓ Phase 3 (03-07; live fit retest waived by the user as minor) |
-| v2: skip the 4-researcher pass; research only F5 root cause and the acknowledge fit | F.A.S.T. support (`128bbd7`, `d4c3c23`, `tool.recoveryControl`) is the template | ✓ Good — F5-ROOT-CAUSE.md + ACK-AND-F3.md carried all three phases |
+| v1.1: pull F5 and F3 into scope (reverses the 2026-10-12 deferral) | The STACK queues a second submit and its errors carry the guid the operator needs; the galago-tools step_key ledger is defence in depth, not the fix | ✓ Shipped in Phase 3 (start guard + error visibility) |
+| v1.1: run outcome `COMPLETED_WITH_SKIPPED_FAILURE` is client-only, derived from polled rows; `RunStatus` not widened | No schema change; FAILED takes precedence over a COMPLETED last row | ✓ Phase 3 |
+| v1.1: step-card error sits beside the image in one row (amends D-17/UA2) | The stacked layout overflowed the fixed 165px card (G-03-3) | ✓ Phase 3 (03-07; live fit retest waived by the user as minor) |
+| v1.1: skip the 4-researcher pass; research only F5 root cause and the acknowledge fit | F.A.S.T. support (`128bbd7`, `d4c3c23`, `tool.recoveryControl`) is the template | ✓ Good — F5-ROOT-CAUSE.md + ACK-AND-F3.md carried all three phases |
 | Guid char class excludes U+0085 (NEL) explicitly; JS `\s` misses it | The planned guid regex would otherwise accept a NEL control char (04-01) | ✓ Phase 4 |
 | Operator-only command matching is trim + lowercase exact equality (D-04); action-availability is the first server refusal (D-06 reroute) | Deny-by-list never invents a match; type-aware BAD_REQUEST comes before the run-state gate (04-01) | ✓ Phase 4 |
 | Recovery card buttons are spec-derived per tool type; raw latch replies render bounded (LatchRawJson) | STACK declares only acknowledge_failure, so resume/abort never show for stack; a ~3 KB unknown reply must not blow out the card (04-06, G-04-2/6) | ✓ Phase 4 |
 | `run.create` maps protocol/op errors by `Error.name` guards, not `instanceof`, plus a `next lint` gate on the build | The dev recompile module-copy drift broke class-identity checks against `RunStore.global` singletons (04-07, G-04-5/7) | ✓ Phase 4 |
 | Use quick tasks for post-phase fixes instead of inserting decimal phases | Small, test-backed queue fixes (f48, h0q, o44, t9e) | ✓ Good — but leaves earlier phase verifications stale; re-verify after |
-| v2 codegen: submodule pinned at stack-proto commit `bcbbf8e` + scratch-dir ts-proto 1.151.1 with an explicit `--plugin=` (never the node_modules 1.153.2) | The pinned frozen proto and plugin are the regen-reproducibility guarantee (05-01) | ✓ Phase 5 |
-| v2 display: tri-state `lastReply` (undefined born hidden / null completed-no-data / reply object) + one shared BoundedRawJson for all raw replies | Born-hidden AND legible empty state from one state variable; a single bounded display instead of a second styled copy (05-02) | ✓ Phase 5 |
-| v2 send pipeline: `omitBlankParams` + `coerceBooleanParams` scoped to STACK sends; NaN treated as blank | Operator-typed `false` reaches the wire; cleared number fields are omitted; other tool types pass verbatim (05-04) | ✓ Phase 5 (CR-01/WR-01 proven live) |
+| v1.1 codegen: submodule pinned at stack-proto commit `bcbbf8e` + scratch-dir ts-proto 1.151.1 with an explicit `--plugin=` (never the node_modules 1.153.2) | The pinned frozen proto and plugin are the regen-reproducibility guarantee (05-01) | ✓ Phase 5 |
+| v1.1 display: tri-state `lastReply` (undefined born hidden / null completed-no-data / reply object) + one shared BoundedRawJson for all raw replies | Born-hidden AND legible empty state from one state variable; a single bounded display instead of a second styled copy (05-02) | ✓ Phase 5 |
+| v1.1 send pipeline: `omitBlankParams` + `coerceBooleanParams` scoped to STACK sends; NaN treated as blank | Operator-typed `false` reaches the wire; cleared number fields are omitted; other tool types pass verbatim (05-04) | ✓ Phase 5 (CR-01/WR-01 proven live) |
 | Production-build lesson: `next build` fatals on an eslint-disable comment for a rule the config doesn't define | UAT container rebuild surfaced it; `commandParams.ts` disabled-comment replaced by a precise typed cast (bf928c0) | ✓ Phase 5 (found during verification work, re-reviewed 0 critical/warning) |
 
 ## Evolution
@@ -206,4 +206,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-11-02 after v2 milestone*
+*Last updated: 2026-11-02 after v1.1 milestone*
