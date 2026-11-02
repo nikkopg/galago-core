@@ -1,225 +1,209 @@
 ---
 phase: 05-stack-codegen-command-forms
-reviewed: 2026-11-02T10:40:00Z
+reviewed: 2026-11-02T11:25:00Z
 depth: standard
-files_reviewed: 17
+files_reviewed: 5
 files_reviewed_list:
-  - controller/components/tools/RunRecoverySection.tsx
   - controller/components/tools/commandParams.ts
-  - controller/components/tools/constants.ts
-  - controller/components/ui/BoundedRawJson.tsx
   - controller/pages/tools/[id].tsx
-  - controller/server/recoveryActions.ts
-  - controller/test/boundedRawJson.test.ts
-  - controller/test/commandFields.test.ts
   - controller/test/commandParams.test.ts
-  - controller/test/latchStatus.test.ts
-  - controller/test/operatorOnly.test.ts
-  - controller/test/recoveryControl.test.ts
-  - controller/test/stackActivation.test.ts
-  - controller/test/staticScan.test.ts
   - controller/test/toolPageReply.test.ts
-  - controller/test/tools.test.ts
   - controller/test/wire.test.ts
 findings:
-  critical: 1
+  critical: 0
   warning: 2
-  info: 2
+  info: 3
   total: 5
 status: issues_found
 ---
 
-# Phase 5: Code Review Report
+# Phase 5: Code Review Report (incremental re-review, plan 05-04 gap closure)
 
-**Reviewed:** 2026-11-02T10:40:00Z
+**Reviewed:** 2026-11-02T11:25:00Z
 **Depth:** standard
-**Files Reviewed:** 17
+**Files Reviewed:** 5
 **Status:** issues_found
 
 ## Summary
 
-Reviewed the Phase 5 STACK codegen & command-forms surface at standard depth: the new
-`commandFields.stack` entry (constants.ts), the `omitBlankParams` strip (commandParams.ts), the
-extracted shared bounded display (BoundedRawJson.tsx), the tool page's born-empty display +
-reply meta_data panel + STACK-only strip ([id].tsx), the `LATCH_READ_COMMAND` unfreeze
-(recoveryActions.ts), the latch-display rewire of RunRecoverySection.tsx, and all twelve test
-files. Cross-file contracts were traced into `components/runs/controlDecision.ts`,
-`components/runs/RunControlConfirmModal.tsx`, `hooks/useRunControl.ts`,
-`server/routers/tool.ts`, `server/tools.ts`, and the generated
-`gen-interfaces/tools/grpc_interfaces/stack.ts` encoder.
+Incremental re-review of the 05-04 gap-closure delta (commits `2ca4e4e` → `a127fb2`
+against diff_base `d0b6d7d`): `coerceBooleanParams` (CR-01 fix), NaN-as-blank in
+`isBlank` (WR-01 fix), the NumberInput `""`-on-clear handler in `[id].tsx`, the
+coerce-before-strip source pins in `toolPageReply.test.ts`, and the new
+real-encoder boolean wire cases in `wire.test.ts`.
 
-The locked constraints largely hold and are well-pinned: `commandFields.stack` carries no
-`defaultValue` and no `select` (D-03), `get_failure_latch` is in and `acknowledge_failure` is
-out, `LATCH_READ_COMMAND = "get_failure_latch"` matches the generated oneof key exactly
-(GEN-04b pins the encode/decode round trip), the `/latch/i` send-path and single-reader scans
-are in place, the card and reply panel are timer-free, the meta_data panel never feeds a send,
-and the born-empty render uses nullish coalescing so a typed 0/false survives the display
-layer. The "No reply data returned." empty state is a documented design (RESEARCH Pitfall 6 /
-assumption A1), not a defect. All 136 tests in the reviewed files pass.
+**Pipeline invariants verified as still holding on source inspection:**
 
-Two wire-correctness defects survive that test coverage because neither the strip tests nor
-the wire tests exercise the page's actual value pipeline for boolean and cleared-number
-fields: a typed `"false"` in the new STACK `refresh` fields encodes as `true` on the wire
-(CR-01), and a typed-then-cleared number sends `NaN` (WR-01). Both trace to the pre-existing
-shared form renderer that Phase 5's new STACK field surface now exposes in its born-empty
-form. Findings below are ordered by severity.
+1. **Coercion-before-strip order** — `omitBlankParams(coerceBooleanParams(formValues, fields))`
+   (`[id].tsx:180-187`): coercion runs as the strip's argument (inner), so a string
+   `"false"` becomes real `false` *before* the blank strip runs — and real `false`
+   is not blank, so it survives. Correct.
+2. **STACK-only scoping** — the ternary still falls back to `formValues` verbatim
+   for every non-STACK tool type (`[id].tsx:187`); `coerceBooleanParams` and
+   `omitBlankParams` are referenced only inside the `String(config?.type) === "stack"` branch
+   (`[id].tsx:33, 180-187`), matching the project convention that STACK-specific
+   behavior lives behind that branch.
+3. **Blank semantics unchanged for non-boolean values** — `isBlank` now treats
+   `undefined`, `null`, `""` and `NaN` as blank (`commandParams.ts:14-21`); `0` and
+   `false` still pass through (pinned by `commandParams.test.ts:11-17, 53-58`).
+4. **gen-interfaces untouched** — the delta diff touches only the five reviewed
+   files; no generated encoder was hand-edited.
+5. **The pinned CR-01 defect is now a test assertion** — `wire.test.ts:144-155`
+   proves on the real generated encoder that the uncoerced `"false"` string encodes
+   as `true` (protobufjs `Writer.prototype.bool` is `value ? 1 : 0`,
+   `node_modules/protobufjs/src/writer.js:291-293`), so the fixed pipeline at
+   `wire.test.ts:158-168` decoding `false` is a genuine regression guard, not a
+   tautology.
+6. **Display contract preserved** — the `?? ""` born-empty nullish coalescing pins,
+   the no-`|| 0`/`|| "false"` scan, and the exact count-of-2 `?? ""` assertions in
+   `toolPageReply.test.ts:120-124` still pass (8/8), as do all 25 tests across the
+   three reviewed test files (vitest run verified).
+
+**Verification:** CR-01 and WR-01 from the prior 05-REVIEW are fixed and pinned on
+both the unit and real-encoder levels. No new critical issues found. Two warnings
+remain: one carried-over defect from the prior review that this increment did not
+address (WR-02), and one residual edge of the CR-01 fix itself (WR-03). All
+findings below carry full file/line evidence; carried items keep their prior IDs
+for traceability.
 
 ## Critical Issues
 
-### CR-01: Typed "false" in a STACK `refresh` boolean field encodes as `true` on the wire — the operator cannot send `false`
-
-**File:** `controller/pages/tools/[id].tsx:266-282` (renderer), with `controller/components/tools/constants.ts:364-366` (new STACK boolean fields) and `controller/components/tools/commandParams.ts:12-14` (strip keeps the string)
-
-**Issue:** Phase 5 adds `refresh` (type `"boolean"`, no defaultValue) to the new STACK
-`list_devices`, `list_labware_profiles` and `list_transfer_profiles` commands. The shared
-form renderer renders boolean fields as `<Input type="boolean" ... />` — `boolean` is not a
-valid HTML input type, so the browser falls back to a **text** input and `onChange` stores
-`e.target.value`, a **string** (`handleInputChange` only converts `text_array`; booleans are
-stored as typed text, `[id].tsx:279-281`). The value then flows:
-
-1. `omitBlankParams` keeps it — the string `"false"` is not `undefined`/`null`/`""`
-   (`commandParams.ts:12-14`, and the D-04 contract explicitly wants operator-typed false to
-   survive);
-2. `Tool._payloadForCommand` (`server/tools.ts:361-367`) embeds it verbatim as the oneof
-   message field;
-3. the generated encoder writes it whenever `message.refresh !== undefined`
-   (`gen-interfaces/tools/grpc_interfaces/stack.ts:660-661`) via protobufjs
-   `Writer.prototype.bool`, which is `value ? 1 : 0`
-   (`node_modules/protobufjs/src/writer.js:291-293`) — the string `"false"` is truthy, so the
-   wire carries `1` and the adapter reads `refresh: true`.
-
-Net effect: **any non-empty text the operator types — `"false"`, `"0"`, `"no"` — sends
-`refresh: true`, and there is no input at all that sends `false`.** This directly violates
-the phase's locked constraint that an operator-typed false must survive intact (phase context
-D-04), and `wire.test.ts`'s blank-optional case never covers a boolean field, so the gap is
-untested. The renderer flaw is pre-existing (other tools' booleans shared it), but the STACK
-commands that newly expose it ship in this phase.
-
-**Fix:** Make boolean fields a real boolean control and store a real boolean. Minimal, local
-change in `[id].tsx` — coerce on input and render a bounded choice:
-
-```tsx
-} else if (field.type === "boolean") {
-  return (
-    <FormControl key={field.name} my={2}>
-      <FormLabel>{field.name}</FormLabel>
-      <Select
-        placeholder="Select an option"
-        value={
-          ((parentField
-            ? (formValues[parentField] as Record<string, AtomicFormValues>)?.[field.name]
-            : formValues[field.name]) ?? "") as string
-        }
-        onChange={(e) =>
-          // store a real boolean (or "" for untouched), never a truthy string
-          handleInputChange(field.name, field.type, e.target.value, parentField)
-        }>
-        <option value="true">true</option>
-        <option value="false">false</option>
-      </Select>
-    </FormControl>
-  );
-}
-```
-
-and in `handleSubmit`, before the strip, convert boolean strings to booleans (e.g.
-`params[field] = value === "true" ? true : value === "false" ? false : value`), or add a
-boolean-aware coercion in `omitBlankParams`'s caller for STACK. Add a `wire.test.ts` case:
-`refresh: false` must decode `false`, `refresh: "false"`-typed input must never decode `true`.
+None. The prior CR-01 (typed `"false"` encoding as `true`) is closed by the
+coercion-before-strip pipeline and is now pinned both ways on the real encoder
+(`wire.test.ts:136-194`).
 
 ## Warnings
 
-### WR-01: A typed-then-cleared STACK number field sends `NaN` — the blank strip does not catch it
+### WR-02 (carried, unresolved in this delta): Command-form seeding effect's nested-group branch is dead and self-overwriting; `FieldType` and `Field.type` disagree
 
-**File:** `controller/pages/tools/[id].tsx:314-330` (NumberInput onChange), with `controller/components/tools/commandParams.ts:12-14`
+**File:** `controller/pages/tools/[id].tsx:88-113`, `controller/components/tools/types.ts:1-7, 21`
 
-**Issue:** Chakra v2's `NumberInput` `onChange(valueString, valueAsNumber)` calls the
-user handler with `parse(next)` (`@chakra-ui/counter`: `update` →
-`onChangeProp(next.toString(), parse(next))`, where `parse("") = parseFloat("") = NaN`).
-When the operator types a value and then clears it — a normal correction flow —
-`handleInputChange` stores `NaN` in `formValues` (`[id].tsx:325-327`). `isBlank(NaN)` is
-false (`NaN` is neither `undefined`, `null` nor `""`), so `omitBlankParams` **keeps** it and
-the STACK send carries `timeout_s: NaN`, which the generated encoder writes as a raw NaN
-double (`stack.ts:399-401`, `writer.double(message.timeout_s)`). The born-empty display
-change (`?? ""`) fixed only the render side; the input side still poisons `formValues` with
-`NaN`, so a field the operator visually emptied is still sent — the exact outcome the
-omit-blanks decision exists to prevent. Pre-existing for other tool types, but the STACK
-strip's contract makes this phase the place it must be handled.
+**Issue:** Unchanged by this increment and still unaddressed. The seeding effect's
+first `if (Array.isArray(field.type))` branch seeds
+`newValues[field.name] = nestedFieldValues` (`[id].tsx:95-102`), but the following
+`if (field.type === "text_array") ... else ...` at `[id].tsx:103-108` is *not* an
+`else if` — its `else` runs for array-typed fields too (an array is not the string
+`"text_array"`), overwriting the just-seeded record with
+`field.defaultValue !== undefined ? field.defaultValue : ""` (`[id].tsx:107`). Since
+group fields carry no `defaultValue`, the nested seeding can never survive: the
+group key is born as the string `""`. `handleInputChange` partially masks this
+(`{ ...newValues[parentField] ..., }` over `""` yields `{}` via spread, so each
+typed nested key re-materializes a record), but untouched nested keys are born
+absent instead of `""` — a divergence from the born-empty contract (UI-SPEC AC-4)
+that would surface the moment anyone adds a nested group (the `Field[]` member
+exists in `FieldType` precisely for that). Also still escalated: `Field["type"]`
+(`types.ts:1-7`) omits `Field[]` while `FieldType` (`types.ts:21`) includes it, so
+the nested-group feature is typed in one place and untyped the other.
 
-**Fix:** In `handleInputChange`, store the born-empty `""` when the number is not parseable:
+This matters more now than it did when first reported: `coerceBooleanParams` added
+a nested-walk (`commandParams.ts:49-52, 61-66`) that relies on a group value being
+a plain record (`isPlainRecord(value)` guard, `[id].tsx` consuming it), and
+`omitBlankParams` recursion treats the group member `""` as a top-level blank — so
+today the nested coercion walk is reachable only through the spread-masking path.
+The dead seeding is a live hazard for exactly the machinery this increment built.
+
+**Fix:** Change the second `if` to `else if (field.type === "text_array")` (and
+wrap it in an `else`-chain that skips array-typed fields), and add `Field[]` to
+`Field["type"]` in `types.ts` so `Array.isArray(field.type)` narrows correctly in
+`renderFields` (`[id].tsx:249`). Mirror the same fix shape the coercion walk
+already assumes.
+
+### WR-03 (new, residual of CR-01): STACK boolean fields remain free-text inputs — any non-exact string still silently encodes `true`
+
+**File:** `controller/pages/tools/[id].tsx:280-296` (renderer), `controller/components/tools/commandParams.ts:57-59` (coercion)
+
+**Issue:** The CR-01 gap-closure fixes the wire for the exact strings `"true"` /
+`"false"`, but does not fix the root cause the prior review identified: the boolean
+branch still renders `<Input type="boolean" ... />` (`[id].tsx:280-282`), and
+`boolean` is not a valid HTML input type — the browser falls back to a **text**
+input whose `onChange` stores `e.target.value` verbatim. The coercion at
+`commandParams.ts:58` (`value === "true" ? true : value === "false" ? false : value`)
+leaves every other string untouched, and protobufjs `Writer.prototype.bool` is
+`value ? 1 : 0` (verified, `node_modules/protobufjs/src/writer.js:291-293`) — so an
+operator-typed `"0"`, `"no"`, `"yes"`, `"TRUE"` or any typo in the boolean field is
+a truthy string and still encodes as `refresh: true`. The prior review's CR-01
+explicitly enumerated `"0"` and `"no"` among the inputs that send `true`; this
+increment narrowed the blast radius to non-exact strings without eliminating it.
+The free-text affordance also gives the operator no way to know a boolean field
+accepts only the literal words `true`/`false` — an honest-looking input that
+silently means `true` for arbitrary text is a wire-correctness hazard on real
+STACK motion.
+
+**Fix:** Replace the free-text input with a constrained control (as the prior
+CR-01 fix suggested):
 
 ```tsx
-<NumberInput
-  ...
-  onChange={(_valueString, valueNumber) =>
-    handleInputChange(
-      field.name,
-      field.type,
-      Number.isNaN(valueNumber) ? "" : valueNumber,
-      parentField,
-    )
-  }
+<Select
+  placeholder="Select an option"
+  value={(parentField
+    ? (formValues[parentField] as Record<string, AtomicFormValues>)?.[field.name]
+    : formValues[field.name]) ?? ""}
+  onChange={(e) => handleInputChange(field.name, field.type, e.target.value, parentField)}
 >
+  <option value="true">true</option>
+  <option value="false">false</option>
+</Select>
 ```
 
-and/or teach the STACK strip that `Number.isNaN(value)` is blank. Add a
-`commandParams.test.ts` case: `omitBlankParams({ timeout_s: NaN })` must omit.
-
-### WR-02: Command-form seeding effect's nested-group branch is dead and self-overwriting; `FieldType` and `Field.type` disagree
-
-**File:** `controller/pages/tools/[id].tsx:88-113` (seeding effect), `controller/components/tools/types.ts:1-20`
-
-**Issue:** Two related defects in the form-value seeding effect:
-
-1. **Self-overwrite (latent logic error):** the first `if (Array.isArray(field.type))`
-   branch seeds `newValues[field.name] = nestedFieldValues` (a record), but the following
-   `if (field.type === "text_array") ... else ...` is *not* an `else if` and its `else`
-   runs for array-typed fields too, overwriting the just-seeded record with `""`
-   (`field.defaultValue` is undefined for group fields). The nested seeding can never
-   survive. Unreachable today — no `commandFields` entry uses a nested group — but the
-   moment anyone adds one (the `Field[]` union member exists precisely for that), the
-   seeding silently degrades.
-2. **Type split-brain:** `renderFields` guards on `Array.isArray(field.type)`, which TS
-   narrows to `never` because `Field["type"]` does not include `Field[]`; the `Field[]`
-   member lives only in the separately declared `FieldType` used by `handleInputChange`.
-   The nested-group feature is half-wired: executable nowhere, typed in one place,
-   untyped in the other.
-
-**Fix:** Make the chain exhaustive and the type honest — either restore nested groups
-(change the second `if` to `else if (field.type === "text_array")` and add `Field[]` to
-`Field["type"]`), or delete the dead nested-group branch and the `Field[]` member of
-`FieldType` so the code and the type agree.
+The existing send-time coercion can then stay as defence in depth. If the text
+input must remain for some reason, reject non-`{true,false,""}` values at coerce
+time (drop or blank them) rather than letting a truthy string reach
+`Writer.bool`. Add a `wire.test.ts` case pinning that `refresh: "0"` / `"no"` never
+decode `true`.
 
 ## Info
 
-### IN-01: `omitBlankParams` comment understates its recursion; all-blank nested groups collapse to `{}` and survive
+### IN-01 (carried, unresolved): `omitBlankParams` comment understates its recursion; all-blank nested groups collapse to `{}` and survive
 
-**File:** `controller/components/tools/commandParams.ts:20-23`
+**File:** `controller/components/tools/commandParams.ts:73-76, 84`
 
-**Issue:** The comment says nested parent-field groups get "the same drop one level deep",
-but the implementation recurses to arbitrary depth (`omitBlankParams` calls itself for every
-plain-object value, line 31). Also, a nested group whose every key is blank is stripped to
-`{}` and the group key itself is kept (not dropped), so an empty message still appears on
-the wire. Unreachable with today's field lists (no STACK or F.A.S.T. field is a nested
-group), so behaviorally harmless now.
+**Issue:** Still accurate after the delta. The strip comment says nested
+parent-field groups get "the same drop one level deep," but the implementation
+recurses to arbitrary depth (`commandParams.ts:84`), and a nested group whose every
+key is blank strips to `{}` with the group key itself kept. Unreachable with
+today's field lists (no STACK or F.A.S.T. field is a nested group — verified,
+`constants.ts:346-381`), so behaviorally harmless now.
 
-**Fix:** Reconcile comment and behavior: either document the full-depth recursion and the
-`{}` survival, or drop a now-empty nested group (`if (Object.keys(stripped).length > 0)`).
+**Fix:** Document full-depth recursion and the `{}` survival, or drop an emptied
+nested group (`if (Object.keys(stripped).length > 0)`).
 
-### IN-02: Dead commented-out code and set-only status state on the tool page (pre-existing)
+### IN-02 (carried, unresolved): Dead commented-out code and set-only status state on the tool page (pre-existing)
 
-**File:** `controller/pages/tools/[id].tsx:65-70, 179-191, 222-232, 53`
+**File:** `controller/pages/tools/[id].tsx:65-70, 193-246, 53`
 
-**Issue:** Three large commented-out function blocks (`doesCommandHaveParameters`,
-`executeCommand`, `__handleSelectCommand`) remain from the pre-refactor page, and
-`_commandExecutionStatus` is set-only state — its value is never read anywhere, so the
-"idle/success/error" bookkeeping (lines 122, 131-134, 143-146) has no consumer.
+**Issue:** Unchanged by this delta. Three commented-out function blocks
+(`doesCommandHaveParameters`, `executeCommand`, `__handleSelectCommand`) remain,
+and `_commandExecutionStatus` is set-only state — written at `[id].tsx:122, 131-146`
+but never read, so the idle/success/error bookkeeping has no consumer.
 
-**Fix:** Delete the commented-out blocks and either render the execution status or drop
-`_commandExecutionStatus`/`setCommandExecutionStatus` entirely.
+**Fix:** Delete the commented-out blocks and either render the execution status or
+remove `_commandExecutionStatus` / `setCommandExecutionStatus`.
+
+### IN-03 (new): `isBlank`'s NaN guard leaves other unparseable-number outcomes — `±Infinity` passes the strip and reaches the wire
+
+**File:** `controller/components/tools/commandParams.ts:19`, `controller/pages/tools/[id].tsx:339-349`
+
+**Issue:** The NumberInput guard converts only `Number.isNaN(valueNumber)` to `""`;
+`isBlank` likewise blanks only NaN. But Chakra's counter parse is
+`parseFloat(value.toString().replace(/[^\w.-]+/g, ""))` (`@chakra-ui/counter`,
+`use-counter.js:138` — verified), which, unlike `""`, yields **`Infinity`** for
+operator-typed `"Infinity"` (all chars are `[\w]` and survive the strip) and
+`"1e400"`. `isBlank(Infinity)` is false, so `timeout_s: Infinity` passes
+`omitBlankParams` and the generated encoder writes it as a valid double on the
+wire. An operator who typed an overflow expression intending a large-but-real
+timeout silently sends IEEE `+Inf` as a STACK duration. Low likelihood (requires
+literal garbage typing) and it is a pre-existing gap the delta didn't widen, hence
+Info — but it is the same failure family WR-01 closed for NaN.
+
+**Fix:** Blank both non-finite branches:
+`isBlank` → `(typeof value === "number" && !Number.isFinite(value))` covers NaN and
+±Infinity together, and/or extend the NumberInput guard to
+`Number.isNaN(valueNumber) || !Number.isFinite(valueNumber) ? "" : valueNumber`.
+Pin with a `commandParams.test.ts` case (`omitBlankParams({ timeout_s: Infinity })`
+must omit) and optionally a real-encoder case asserting `timeout_s` decodes absent.
 
 ---
 
-_Reviewed: 2026-11-02T10:40:00Z_
+_Reviewed: 2026-11-02T11:25:00Z_
 _Reviewer: the agent (gsd-code-reviewer)_
 _Depth: standard_
