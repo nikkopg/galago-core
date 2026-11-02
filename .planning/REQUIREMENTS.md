@@ -62,7 +62,7 @@ not one row three times. The real defect is an unguarded re-entrant `_start()`.
 
 ### STACK codegen (DEP-02, gated on galago-tools Phase 4)
 
-- [ ] **GEN-01**: `vendor/galago-tools` bumped to the frozen `stack.proto` commit; `gen-interfaces`
+- [x] **GEN-01**: `vendor/galago-tools` bumped to the frozen `stack.proto` commit; `gen-interfaces`
   regenerated with ts-proto 1.151.1 (`snakeToCamel=false`, never the local 1.153.2); tsc, unit suite and
   prettier green
 - [ ] **GEN-02**: `commandFields.stack` covers every STACK command except `acknowledge_failure`; required
@@ -111,7 +111,7 @@ not one row three times. The real defect is an unguarded re-entrant `_start()`.
 | OPR-03 | Phase 4 | Complete |
 | OPR-04 | Phase 4 | Complete |
 | OPR-05 | Phase 4 | Complete |
-| GEN-01 | Phase 5 | Pending |
+| GEN-01 | Phase 5 | Complete |
 | GEN-02 | Phase 5 | Pending |
 | GEN-03 | Phase 5 | Pending |
 | GEN-04 | Phase 5 | Pending |

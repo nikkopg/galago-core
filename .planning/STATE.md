@@ -5,16 +5,16 @@ milestone_name: STACK tool support — codegen, operator acknowledge, error visi
 current_phase: 05
 current_phase_name: STACK Codegen & Command Forms
 status: executing
-stopped_at: Phase 5 UI-SPEC approved
-last_updated: "2026-11-02T02:56:09.508Z"
+stopped_at: Completed 05-01-PLAN.md
+last_updated: "2026-11-02T03:04:58.826Z"
 last_activity: 2026-11-02
 last_activity_desc: Phase 05 execution started
-state_head: fb7711ebaad093be00b7293ca33e209d4a8084f3
+state_head: 693f4888e4a3574a970d6e12aef31a2989260c8a
 progress:
   total_phases: 3
   completed_phases: 2
   total_plans: 17
-  completed_plans: 14
+  completed_plans: 15
   percent: 67
 ---
 
@@ -31,8 +31,8 @@ decides every recovery action; the web app never acts on its own or pre-selects 
 ## Current Position
 
 Phase: 05 (STACK Codegen & Command Forms) — EXECUTING
-Plan: 1 of 3
-Status: Executing Phase 05
+Plan: 2 of 3
+Status: Ready to execute
 Last activity: 2026-11-02 — Phase 05 execution started
 
 Progress: [███████░░░] 67%
@@ -87,6 +87,7 @@ Progress: [███████░░░] 67%
 | Phase 04 P05 | 286 | 2 tasks | 1 files |
 | Phase 04 P06 | 6 min | 3 tasks | 3 files |
 | Phase 04 P07 | 6 min | 2 tasks | 4 files |
+| Phase 05 P01 | 7 min | 3 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -128,6 +129,10 @@ Recent decisions affecting current work:
 - [Phase 04]: 04-06: G-04-5 fixed via GUID_BLANK_HINT JS string constant (not &apos;) so rendered copy and controlDecision pin are unchanged; next lint --no-cache --quiet is the inherited lint gate
 - [Phase 04]: 04-06: STACK recovery buttons hidden via isRecoveryAction (spec-derived); raw latch replies bounded in LatchRawJson (160px, w=0px + minW=100%)
 - [Phase 04]: 04-07: classify run.create errors by Error.name via exported guards (not class identity), so the mapping survives next dev module-copy drift; RunStore/CommandQueue stay on global
+- [Phase 05]: Pin vendor/galago-tools gitlink to bcbbf8e (last interfaces/ commit, the 128bbd7 precedent); four proto stop-condition facts verified at that exact hash — D-01 gate; origin/feat/stack-tool tip moved during execution but interfaces/ held
+- [Phase 05]: Codegen pinning mechanism: scratch-dir ts-proto 1.151.1 + explicit --plugin= (venv grpcio-tools 1.85.1), never node_modules 1.153.2 — RESEARCH spike-proven recipe; T-05-01 mitigation
+- [Phase 05]: commandFields.stack: 9 commands in proto declaration order, born-empty fields, no select; ack literal nowhere in constants.ts; OPR-05 scan flipped positive in the same commit — D-03 + RESEARCH Pitfall 1
+- [Phase 05]: LATCH_READ_COMMAND renamed to the frozen oneof key get_failure_latch; wire tests prove the ack payload and latch read on the real tool_base.Command encoder — D-07a/b, RESEARCH Pitfall 2
 
 ### Pending Todos
 
@@ -176,9 +181,9 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-02T02:29:50.575Z
-Stopped at: Phase 5 UI-SPEC approved
-Resume file: .planning/phases/05-stack-codegen-command-forms/05-UI-SPEC.md
+Last session: 2026-11-02T03:04:58.667Z
+Stopped at: Completed 05-01-PLAN.md
+Resume file: None
 
 ## Operator Next Steps
 
