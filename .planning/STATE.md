@@ -2,19 +2,19 @@
 gsd_state_version: "1.0"
 milestone: v2
 milestone_name: STACK tool support — codegen, operator acknowledge, error visibility, F5
-current_phase: 5
+current_phase: 05
 current_phase_name: STACK Codegen & Command Forms
-status: executing
-stopped_at: Phase 5 executed 3/3 plans; verification gaps_found (CR-01/WR-01 wire pipeline) — gap closure next
-last_updated: "2026-11-02T03:54:01.145Z"
+status: verifying
+stopped_at: "Completed 05-04-PLAN.md (CR-01/WR-01 gap closed: boolean coercion + NaN-as-blank, real-encoder proof)"
+last_updated: "2026-11-02T04:10:24.497Z"
 last_activity: 2026-11-02
 last_activity_desc: Phase 05 execution started
-state_head: 730b388f784a3416bb44f4e65fe7aed8bb8c53cc
+state_head: a127fb2e71afc3e83a241721f33fc5e3a77d9ed6
 progress:
   total_phases: 3
   completed_phases: 2
   total_plans: 18
-  completed_plans: 17
+  completed_plans: 18
   percent: 67
 ---
 
@@ -30,9 +30,9 @@ decides every recovery action; the web app never acts on its own or pre-selects 
 
 ## Current Position
 
-Phase: 5 (STACK Codegen & Command Forms) — READY TO EXECUTE
-Plan: 3 of 3
-Status: Ready to execute
+Phase: 05 (STACK Codegen & Command Forms) — EXECUTING
+Plan: 4 of 4
+Status: Phase complete — ready for verification
 Last activity: 2026-11-02 — Phase 05 execution started
 
 Progress: [███████░░░] 67%
@@ -90,6 +90,7 @@ Progress: [███████░░░] 67%
 | Phase 05 P01 | 7 min | 3 tasks | 12 files |
 | Phase 05 P02 | 5 min | 3 tasks | 8 files |
 | Phase 05 P03 | 7 min | 3 tasks | 7 files |
+| Phase 05 P04 | 9 min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -143,6 +144,9 @@ Recent decisions affecting current work:
 - [Phase 05]: 05-03: D-08 retrofit kept purely mechanical — 8 one-token "stack" as ToolType → ToolType.stack cast swaps, all 72 retrofitted tests pass unchanged
 - [Phase 05]: 05-03: D-04 omit-blank pinned BOTH ways on the real encoder — stripped page-shaped params decode untouched fields absent, unstripped decode the blank present-empty; RESEARCH Pitfall 5 closed and the "wire payloads never proven" blocker resolved
 - [Phase 05]: 05-03: D-07d enum acceptance proven via the exported zTool schema (type field IS the un-exported zToolType) since zToolCreate.type is a plain string; routers/tool.ts stale comment left untouched (test-only plan)
+- [Phase 05]: 05-04: coerce-before-strip on STACK sends (coerceBooleanParams in the pipeline, not a control swap — AC-4 kept): a typed "false" sends real false on the real encoder; exact literals only, born-empty "" untouched for the blank strip
+- [Phase 05]: 05-04: isBlank NaN-as-blank is narrow (only Number.isNaN; real 0/false pass) and the cleared NumberInput stores "" at the source — WR-01 closed twice over; full gate 608/608 (599 unregressed + 9 new)
+- [Phase 05]: 05-04: valid-RED scaffold procedure (#3770): pass-through stub in the test commit so targets fail on assertion; junit RED records in 05-04-tdd-red/, RED_EVIDENCE_OK x3 before GREEN
 
 ### Pending Todos
 
@@ -191,9 +195,9 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-02T03:39:39.241Z
-Stopped at: Phase 5 executed 3/3 plans; verification gaps_found (CR-01/WR-01 wire pipeline) — gap closure next
-Resume file: .planning/phases/05-stack-codegen-command-forms/05-VERIFICATION.md
+Last session: 2026-11-02T04:10:17.223Z
+Stopped at: Completed 05-04-PLAN.md (CR-01/WR-01 gap closed: boolean coercion + NaN-as-blank, real-encoder proof)
+Resume file: None
 
 ## Operator Next Steps
 
