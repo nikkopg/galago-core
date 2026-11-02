@@ -65,12 +65,12 @@ not one row three times. The real defect is an unguarded re-entrant `_start()`.
 - [x] **GEN-01**: `vendor/galago-tools` bumped to the frozen `stack.proto` commit; `gen-interfaces`
   regenerated with ts-proto 1.151.1 (`snakeToCamel=false`, never the local 1.153.2); tsc, unit suite and
   prettier green
-- [ ] **GEN-02**: `commandFields.stack` covers every STACK command except `acknowledge_failure`; required
+- [x] **GEN-02**: `commandFields.stack` covers every STACK command except `acknowledge_failure`; required
   strings are `text` fields with no `defaultValue`; no `select` pre-fills; the STACK tool's Config
   (host/port) is configurable from the tool page
 - [x] **GEN-03**: The tool-page command panel shows a command's reply `meta_data` read-only, so STACK
   reads are usable
-- [ ] **GEN-04**: Activation tests run on the generated types: a real-encoder wire test of the
+- [x] **GEN-04**: Activation tests run on the generated types: a real-encoder wire test of the
   acknowledge payload, the latch read, and the operator-only refusal keyed on `ToolType.stack`
 
 ## Future Requirements
@@ -112,9 +112,9 @@ not one row three times. The real defect is an unguarded re-entrant `_start()`.
 | OPR-04 | Phase 4 | Complete |
 | OPR-05 | Phase 4 | Complete |
 | GEN-01 | Phase 5 | Complete |
-| GEN-02 | Phase 5 | Pending |
+| GEN-02 | Phase 5 | Complete |
 | GEN-03 | Phase 5 | Complete |
-| GEN-04 | Phase 5 | Pending |
+| GEN-04 | Phase 5 | Complete |
 
 **Coverage:**
 - v2 requirements: 17 total (QUE 3, ERR 5, OPR 5, GEN 4)

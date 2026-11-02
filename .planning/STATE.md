@@ -4,17 +4,17 @@ milestone: v2
 milestone_name: STACK tool support — codegen, operator acknowledge, error visibility, F5
 current_phase: 05
 current_phase_name: STACK Codegen & Command Forms
-status: executing
-stopped_at: Completed 05-02-PLAN.md
-last_updated: "2026-11-02T03:15:48.714Z"
+status: verifying
+stopped_at: Completed 05-03-PLAN.md
+last_updated: "2026-11-02T03:25:01.966Z"
 last_activity: 2026-11-02
 last_activity_desc: Phase 05 execution started
-state_head: f2994d0e28cf7e4c10044f59d55f6eafc421feec
+state_head: 390f1e3a47c72c9f60aa742c99b8cd4f9db0868f
 progress:
   total_phases: 3
   completed_phases: 2
   total_plans: 17
-  completed_plans: 16
+  completed_plans: 17
   percent: 67
 ---
 
@@ -32,7 +32,7 @@ decides every recovery action; the web app never acts on its own or pre-selects 
 
 Phase: 05 (STACK Codegen & Command Forms) — EXECUTING
 Plan: 3 of 3
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-11-02 — Phase 05 execution started
 
 Progress: [███████░░░] 67%
@@ -89,6 +89,7 @@ Progress: [███████░░░] 67%
 | Phase 04 P07 | 6 min | 2 tasks | 4 files |
 | Phase 05 P01 | 7 min | 3 tasks | 12 files |
 | Phase 05 P02 | 5 min | 3 tasks | 8 files |
+| Phase 05 P03 | 7 min | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -139,6 +140,9 @@ Recent decisions affecting current work:
 - [Phase 05]: 05-02: lastReply is a tri-state (undefined = born hidden / null = completed send without data / reply object), set ONLY from runCommand onSuccess as data ?? null; onError leaves the panel untouched — Satisfies the born-hidden rule AND Pitfall 6's legible empty state with one variable; the error toast stays the only error surface (UI-SPEC rule 5)
 - [Phase 05]: 05-02: omitBlankParams (pure, keeps 0/false, one-level nested strip, no mutation) is applied ONLY when String(config?.type) === 'stack'; every other tool type sends formValues verbatim — D-04 planner decision is scoped to STACK — proto3 optional encodes on presence, so omitted blanks are wire-absent; F.A.S.T. wire bytes unchanged; 05-03's blank-optional wire case pins the STACK behaviour
 - [Phase 05]: 05-02: Born-empty display fallbacks: boolean and NumberInput branches use ?? '' instead of ||-painting 0/false; untouched fields render empty, real typed 0/false render as before; no Switch, no placeholder, formValues semantics unchanged — UI-SPEC option (a) — fixing the shared renderFields fallbacks also de-paints F.A.S.T. born number/boolean displays (display-only); the no-unchosen-value rule is the project core value
+- [Phase 05]: 05-03: D-08 retrofit kept purely mechanical — 8 one-token "stack" as ToolType → ToolType.stack cast swaps, all 72 retrofitted tests pass unchanged
+- [Phase 05]: 05-03: D-04 omit-blank pinned BOTH ways on the real encoder — stripped page-shaped params decode untouched fields absent, unstripped decode the blank present-empty; RESEARCH Pitfall 5 closed and the "wire payloads never proven" blocker resolved
+- [Phase 05]: 05-03: D-07d enum acceptance proven via the exported zTool schema (type field IS the un-exported zToolType) since zToolCreate.type is a plain string; routers/tool.ts stale comment left untouched (test-only plan)
 
 ### Pending Todos
 
@@ -187,8 +191,8 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-02T03:15:35.174Z
-Stopped at: Completed 05-02-PLAN.md
+Last session: 2026-11-02T03:25:01.811Z
+Stopped at: Completed 05-03-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
