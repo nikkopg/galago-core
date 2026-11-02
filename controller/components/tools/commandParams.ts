@@ -47,8 +47,7 @@ export function coerceBooleanParams<T extends Record<string, unknown>>(
     if (field.type === "boolean") {
       booleanByName.set(field.name, true);
     } else if (Array.isArray(field.type)) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      nested.set(field.name, field.type as any);
+      nested.set(field.name, field.type as ReadonlyArray<{ name: string; type: unknown }>);
     }
   }
   const result: Record<string, unknown> = {};
