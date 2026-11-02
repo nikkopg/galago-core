@@ -80,3 +80,9 @@ app_config.json
 tools/build/*
 .cursor/rules/
 CLAUDE.md
+
+# graphify build output (GSD copies artifacts to .planning/graphs/)
+graphify-out/
+
+# graphify build output (regenerable)
+.planning/graphs/
