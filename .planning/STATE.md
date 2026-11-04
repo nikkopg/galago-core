@@ -1,19 +1,19 @@
 ---
 gsd_state_version: "1.0"
 milestone: v1.1
-milestone_name: STACK tool support — codegen, operator acknowledge, error visibility, F5
 status: Awaiting next milestone
 stopped_at: Phase 05 complete — all phases complete
-last_updated: "2026-11-02T07:21:48.903Z"
-last_activity: 2026-11-02
+last_updated: "2026-11-04T10:58:28.308Z"
+last_activity: 2026-11-04
 last_activity_desc: Milestone v1.1 completed and archived
-state_head: cb21916c69583c4c5f4acb35e991215a90c7d409
+state_head: d85f9928d22e1910de3599020ad6dc93804ee9b5
 progress:
   total_phases: 3
   completed_phases: 3
   total_plans: 18
   completed_plans: 18
   percent: 100
+milestone_name: STACK tool support — codegen, operator acknowledge, error visibility, F5
 current_phase: 05
 ---
 
@@ -32,7 +32,7 @@ decides every recovery action; the web app never acts on its own or pre-selects 
 Phase: Milestone v1.1 complete
 Plan: —
 Status: Awaiting next milestone
-Last activity: 2026-11-02 — Milestone v1.1 completed and archived
+Last activity: 2026-11-04 - Completed quick task 261104-or1: Remove per-command expected_tray_id from F.A.S.T. Transfer
 
 ## Performance Metrics
 
@@ -148,7 +148,6 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
-- [2026-10-15] [ui] Evaluate whether expected_tray_id is still needed — [todo file](.planning/todos/pending/2026-10-15-evaluate-whether-expected-tray-id-is-still-needed.md) — Needs TBD. Decide before removing anything:.
 - [2026-10-15] [ui] Fetch F.A.S.T. plate list for source/dest plate dropdowns — [todo file](.planning/todos/pending/2026-10-15-fetch-f-a-s-t-plate-list-for-source-dest-plate-dropdowns.md) — Needs TBD. A likely shape:.
 
 ### Blockers/Concerns
@@ -181,6 +180,7 @@ Recent decisions affecting current work:
 
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
+| 261104-or1 | Remove per-command expected_tray_id from F.A.S.T. Transfer | 2026-11-04 | d85f992 | [261104-or1-remove-per-command-expected-tray-id-from](./quick/261104-or1-remove-per-command-expected-tray-id-from/) |
 
 ## Deferred Items
 
@@ -200,6 +200,5 @@ Stopped at: Phase 05 complete — all 3 phases complete, milestone v1.1 ready to
 Resume file: None
 
 ## Operator Next Steps
-
 
 - Start the next milestone with /gsd-new-milestone
