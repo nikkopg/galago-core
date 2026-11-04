@@ -39,3 +39,25 @@ TBD. Decide before removing anything:
    must keep loading (see the D-20 legacy-step handling in `test/runControl.test.ts`).
 3. If the tray-ID check itself is obsolete, removing it is an adapter change in galago-tools and
    a safety-gate change, and needs an explicit decision from the instrument owner.
+
+## Resolution
+
+2026-11-04, quick task 261104-or1. Decision: option 2 from the Solution list. The operator
+confirmed that a run is not blocked when no expected tray is configured. That answers Solution
+step 1: there is no NeedsConfirmation-on-every-run blocker, so no operator-confirmation path is
+needed. The per-command override was therefore redundant with the tool Config value.
+
+- Removed: the per-command `expected_tray_id` entry and its D-14 comment from
+  `commandFields.fast.transfer` in `controller/components/tools/constants.ts`. The Add-command
+  modal and the tool page Transfer form no longer offer it (12 fields remain).
+- Kept, unchanged: the tool Config `expected_tray_id`, the adapter's `_expected_tray_id()`
+  resolution, and the tray-confirmation gate in `vendor/galago-tools` (no submodule edits; option 3
+  not taken), plus the generated ts-proto field in `controller/gen-interfaces`.
+- Legacy steps: protocols saved with the per-command value keep loading, because the step drawer
+  lists and keeps every saved key. They also keep running: params pass verbatim to the encoder,
+  and the adapter still prefers the per-command value over the Config (galago-tools D-14). No
+  migration or stripping was added.
+- Covering tests: `commandFields.test.ts` describe "commandFields.fast.transfer (261104-or1)" and
+  `wire.test.ts` "encodes a legacy saved F.A.S.T. transfer step that still carries
+  expected_tray_id". Gate result: `tsc --noEmit` clean (exit 0); `vitest run` 28 files passed,
+  610 tests passed.
