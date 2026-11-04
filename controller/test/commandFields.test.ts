@@ -24,6 +24,27 @@ describe("commandFields select fields (IN-02)", () => {
   });
 });
 
+// 261104-or1: the F.A.S.T. Transfer form no longer offers a per-command tray
+// override; the tool Config value is the single tray-identity input.
+describe("commandFields.fast.transfer (261104-or1)", () => {
+  it("offers exactly the 12 transfer fields, in order, with no per-command tray override", () => {
+    expect(commandFields.fast.transfer.map((f) => f.name)).toStrictEqual([
+      "source_deck",
+      "dest_deck",
+      "source_plate_id",
+      "dest_plate_id",
+      "source_start_row",
+      "source_start_col",
+      "dest_start_row",
+      "dest_start_col",
+      "num_rows",
+      "num_cols",
+      "volume",
+      "tip_reuse",
+    ]);
+  });
+});
+
 // GEN-02 (D-03 mapping rules, D-07c): the stack entry covers every command the
 // generated stack.Command oneof declares EXCEPT the operator-only
 // acknowledge_failure, every field is born-empty (no defaultValue) and no

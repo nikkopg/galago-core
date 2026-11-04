@@ -326,8 +326,6 @@ export const commandFields: CommandFields = {
       { name: "volume", type: "number" },
       // Values the F.A.S.T. adapter accepts (fast_mcp _TIP_REUSE_MODES)
       { name: "tip_reuse", type: "select", options: ["fresh", "reuse"] },
-      // optional: overrides the tool Config expected_tray_id (D-14)
-      { name: "expected_tray_id", type: "number" },
     ],
     run_protocol: [
       { name: "csv", type: "text" },

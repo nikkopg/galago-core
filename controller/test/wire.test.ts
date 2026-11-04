@@ -48,6 +48,40 @@ describe("wire contract", () => {
     expect(abortDecoded.fast?.abort?.return_liquid).toBe("yes");
   });
 
+  // 261104-or1 legacy contract: the form no longer offers a per-command tray
+  // override, but a protocol saved before that change still loads and runs
+  // unchanged. The step drawer renders and keeps every saved params key
+  // (CommandDetailsDrawer), _payloadForCommand sends params verbatim, and the
+  // generated Command_Transfer keeps the field - so the saved value reaches the
+  // wire and the adapter still prefers it over the Config (galago-tools D-14).
+  it("encodes a legacy saved F.A.S.T. transfer step that still carries expected_tray_id", () => {
+    const { tool } = installFakeTool("wire-fast", ToolType.fast);
+
+    const payload = tool._payloadForCommand({
+      toolId: "wire-fast",
+      toolType: ToolType.fast,
+      command: "transfer",
+      params: {
+        source_deck: 1,
+        dest_deck: 2,
+        source_plate_id: 10,
+        dest_plate_id: 11,
+        source_start_row: "A",
+        source_start_col: 1,
+        dest_start_row: "A",
+        dest_start_col: 1,
+        num_rows: 1,
+        num_cols: 1,
+        volume: 50,
+        tip_reuse: "fresh",
+        expected_tray_id: 7,
+      },
+    });
+    const decoded = tool_base.Command.decode(tool_base.Command.encode(payload).finish());
+    expect(decoded.fast?.transfer?.expected_tray_id).toBe(7);
+    expect(decoded.fast?.transfer?.volume).toBe(50);
+  });
+
   // GEN-04a (D-07a): the operator acknowledge payload survives the REAL
   // generated encoder with guid and arm_inspected intact — the first
   // real-encoder evidence for the Phase 4 acknowledge work. Fakes only; the
