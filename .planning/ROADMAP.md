@@ -54,6 +54,7 @@ galago-tools gate without blocking Phases 8-9.
 ## Phase Details
 
 ### Phase 6: STACK Dropdowns
+
 **Goal**: The operator fills the STACK `transfer`, `get_transfer_estimate` and `get_labware_presence` forms by
 picking values the STACK reports, and the shared dropdown layer is ready for Phase 7.
 **Depends on**: Nothing (first v1.2 phase)
@@ -62,17 +63,27 @@ picking values the STACK reports, and the shared dropdown layer is ready for Pha
   1. The three STACK forms offer instrument-reported dropdowns that start empty and preselect nothing.
   2. An unreachable instrument or a saved value no longer reported never blocks or rewrites a step.
   3. What is sent is unchanged (saved protocols run as before), with `vendor/galago-tools` pinned to `4ccd3da` and no regen diff.
+
 **Plans**: 5 plans
 Plans:
+**Wave 1**
 - [ ] 06-01-PLAN.md — Re-pin vendor/galago-tools to 4ccd3da (zero-diff regen gate), tracer: robot/labware/transfer-profile dropdowns on the tool page end to end, user push checkpoint
+
+**Wave 2** *(blocked on Wave 1 completion)*
 - [ ] 06-02-PLAN.md — Server hardening: caps, TTL cache + configure generation, in-flight dedupe, Refresh, throttled logging, D-17 server scans
 - [ ] 06-03-PLAN.md — React-free core: location cascade, calibration filter, ambiguity flags, applyChange, full view model, round-trip and wire proofs
+
+**Wave 3** *(blocked on Wave 2 completion)*
 - [ ] 06-04-PLAN.md — OptionsSelect all modes + Refresh row + status line, tool-page cascade wiring, D-17 client scans
+
+**Wave 4** *(blocked on Wave 3 completion)*
 - [ ] 06-05-PLAN.md — AddToolCommandModal and CommandDetailsDrawer (edit mode only), host scans, full phase gate
+
 **UI hint**: yes
 **Settle in discuss**: D6, D7, D10, D11 (standard patterns).
 
 ### Phase 7: F.A.S.T. Plate Dropdowns
+
 **Goal**: The operator picks F.A.S.T. Transfer `source_plate_id` and `dest_plate_id` from the plates the
 instrument has registered.
 **Depends on**: Phase 6. **External**: galago-tools must freeze a read-only `get_plates` first (contract:
@@ -82,11 +93,13 @@ instrument has registered.
   1. Gate: a frozen galago-tools `get_plates` answers through `ExecuteCommand` mid-Transfer, and the submodule is re-pinned to it with the exact expected interface diff.
   2. The plate fields are dropdowns of registered plates (id and description, numeric id sent) that start empty, like Phase 6.
   3. Invalid or duplicate plate ids are rejected or flagged, an unset plate never becomes `0`, and `get_plates` is never a step or tool-page command.
+
 **Plans**: TBD
 **UI hint**: yes
 **Settle in discuss**: inherits D6, D10, D11 from Phase 6; open item is the frozen `get_plates` shape.
 
 ### Phase 8: Concurrency Lanes
+
 **Goal**: With the lane flag on, one run can drive two tool servers at once and any failure freezes every lane
 without aborting anything. Waves: lane engine first, then protocol surface and run page.
 **Depends on**: Nothing from Phases 6-7
@@ -95,11 +108,13 @@ without aborting anything. Waves: lane engine first, then protocol surface and r
   1. Flag off is byte-identical to today; flag on, steps on different tool servers overlap, one per tool server, honouring barriers.
   2. Any failure, a primary-lane modal or the operator's run-page freeze control stops new dispatch on every lane, and control, Stop and recovery still work on any lane.
   3. The operator can author lane-tagged protocols, is refused invalid setups, and sees per-lane steps, outcome and failures in the preview, Start confirmation and run page.
+
 **Plans**: TBD
 **UI hint**: yes
 **Settle in discuss**: D1, D2, D3, D4, D9, D12 (D3 includes the freeze control and its run-page button).
 
 ### Phase 9: Supervised Live Two-Tool Proof
+
 **Goal**: With the user present, a live run and a drill prove the overlap and the lane freeze, and the
 resolution is recorded.
 **Depends on**: Phase 8
@@ -108,6 +123,7 @@ resolution is recorded.
   1. A supervised live run shows a STACK step overlapping the F.A.S.T. transfer, with per-lane evidence rows, explicit step keys and the SHAs recorded.
   2. A simulated-failure drill freezes both lanes, with no automated motion.
   3. PROJECT.md, the lanes todo and (after the live run passes) the galago-tools runbook record the resolution.
+
 **Plans**: TBD
 **Settle in discuss**: D5, D8.
 
