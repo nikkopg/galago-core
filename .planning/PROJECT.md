@@ -57,11 +57,29 @@ via `/gsd-quick`, never here.
 
 </details>
 
-## Next Milestone Goals
+## Current Milestone: v1.2 Tool-inferred dropdowns + per-tool concurrency lanes
 
-Not yet defined. Start with `/gsd-new-milestone` (questioning → research → requirements →
-roadmap). Candidates carried from v1.1: the Future Requirements list (archived at
-`milestones/v1.1-REQUIREMENTS.md`) and the tech-debt list in `v1.1-MILESTONE-AUDIT.md`.
+**Goal:** The operator picks STACK and F.A.S.T. command values from lists the instruments themselves
+report, instead of typing names and ids from memory; and one run can drive two tool servers at once
+(e.g. STACK goto-safe while the F.A.S.T. runs its ~73 s transfer) without weakening any
+operator-decides-recovery guarantee.
+
+**Target features:**
+- STACK command forms (`transfer`, `get_transfer_estimate`, `get_labware_presence`) offer
+  dropdowns for robot, source/destination device → deck → nest, labware profile and
+  source/destination transfer profile, read live from the stack-automation-layer through the
+  existing `stack.proto` reads (`get_robot_states`, `list_devices`, `list_labware_profiles`,
+  `list_transfer_profiles`). Needs only a submodule re-pin to galago-tools `feat/stack-tool`
+  (`4ccd3da`; protos unchanged from `bcbbf8e`).
+- F.A.S.T. Transfer `source_plate_id` / `dest_plate_id` dropdowns from the instrument's registered
+  plates via a new read-only `get_plates` command — galago-tools must ship it first
+  (contract: `.planning/research/FAST-GET-PLATES-CONTRACT.md`).
+- Per-toolId concurrency lanes in the command queue, behind a default-off flag: per-lane Start
+  guard, lane-halt (any latch-class failure freezes every lane), byte-identical sequential behavior
+  with the flag off, lane field + per-lane preview and run-page rows, proven live on two tools.
+  Source: `.planning/todos/pending/scheduler-per-tool-concurrency-lanes.md`.
+
+**Shape:** STACK dropdowns → F.A.S.T. plates → lanes (internals → protocol/run page → live proof).
 
 ## Requirements
 
@@ -106,7 +124,12 @@ roadmap). Candidates carried from v1.1: the Future Requirements list (archived a
 
 ### Active
 
-(None yet — the next milestone's requirements are defined by `/gsd-new-milestone`.)
+- [ ] STACK command dropdowns inferred from the stack-automation-layer (robot, device/deck/nest,
+  labware profile, transfer profiles) — v1.2
+- [ ] F.A.S.T. source/dest plate dropdowns from the instrument's registered plates — v1.2
+- [ ] Per-toolId concurrency lanes for live two-tool runs — v1.2
+
+(Detailed REQ-IDs in `.planning/REQUIREMENTS.md`.)
 
 ### Out of Scope
 
@@ -116,8 +139,10 @@ roadmap). Candidates carried from v1.1: the Future Requirements list (archived a
   action is an operator decision
 - STACK or F.A.S.T. motion from tests — live runs only in galago-tools' supervised Phase 7
 - GAL-02 protocol authoring — a runbook protocol in galago-tools, imported by the operator
-- `stack.proto` changes — frozen for v1.1 in galago-tools; a needed change stops the work for the user's
-  sign-off
+- `stack.proto` changes — frozen in galago-tools; a needed change stops the work for the user's
+  sign-off (v1.2's STACK dropdowns use only reads the frozen proto already has)
+- Dropdowns that preselect a physical choice (labware profile, nest, plate) — the operator picks
+  every value; the dropdowns only offer what the instrument reports
 - stack-automation-layer core fixes — a gap found here stops the work and is fixed there
 - Upstream PRs to `sciencecorp/galago-core`
 
@@ -206,4 +231,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-11-02 after v1.1 milestone*
+*Last updated: 2026-11-05 after starting v1.2 milestone*

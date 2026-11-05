@@ -1,20 +1,16 @@
 ---
 gsd_state_version: "1.0"
-milestone: v1.1
-status: Awaiting next milestone
-stopped_at: Phase 05 complete — all phases complete
-last_updated: "2026-11-04T10:58:28.308Z"
-last_activity: 2026-11-04
-last_activity_desc: Milestone v1.1 completed and archived
-state_head: d85f9928d22e1910de3599020ad6dc93804ee9b5
+milestone: v1.2
+milestone_name: Tool-inferred dropdowns + per-tool concurrency lanes
+status: planning
+last_updated: "2026-11-05T11:45:14.056Z"
+last_activity: 2026-11-05
 progress:
-  total_phases: 3
-  completed_phases: 3
-  total_plans: 18
-  completed_plans: 18
-  percent: 100
-milestone_name: STACK tool support — codegen, operator acknowledge, error visibility, F5
-current_phase: 05
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -29,10 +25,10 @@ decides every recovery action; the web app never acts on its own or pre-selects 
 
 ## Current Position
 
-Phase: Milestone v1.1 complete
+Phase: Not started (defining requirements)
 Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-11-04 - Completed quick task 261104-or1: Remove per-command expected_tray_id from F.A.S.T. Transfer
+Status: Defining requirements
+Last activity: 2026-11-05 — Milestone v1.2 started
 
 ## Performance Metrics
 
