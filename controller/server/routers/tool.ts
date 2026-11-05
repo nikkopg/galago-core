@@ -10,6 +10,7 @@ import Tool from "@/server/tools";
 import CommandQueue from "@/server/command_queue";
 import { recoveryControl } from "@/server/recoveryControl";
 import { LATCH_READ_COMMAND, extractLatch } from "@/server/recoveryActions";
+import { fetchOptions, OPTION_SOURCE_IDS } from "@/server/toolOptions";
 import { normalizeToolKey as normalize } from "@/server/toolKey";
 import { Config } from "gen-interfaces/tools/grpc_interfaces/tool_base";
 import { ToolType } from "gen-interfaces/controller";
@@ -534,6 +535,26 @@ export const toolRouter = router({
         action: input.action,
         params: input.params ?? {},
       });
+    }),
+
+  // Instrument-reported option lists for the dropdown fields (D-02). The input
+  // is strict and closed: a toolId, a source id from the server registry and an
+  // optional refresh flag. The client can never supply a command or params; the
+  // read command is fixed inside OPTION_SOURCES. fetchOptions never throws and
+  // returns a closed reason code on any failure. Keep this above latchStatus:
+  // latchStatus.test.ts slices this file from latchStatus to the end.
+  options: procedure
+    .input(
+      z
+        .object({
+          toolId: z.string().max(200),
+          source: z.enum(OPTION_SOURCE_IDS),
+          refresh: z.boolean().optional(),
+        })
+        .strict(),
+    )
+    .query(async ({ input }) => {
+      return await fetchOptions(input.toolId, input.source, input.refresh === true);
     }),
 
   // Structured latch read for the STACK Run Recovery card (D-11, D-13): the

@@ -31,6 +31,8 @@ import Head from "next/head";
 import { TeachPendant } from "@/components/tools/advanced/teach_pendant/TeachPendant";
 import { commandFields } from "@/components/tools/constants";
 import { omitBlankParams, coerceBooleanParams } from "@/components/tools/commandParams";
+import { lookupFieldBinding } from "@/components/tools/fieldOptions";
+import { OptionsSelect } from "@/components/tools/OptionsSelect";
 import { loadingToast } from "@/components/ui/Toast";
 import { Tool } from "@/types";
 
@@ -246,6 +248,25 @@ export default function Page() {
   // };
   const renderFields = (fields: Field[], parentField?: string) => {
     return fields.map((field) => {
+      // Instrument-fed list field (D-10): top-level fields only. The binding map
+      // is closed; every other field renders exactly as before.
+      const binding = parentField
+        ? undefined
+        : lookupFieldBinding(String(config?.type), selectedCommand, field.name);
+      if (binding !== undefined && binding.role.kind === "list") {
+        return (
+          <FormControl key={field.name} my={2}>
+            <FormLabel>{field.name}</FormLabel>
+            <OptionsSelect
+              toolId={config?.name}
+              binding={binding}
+              value={formValues[field.name]}
+              enabled={true}
+              onSelect={(v) => handleInputChange(field.name, field.type, v)}
+            />
+          </FormControl>
+        );
+      }
       if (Array.isArray(field.type)) {
         return (
           <Box key={field.name} border="1px" borderColor="gray.200" borderRadius="md" p={4} my={2}>

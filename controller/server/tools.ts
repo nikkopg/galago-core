@@ -28,6 +28,16 @@ import { getSelectedWorkcellId } from "@/db/helpers";
 
 type ToolDriverClient = PromisifiedGrpcClient<tool_driver.ToolDriverClient>;
 
+// Deadline for a read-only list request (D-01): a read that takes longer is
+// reported unavailable, never waited on.
+export const READ_DEADLINE_MS = 5000;
+
+export interface ToolReadReply {
+  response: tool_base.ResponseCode;
+  message?: string;
+  meta: Record<string, unknown> | undefined;
+}
+
 export interface ToolControlResult {
   ok: boolean;
   response: tool_base.ResponseCode;
@@ -388,6 +398,27 @@ export default class Tool {
       response: reply.response,
       message: reply.error_message,
     };
+  }
+
+  // Read-only list request (D-01). Separate from executeCommand on purpose: it
+  // never substitutes {{var}}, never audits, never enters the queue, and it is
+  // the only send that carries call options (a 5 s deadline). A transport error
+  // or a deadline propagates to the caller, which maps it to a closed reason.
+  async readOptions(
+    toolType: string,
+    command: string,
+    params: Record<string, boolean>,
+  ): Promise<ToolReadReply> {
+    if (String(this.toolType) !== toolType) {
+      throw new Error(`Tool ${this.toolId} is not a ${toolType} tool`);
+    }
+    const payload = {
+      [toolType]: { [command]: params },
+    } as unknown as tool_base.Command;
+    const reply = await this.grpc.executeCommand(payload, new grpc.Metadata(), {
+      deadline: Date.now() + READ_DEADLINE_MS,
+    });
+    return { response: reply.response, message: reply.error_message, meta: reply.meta_data };
   }
 
   static async executeCommand(command: ToolCommandInfo) {
