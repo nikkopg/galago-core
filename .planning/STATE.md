@@ -2,9 +2,14 @@
 gsd_state_version: "1.0"
 milestone: v1.2
 milestone_name: Tool-inferred dropdowns + per-tool concurrency lanes
+current_phase: 6
+current_phase_name: v1.2 covers Phases 6-9
 status: planning
-last_updated: "2026-11-05T12:11:48.000Z"
+stopped_at: Phase 6 context gathered
+last_updated: "2026-11-05T12:46:45.911Z"
 last_activity: 2026-11-05
+last_activity_desc: v1.2 roadmap created (Phases 6-9, 40/40 requirements mapped)
+state_head: c2a736a62e80342ddd33ecbca4b5ce2fadfa39e5
 progress:
   total_phases: 4
   completed_phases: 0
@@ -207,9 +212,9 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-05T12:11:48.000Z
-Stopped at: v1.2 roadmap created (Phases 6-9); Phase 6 ready to discuss/plan
-Resume file: None
+Last session: 2026-11-05T12:46:45.893Z
+Stopped at: Phase 6 context gathered
+Resume file: .planning/phases/06-stack-dropdowns/06-CONTEXT.md
 
 ## Operator Next Steps
 
