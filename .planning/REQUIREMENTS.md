@@ -50,7 +50,7 @@ on its own, and never preselects a physical decision for the operator.
   `list_transfer_profiles`.
 - [ ] **STK-07**: Dropdowns cover every STACK command that takes these fields (`transfer`,
   `get_transfer_estimate`, `get_labware_presence`). `step_key` and `timeout_s` stay typed inputs.
-- [ ] **STK-08**: `vendor/galago-tools` is pinned by SHA to `4ccd3da`, and the regenerated
+- [x] **STK-08**: `vendor/galago-tools` is pinned by SHA to `4ccd3da`, and the regenerated
   interfaces (ts-proto 1.151.1) show no diff.
 
 ### F.A.S.T. plates (PLT)
@@ -156,7 +156,7 @@ the protocol surface and run page, as waves inside one phase.
 | STK-05 | Phase 6 | Pending |
 | STK-06 | Phase 6 | Pending |
 | STK-07 | Phase 6 | Pending |
-| STK-08 | Phase 6 | Pending |
+| STK-08 | Phase 6 | Complete |
 | PLT-01 | Phase 7 | Pending |
 | PLT-02 | Phase 7 | Pending |
 | PLT-03 | Phase 7 | Pending |

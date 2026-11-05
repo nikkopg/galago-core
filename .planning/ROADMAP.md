@@ -64,10 +64,10 @@ picking values the STACK reports, and the shared dropdown layer is ready for Pha
   2. An unreachable instrument or a saved value no longer reported never blocks or rewrites a step.
   3. What is sent is unchanged (saved protocols run as before), with `vendor/galago-tools` pinned to `4ccd3da` and no regen diff.
 
-**Plans**: 5 plans
+**Plans**: 1/5 plans executed
 Plans:
 **Wave 1**
-- [ ] 06-01-PLAN.md — Re-pin vendor/galago-tools to 4ccd3da (zero-diff regen gate), tracer: robot/labware/transfer-profile dropdowns on the tool page end to end, user push checkpoint
+- [x] 06-01-PLAN.md — Re-pin vendor/galago-tools to 4ccd3da (zero-diff regen gate), tracer: robot/labware/transfer-profile dropdowns on the tool page end to end, user push checkpoint
 
 **Wave 2** *(blocked on Wave 1 completion)*
 - [ ] 06-02-PLAN.md — Server hardening: caps, TTL cache + configure generation, in-flight dedupe, Refresh, throttled logging, D-17 server scans
@@ -133,7 +133,7 @@ resolution is recorded.
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 6. STACK Dropdowns | 0/TBD | Not started | - |
+| 6. STACK Dropdowns | 1/5 | In Progress | - |
 | 7. F.A.S.T. Plate Dropdowns | 0/TBD | Not started (external gate) | - |
 | 8. Concurrency Lanes | 0/TBD | Not started | - |
 | 9. Supervised Live Two-Tool Proof | 0/TBD | Not started | - |

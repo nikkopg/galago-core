@@ -4,17 +4,17 @@ milestone: v1.2
 milestone_name: Tool-inferred dropdowns + per-tool concurrency lanes
 current_phase: 6
 current_phase_name: STACK Dropdowns
-status: planning
-stopped_at: Phase 6 UI-SPEC approved
-last_updated: "2026-11-05T13:36:50.221Z"
+status: executing
+stopped_at: Completed 06-01 code tasks; Task 3 awaiting user push of galago-tools feat/stack-tool
+last_updated: "2026-11-05T13:43:06.273Z"
 last_activity: 2026-11-05
-last_activity_desc: v1.2 roadmap created (Phases 6-9, 40/40 requirements mapped)
-state_head: 6e354bf9862c949e4c51ac1cf0e50cae4d35d807
+last_activity_desc: Phase 6 execution started
+state_head: c7da55a9f11665f88f16d35e071a642150df6e94
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 5
-  completed_plans: 0
+  completed_plans: 1
   percent: 0
 ---
 
@@ -26,15 +26,15 @@ See: .planning/PROJECT.md (updated 2026-11-05)
 
 **Core value:** While an instrument step runs, the operator sees what the instrument is doing and
 decides every recovery action; the web app never acts on its own or pre-selects a physical decision.
-**Current focus:** Phase 6 — STACK Dropdowns (milestone v1.2: Tool-inferred dropdowns + per-tool
+**Current focus:** Phase 6 — STACK Dropdowns
 concurrency lanes)
 
 ## Current Position
 
-Phase: 6 (STACK Dropdowns) — READY TO EXECUTE
-Plan: — (not yet planned)
-Status: Ready to discuss / plan Phase 6
-Last activity: 2026-11-05 — v1.2 roadmap created (Phases 6-9, 40/40 requirements mapped)
+Phase: 6 (STACK Dropdowns) — EXECUTING
+Plan: 2 of 5
+Status: Ready to execute
+Last activity: 2026-11-05 — Phase 6 execution started
 
 Progress: [░░░░░░░░░░] 0% (0 of 4 v1.2 phases)
 
@@ -93,6 +93,7 @@ Progress: [░░░░░░░░░░] 0% (0 of 4 v1.2 phases)
 | Phase 05 P02 | 5 min | 3 tasks | 8 files |
 | Phase 05 P03 | 7 min | 3 tasks | 7 files |
 | Phase 05 P04 | 9 min | 2 tasks | 5 files |
+| Phase 06 P01 | 9 min | 2 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -158,6 +159,7 @@ Recent decisions affecting current work:
 - [Phase 05]: 05-04: coerce-before-strip on STACK sends (coerceBooleanParams in the pipeline, not a control swap — AC-4 kept): a typed "false" sends real false on the real encoder; exact literals only, born-empty "" untouched for the blank strip
 - [Phase 05]: 05-04: isBlank NaN-as-blank is narrow (only Number.isNaN; real 0/false pass) and the cleared NumberInput stores "" at the source — WR-01 closed twice over; full gate 608/608 (599 unregressed + 9 new)
 - [Phase 05]: 05-04: valid-RED scaffold procedure (#3770): pass-through stub in the test commit so targets fail on assertion; junit RED records in 05-04-tdd-red/, RED_EVIDENCE_OK x3 before GREEN
+- [Phase 06]: 06-01: Tool.readOptions throws on transport/deadline; fetchOptions owns the closed reason mapping
 
 ### Pending Todos
 
@@ -212,9 +214,9 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-05T13:06:34.967Z
-Stopped at: Phase 6 UI-SPEC approved
-Resume file: .planning/phases/06-stack-dropdowns/06-UI-SPEC.md
+Last session: 2026-11-05T13:43:06.250Z
+Stopped at: Completed 06-01 code tasks; Task 3 awaiting user push of galago-tools feat/stack-tool
+Resume file: None
 
 ## Operator Next Steps
 
