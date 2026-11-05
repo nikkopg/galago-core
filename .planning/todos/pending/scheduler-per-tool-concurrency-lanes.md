@@ -2,6 +2,7 @@
 created: 2026-11-03
 source: Operator debrief after the galago-tools v2 milestone's live two-plate handoff cycles (the concurrent-maneuver want surfaced in practice)
 type: feature-candidate (gsd-quick / next-cycle)
+resolves_phase: 8
 ---
 
 # Scheduler: per-toolId concurrency lanes for live two-tool runs

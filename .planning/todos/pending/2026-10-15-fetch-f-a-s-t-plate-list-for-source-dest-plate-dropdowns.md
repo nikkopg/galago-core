@@ -3,6 +3,7 @@ created: 2026-10-15T05:00:34.361Z
 title: Fetch F.A.S.T. plate list for source/dest plate dropdowns
 area: ui
 severity: minor
+resolves_phase: 7
 files:
   - controller/components/tools/constants.ts:318-319
   - controller/components/tools/types.ts:1-7
