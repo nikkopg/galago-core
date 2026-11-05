@@ -1,0 +1,146 @@
+# Requirements: galago-core v1.2: Tool-inferred dropdowns + per-tool concurrency lanes
+
+**Defined:** 2026-11-05
+**Core Value:** While an instrument step runs, the operator sees what the instrument is doing and
+decides every recovery action themselves. The web app never pauses, resumes or aborts an instrument
+on its own, and never preselects a physical decision for the operator.
+**Research:** `.planning/research/SUMMARY.md` (decisions D1-D12)
+
+## v1.2 Requirements
+
+### Dropdown behaviour (DRP), shared by every instrument-fed field
+
+- [ ] **DRP-01**: The operator sees a dropdown of instrument-reported values for each bound field.
+  Each dropdown starts empty. Nothing is preselected, not even when only one option exists.
+- [ ] **DRP-02**: When the operator opens a saved step whose value the instrument no longer reports,
+  the value stays selected, marked "(not reported by instrument)". It is never cleared or rewritten.
+- [ ] **DRP-03**: In the protocol editor the operator can still bind any dropdown field to a
+  `{{variable}}`. A bound parent field turns its child fields into typed inputs.
+- [ ] **DRP-04**: When the instrument can't be reached, or the read fails or returns no data, the
+  operator gets the plain typed input with an "instrument list unavailable" hint. A stale list is
+  never shown.
+- [ ] **DRP-05**: Changing a parent field (device → deck → nest) clears its child fields. Loading
+  options never clears a saved value.
+- [ ] **DRP-06**: The operator can press Refresh on a list to re-read it from the instrument
+  (`refresh: true`). Refreshing never clears a selection.
+- [ ] **DRP-07**: Lists are read through one closed server registry of sources, using the instance
+  `Tool.executeCommand` with a deadline. They never go through the command queue, and are never
+  polled or retried automatically. Every reply is validated and size-capped. Instrument names that
+  look like `{{x}}` are never substituted.
+- [ ] **DRP-08**: The same dropdowns appear when the operator edits a saved step in the step
+  details drawer. The drawer reads lists only while it is in edit mode.
+- [ ] **DRP-09**: What is sent stays the same: the selected value is the same string or number the
+  operator would have typed, so existing saved protocols load and run unchanged.
+
+### STACK fields (STK)
+
+- [ ] **STK-01**: The operator picks `robot` from the robots the STACK manager reports
+  (`get_robot_states`).
+- [ ] **STK-02**: The operator picks source and destination device → deck → nest from the manager's
+  device tree (`list_devices`). Source and destination each have their own cascade. The values sent
+  are `deviceName`/`deckName`/`nestName`, never `unifiedName`.
+- [ ] **STK-03**: Only calibrated decks and nests (`isCalibrated: true`) are offered. Uncalibrated
+  ones are hidden, matching the manager's own refusal (stack-automation-layer `errors.py:185-191`).
+  A saved uncalibrated deck or nest is kept as in DRP-02.
+- [ ] **STK-04**: Location names the manager reports as ambiguous are shown and flagged. They are
+  never merged or silently resolved.
+- [ ] **STK-05**: The operator picks `labware_profile` from `list_labware_profiles`. It is never
+  preselected or inferred.
+- [ ] **STK-06**: The operator picks source and destination transfer profiles from
+  `list_transfer_profiles`.
+- [ ] **STK-07**: Dropdowns cover every STACK command that takes these fields (`transfer`,
+  `get_transfer_estimate`, `get_labware_presence`). `step_key` and `timeout_s` stay typed inputs.
+- [ ] **STK-08**: `vendor/galago-tools` is pinned by SHA to `4ccd3da`, and the regenerated
+  interfaces (ts-proto 1.151.1) show no diff.
+
+### F.A.S.T. plates (PLT)
+
+- [ ] **PLT-01**: galago-tools ships a frozen `get_plates` read that answers while a Transfer is
+  running. A test calls it through `ExecuteCommand` during a transfer. This is a cross-repo
+  precondition (contract: `research/FAST-GET-PLATES-CONTRACT.md`).
+- [ ] **PLT-02**: `vendor/galago-tools` is re-pinned to that frozen commit. The interface diff is
+  exactly `GetPlates` plus oneof entry 11, and `Transfer.expected_tray_id = 13` is unchanged.
+- [ ] **PLT-03**: The operator picks `source_plate_id` and `dest_plate_id` from the registered
+  plates. The label shows the id and description, and the value is the numeric id.
+- [ ] **PLT-04**: Plate entries whose id is not an integer ≥ 1 are rejected, never truncated.
+  Duplicate ids are flagged. An unset plate is never saved as `0`.
+- [ ] **PLT-05**: `get_plates` never appears as a protocol step or a tool-page command.
+
+### Lane engine (LAN)
+
+- [ ] **LAN-01**: With the lane-mode env var off, the queue behaves byte-identically to today. A
+  golden transcript captured before the change proves it, and every existing test passes unedited.
+- [ ] **LAN-02**: With lanes on, a step tagged with a lane can run while another tool's step is
+  running. At most one step per tool server is in flight.
+- [ ] **LAN-03**: A step can declare a barrier or dependency on steps in another lane, and won't
+  start until they finish. An untagged step waits for everything before it, as today.
+- [ ] **LAN-04**: Each lane has its own single-flight Start guard. A Start never dispatches a row
+  that is already in flight (the F5 guarantee, per lane).
+- [ ] **LAN-05**: When any step on any lane fails, new dispatch stops on every lane. Steps already
+  running are never aborted, and only the operator's Start clears the halt.
+- [ ] **LAN-06**: A modal on the primary lane (a form, a prompt or a pause) stops new dispatch on
+  every lane. Non-tool steps run on the primary lane only.
+- [ ] **LAN-07**: Pause, resume and abort still reach a running F.A.S.T. on whatever lane it is on,
+  and the run-state poller is never stopped by another lane's step. Abort markers and failed
+  attempts are tracked per step.
+- [ ] **LAN-08**: Stop, Clear All and run delete still abort first for every controllable running
+  step, whatever its lane.
+- [ ] **LAN-09**: The operator can freeze lanes: one control that stops new dispatch on every lane,
+  for example after a tool-initiated pause. Nothing is aborted.
+
+### Lane protocol surface and run page (LUI)
+
+- [ ] **LUI-01**: In the visual protocol editor the operator can tag a tool step with a lane and a
+  barrier or dependency.
+- [ ] **LUI-02**: A script protocol can tag steps with `galago.lane(...)` and declare dependencies.
+- [ ] **LUI-03**: Run creation refuses invalid lane setups with a clear error: a cycle, a non-tool
+  step on a secondary lane, or one tool on two lanes.
+- [ ] **LUI-04**: The preview and the Start confirmation list the steps per lane.
+- [ ] **LUI-05**: The run page shows each lane's steps in order, with their own statuses and
+  timestamps, and the run outcome takes every lane into account.
+- [ ] **LUI-06**: The error banner lists each lane's failure. The first failure keeps the STACK
+  guid the operator needs.
+
+### Live proof (LIV)
+
+- [ ] **LIV-01**: A supervised live two-tool run shows a STACK step overlapping the F.A.S.T.
+  transfer, with per-lane evidence rows. Explicit step keys are used, and the galago-tools SHA and
+  auto-mint status are recorded. The STACK step itself is decided in Phase 10's discussion.
+- [ ] **LIV-02**: Lane-halt and freeze-lanes are shown in a drill that freezes both lanes, using a
+  fake or simulated failure. No automated motion.
+- [ ] **LIV-03**: PROJECT.md and the lanes todo record the resolution. The galago-tools operator
+  runbook gains the parallel cycle only after LIV-01.
+
+## Future Requirements
+
+- Option-label context: robot state, labware has-lid, plate size and capacity.
+- Lane timeline visualisation.
+- Disabling, rather than only flagging, ambiguous locations.
+
+## Out of Scope
+
+| Feature | Reason |
+|---|---|
+| Preselecting any physical value (labware, nest, plate) | Core value: the operator picks every physical choice |
+| Rewriting or migrating saved protocols | Saved values are kept verbatim (DRP-02, DRP-09) |
+| Polling, or showing stale lists while offline | It would mislead the operator. The typed fallback is safer |
+| Software abort of a sibling lane | Only the operator aborts. Lane-halt only stops new dispatch |
+| Auto-advance, auto-retry or auto-skip on failure | Core value |
+| Parallel lanes by default, or across runs | The flag is opt-in, and lanes work within one run only |
+| A general DAG scheduler | Lanes plus barriers and dependencies cover the workcell cycle |
+| Repurposing `advancedParameters.runAsynchronously` | It is stored as `false` on every saved row (D1) |
+| `stack.proto` changes | Frozen in galago-tools |
+| New npm dependencies | Existing packages cover every need (STACK.md) |
+
+## Traceability
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+
+**Coverage:**
+- v1.2 requirements: 40 total
+- Mapped to phases: 0 (filled by roadmap)
+
+---
+*Requirements defined: 2026-11-05*
+*Last updated: 2026-11-05 after initial definition*
