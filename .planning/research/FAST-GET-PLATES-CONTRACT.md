@@ -41,7 +41,8 @@ stays, because old saved galago-core steps still send it (quick task 261104-or1)
 
 - Add a `GetPlates(self, params)` handler that calls
   `service.plate_definitions(refresh=bool(params.refresh))`.
-- **No motion lock and no idle check.** It is a read, like `GetStatus`. It must succeed while a
+- **No motion lock and no idle check.** It is a read, like `GetStatus`. It must skip the adapter's
+  BUSY gate the same way the STACK adapter's `READ_COMMANDS` set does (galago-tools `4ccd3da`). It must succeed while a
   transfer is running, because galago-core may ask for the list while the operator edits a protocol
   mid-run.
 - Return `SUCCESS` with `return_reply=True` and `meta_data` set as described below, using the
@@ -68,16 +69,18 @@ stays, because old saved galago-core steps still send it (quick task 261104-or1)
 - Field names and meaning are identical to fast-mcp's `list_plate_definitions` output. Don't
   invent new ones.
 - `id` is the value galago-core sends back as `Transfer.source_plate_id` / `dest_plate_id`
-  (`int32`). Struct carries numbers as doubles, so galago-core truncates and checks that each id is
-  an integer ≥ 1.
+  (`int32`). Struct carries numbers as doubles, so galago-core **rejects** any entry whose id is not
+  an integer ≥ 1. It never truncates, because truncating would turn 12.7 into plate 12.
 - `workingCapacity` is in µL, the same as fast-mcp.
 - Order: ascending by `id`.
 - An empty `plates: []` is a valid answer (no plates registered), not an error.
 
 ### 4. Tests (galago-tools)
 
-- The handler returns the list while a fake transfer holds the motion lock, which proves it does
-  not take the lock.
+- **Through `ExecuteCommand`, during a Transfer:** `get_plates` returns the list while a fake
+  transfer is running. Calling the handler directly is not enough. Today F.A.S.T.'s `ExecuteCommand`
+  only bypasses base_server's readiness gate for pause/resume/abort (`tools/fast/server.py` ~80,
+  515-541), so without an explicit read bypass the call is refused with `NOT_READY`.
 - The `meta_data` round-trip matches the shape above.
 - An unreachable instrument gives a non-SUCCESS code and no `plates` key.
 
@@ -85,7 +88,9 @@ stays, because old saved galago-core steps still send it (quick task 261104-or1)
 
 - Re-pin `vendor/galago-tools` to the frozen commit and regenerate `controller/gen-interfaces`
   (ts-proto 1.151.1).
-- Add a tRPC query that sends `get_plates` through the direct, non-queue send path (`controller/server/tools.ts:375`). It
+- Add a tRPC query that sends `get_plates` through the instance `Tool.executeCommand` with
+  `return_reply: true` (the `tool.latchStatus` precedent), never through the queue. Do not use
+  `Tool.controlCommand`: a static scan pins it to two callers, and it discards `meta_data`. It
   validates and caps the reply (a maximum plate count, string lengths, and integer ids), caches it
   briefly, and returns `unavailable` instead of throwing when the instrument is offline.
 - `get_plates` is internal. It is never offered as a protocol step or a tool-page command
