@@ -105,7 +105,7 @@ on its own, and never preselects a physical decision for the operator.
 
 - [ ] **LIV-01**: A supervised live two-tool run shows a STACK step overlapping the F.A.S.T.
   transfer, with per-lane evidence rows. Explicit step keys are used, and the galago-tools SHA and
-  auto-mint status are recorded. The STACK step itself is decided in Phase 10's discussion.
+  auto-mint status are recorded. The STACK step itself is decided in Phase 9's discussion.
 - [ ] **LIV-02**: Lane-halt and freeze-lanes are shown in a drill that freezes both lanes, using a
   fake or simulated failure. No automated motion.
 - [ ] **LIV-03**: PROJECT.md and the lanes todo record the resolution. The galago-tools operator
@@ -134,13 +134,59 @@ on its own, and never preselects a physical decision for the operator.
 
 ## Traceability
 
+Each v1.2 requirement maps to exactly one phase. The shared DRP-* dropdown layer is built in Phase 6;
+Phase 7 reuses it for F.A.S.T. plates and owns only PLT-*. Phase 8 delivers the lane engine first, then
+the protocol surface and run page, as waves inside one phase.
+
 | Requirement | Phase | Status |
 |-------------|-------|--------|
+| DRP-01 | Phase 6 | Pending |
+| DRP-02 | Phase 6 | Pending |
+| DRP-03 | Phase 6 | Pending |
+| DRP-04 | Phase 6 | Pending |
+| DRP-05 | Phase 6 | Pending |
+| DRP-06 | Phase 6 | Pending |
+| DRP-07 | Phase 6 | Pending |
+| DRP-08 | Phase 6 | Pending |
+| DRP-09 | Phase 6 | Pending |
+| STK-01 | Phase 6 | Pending |
+| STK-02 | Phase 6 | Pending |
+| STK-03 | Phase 6 | Pending |
+| STK-04 | Phase 6 | Pending |
+| STK-05 | Phase 6 | Pending |
+| STK-06 | Phase 6 | Pending |
+| STK-07 | Phase 6 | Pending |
+| STK-08 | Phase 6 | Pending |
+| PLT-01 | Phase 7 | Pending |
+| PLT-02 | Phase 7 | Pending |
+| PLT-03 | Phase 7 | Pending |
+| PLT-04 | Phase 7 | Pending |
+| PLT-05 | Phase 7 | Pending |
+| LAN-01 | Phase 8 | Pending |
+| LAN-02 | Phase 8 | Pending |
+| LAN-03 | Phase 8 | Pending |
+| LAN-04 | Phase 8 | Pending |
+| LAN-05 | Phase 8 | Pending |
+| LAN-06 | Phase 8 | Pending |
+| LAN-07 | Phase 8 | Pending |
+| LAN-08 | Phase 8 | Pending |
+| LAN-09 | Phase 8 | Pending |
+| LUI-01 | Phase 8 | Pending |
+| LUI-02 | Phase 8 | Pending |
+| LUI-03 | Phase 8 | Pending |
+| LUI-04 | Phase 8 | Pending |
+| LUI-05 | Phase 8 | Pending |
+| LUI-06 | Phase 8 | Pending |
+| LIV-01 | Phase 9 | Pending |
+| LIV-02 | Phase 9 | Pending |
+| LIV-03 | Phase 9 | Pending |
 
 **Coverage:**
 - v1.2 requirements: 40 total
-- Mapped to phases: 0 (filled by roadmap)
+- Mapped to phases: 40 (Phase 6: 17, Phase 7: 5, Phase 8: 15, Phase 9: 3)
+- Unmapped: 0
+- Duplicates: 0
 
 ---
 *Requirements defined: 2026-11-05*
-*Last updated: 2026-11-05 after initial definition*
+*Last updated: 2026-11-05 after roadmap simplification (traceability filled, Phases 6-9)*

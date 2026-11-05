@@ -2,7 +2,7 @@
 
 **Status:** proposed (2026-11-05). This file is the source of truth until galago-tools freezes the
 proto commit. After that, the frozen commit replaces it.
-**Consumers:** milestone v1.2, Phase 6 (F.A.S.T. plate-list dropdowns) in galago-core.
+**Consumers:** milestone v1.2, Phase 7 (F.A.S.T. plate dropdowns) in galago-core.
 **Origin:** `.planning/todos/pending/2026-10-15-fetch-f-a-s-t-plate-list-for-source-dest-plate-dropdowns.md`
 
 ## Why
@@ -84,7 +84,7 @@ stays, because old saved galago-core steps still send it (quick task 261104-or1)
 - The `meta_data` round-trip matches the shape above.
 - An unreachable instrument gives a non-SUCCESS code and no `plates` key.
 
-## galago-core side (for reference; built in v1.2 Phase 6)
+## galago-core side (for reference; built in v1.2 Phase 7)
 
 - Re-pin `vendor/galago-tools` to the frozen commit and regenerate `controller/gen-interfaces`
   (ts-proto 1.151.1).
@@ -98,7 +98,7 @@ stays, because old saved galago-core steps still send it (quick task 261104-or1)
 - The source/dest plate fields become dynamic selects fed by that query. Their values stay numeric
   ids, so nothing changes on the wire and saved protocols load unchanged.
 
-## Open points (to settle in Phase 6 discussion)
+## Open points (to settle in Phase 7 discussion)
 
 - When offline, fall back to a plain number input, or show the last-known list with a "stale" marker?
 - Whether the `refresh` flag is needed, or fast_mcp's cache is fresh enough.

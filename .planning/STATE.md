@@ -3,10 +3,10 @@ gsd_state_version: "1.0"
 milestone: v1.2
 milestone_name: Tool-inferred dropdowns + per-tool concurrency lanes
 status: planning
-last_updated: "2026-11-05T11:45:14.056Z"
+last_updated: "2026-11-05T12:11:48.000Z"
 last_activity: 2026-11-05
 progress:
-  total_phases: 0
+  total_phases: 4
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -17,18 +17,21 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-11-02)
+See: .planning/PROJECT.md (updated 2026-11-05)
 
 **Core value:** While an instrument step runs, the operator sees what the instrument is doing and
 decides every recovery action; the web app never acts on its own or pre-selects a physical decision.
-**Current focus:** Planning next milestone — start with `/gsd-new-milestone`
+**Current focus:** Phase 6 — STACK Dropdowns (milestone v1.2: Tool-inferred dropdowns + per-tool
+concurrency lanes)
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-11-05 — Milestone v1.2 started
+Phase: 6 of 9 (STACK Dropdowns) — v1.2 covers Phases 6-9
+Plan: — (not yet planned)
+Status: Ready to discuss / plan Phase 6
+Last activity: 2026-11-05 — v1.2 roadmap created (Phases 6-9, 40/40 requirements mapped)
+
+Progress: [░░░░░░░░░░] 0% (0 of 4 v1.2 phases)
 
 ## Performance Metrics
 
@@ -94,6 +97,15 @@ Decisions are logged in PROJECT.md Key Decisions table.
 v1 decisions are archived in `milestones/v1-ROADMAP.md` (Milestone Summary) and PROJECT.md.
 Recent decisions affecting current work:
 
+- [Roadmap v1.2]: Phase order is STACK dropdowns (6) → F.A.S.T. plates (7) → concurrency lanes, engine then
+  protocol surface + run page as waves (8) → supervised live proof (9), simplified to 4 phases on 2026-11-05
+  (user decision). Phase 8 depends on nothing from 6-7, so Phase 7 can slip behind the galago-tools
+  `get_plates` gate without blocking 8-9.
+- [Roadmap v1.2]: The shared DRP-* dropdown layer is built and mapped in Phase 6 (with the STK-* fields);
+  Phase 7 reuses it for F.A.S.T. plates and owns only PLT-*.
+- [Roadmap v1.2]: Research decisions D1-D12 (SUMMARY.md) are settled in the owning phase's discuss step:
+  D6/D7/D10/D11 in Phase 6, D1/D2/D3/D4/D9/D12 in Phase 8, D5/D8 in Phase 9 (Phase 7 inherits D6/D10/D11
+  from Phase 6). LAN-09's freeze control and its run-page button both land in Phase 8.
 - [Roadmap v1.1]: Phase order is F5 + F3 (3) → operator acknowledge (4) → STACK codegen (5), the user's
   build order; F5 and F3 merged into one phase (2026-10-28, user decision) since they share files.
 - [Roadmap v1.1]: Phase 4 is built on string tool types and `"stack" as ToolType` fakes, so it does not wait
@@ -148,6 +160,10 @@ Recent decisions affecting current work:
 
 ### Blockers/Concerns
 
+- [Phase 7]: Hard-gated on galago-tools freezing a read-only F.A.S.T. `get_plates` that answers while a
+  Transfer runs (`FastServer.ExecuteCommand` otherwise refuses reads while BUSY), proven by a test through
+  `ExecuteCommand`. Contract is still "proposed": `.planning/research/FAST-GET-PLATES-CONTRACT.md`. Phase 7
+  may slip; Phases 8-9 do not wait on it.
 - [Phase 5]: Hard-gated on galago-tools Phase 4 pushing the frozen `stack.proto` to `feat/stack-tool`
   (not there yet). A needed `stack.proto` change or a stack-automation-layer gap stops the work and is
   noted for the user; it is never patched here.
@@ -191,10 +207,10 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-02T12:45:00.000Z
-Stopped at: Phase 05 complete — all 3 phases complete, milestone v1.1 ready to close
+Last session: 2026-11-05T12:11:48.000Z
+Stopped at: v1.2 roadmap created (Phases 6-9); Phase 6 ready to discuss/plan
 Resume file: None
 
 ## Operator Next Steps
 
-- Start the next milestone with /gsd-new-milestone
+- Discuss Phase 6 with /gsd-discuss-phase 6 (settle D6, D7, D10, D11), then /gsd-plan-phase 6
