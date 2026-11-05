@@ -1,7 +1,8 @@
 ---
 phase: "06"
 slug: "stack-dropdowns"
-status: draft
+status: approved
+reviewed_at: "2026-11-05"
 shadcn_initialized: false
 preset: none
 created: "2026-11-05"
@@ -214,22 +215,25 @@ Sentence case throughout. The em dash in the strings above is the literal charac
 
 ## UI Considerations
 
-Applicable state considerations resolved: 9 covered, 2 backstop, 1 unresolved.
+Produced by the UI-consideration probe (`ui-consideration-probe.cjs`) over 5 elements: E1 the option list, E2 the location cascade, E3 Refresh and the status line, E4 option flags, E5 variable binding. The probe found 28 applicable considerations, none unclassified. In `--auto` mode each one is resolved as an explicit truth where this contract already pins the behavior. Items that only a visual check can confirm stay backstops. The copy referenced here lives in the Copywriting Contract and is not repeated.
 
-| Category | Element(s) | Status | Resolution / Reason |
-|----------|------------|--------|---------------------|
-| empty | Option lists (robots, devices, labware profiles, transfer profiles) | ✅ covered | A validated empty array renders the `ok` mode with only the blank option and the status line "0 items"; it is not treated as unavailable. Copy is in the Copywriting Contract. |
-| empty | Deck and nest lists after the calibration filter | ✅ covered | The child `Select` has only the blank option and the notes "No calibrated decks on this device" and "No calibrated nests on this deck". |
-| loading | First read of each source | ✅ covered | `loading` mode: disabled select with "Loading…"; a saved value shows without a flag; the form stays usable. |
-| error | Failed, timed-out, refused or malformed read | ✅ covered | `unavailable` mode: text input with the hint "Instrument list unavailable — type the value". Never a stale list (check `isError` first). |
-| partial | Degraded list (empty or `{{x}}` names dropped) | ✅ covered | Status line appends "some entries skipped"; the remaining entries are offered. |
-| zero-one-many | A list with exactly one option | ✅ covered | Nothing is preselected; the blank option stays selected until the operator chooses. |
-| long-text | Long device, deck, nest or profile names, and long flag suffixes | 🧪 backstop | Native `<option>` text is clipped by the control width. Held-out visual check with a 60-character name plus the ambiguous suffix, in the modal (narrowest host). |
-| duplicate | Two options with the same name | ✅ covered | Both shown with the same label and index-based React keys; both flagged when ambiguous (D-08). |
-| stale | Saved value not in the loaded list; uncalibrated saved deck or nest | ✅ covered | Kept and selected, shown as "(not reported by instrument)"; blank values never warn. |
-| overflow | A list of up to the server cap (about 10k items) | 🧪 backstop | Native `Select` handles it but is slow to scroll; the server cap bounds it. Held-out check with a large fixture. Searchable dropdown is out of scope (D-11 locks native `Select`). |
-| interaction | Refresh pressed while a selection exists | ✅ covered | The selection is never cleared; children are unchanged (the D-09 test). |
-| live-only | Dropdowns against a simulated STACK | ⚠ unresolved | A simulated STACK answers SUCCESS with no `meta_data`, so every field shows `unavailable` (typed input). Real-list visuals need a real or PAC-simulated STACK; the planner treats it as one live-only UAT item (RESEARCH finding 5). |
+### Resolved (explicit)
+- "E1/E2 empty: a validated empty list renders `ok` mode with only the blank `<option value=\"\">` and the status line \"0 items\"; it is never treated as unavailable. A device with no calibrated decks shows an empty deck list and the \"No calibrated decks on this device\" note."
+- "E1/E2/E3 loading: during the first read the control is a disabled `Select` reading \"Loading…\"; a saved value is shown unflagged and the form stays usable; Refresh in flight reads \"Refreshing…\" and never clears the selection."
+- "E1/E2/E3 error: any failed, timed-out, refused, NOT_READY or malformed read renders `unavailable` mode (typed input plus \"Instrument list unavailable — type the value\"); `isError` is checked before cached data so a stale list is never shown; Refresh stays available to retry."
+- "E1/E3 populated: `ok` mode lists every validated option after the explicit blank `<option value=\"\">`; nothing is preselected; the status line reads \"from instrument · N items · fetched hh:mm:ss\" (24-hour local time)."
+- "E1/E2/E3 partial: when entries were dropped (empty or `{{x}}` names) the remaining options are offered and the status line appends \"· some entries skipped\"."
+- "E1/E2 zero-one-many: a list with exactly one option still starts on the blank option; the operator must choose it."
+- "E4 flags: an option whose path (or a parent device or deck path) is in `ambiguous` stays selectable with the suffix \"ambiguous — adapter will refuse\"; a non-blank saved value missing from a successfully loaded list stays selected with \"(not reported by instrument)\"; blank values and lists that are loading or unavailable never show the not-reported flag."
+- "E5 variable-bound: a field holding `{{var}}` shows the variable and its picker is disabled; when a cascade parent is bound, its children render as typed inputs with the hint \"child list unavailable while the parent is a variable\"."
+- "E2 cascade: changing the device clears deck and nest to `\"\"`, and changing the deck clears the nest, only from the operator's `onChange`; a child with a blank parent is disabled unless its own value is non-blank."
+
+### Resolved (backstop)
+- { statement: "E1/E2/E4 long-text: a 60-character name plus the ambiguous suffix is readable or cleanly clipped in the AddToolCommandModal (narrowest host) without breaking the row layout", verification: backstop }
+- { statement: "E1/E2 overflow: a list at the server cap scrolls in the native Select without freezing the form; a searchable dropdown is out of scope (D-11)", verification: backstop }
+
+### Unresolved
+- ⚠ unresolved — planner must treat as assumption: real-list visuals need a live or PAC-simulated STACK, because a simulated STACK returns SUCCESS with no `meta_data` and every field falls back to `unavailable`. This is one live-only UAT item.
 
 ---
 
