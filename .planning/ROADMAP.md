@@ -62,7 +62,13 @@ picking values the STACK reports, and the shared dropdown layer is ready for Pha
   1. The three STACK forms offer instrument-reported dropdowns that start empty and preselect nothing.
   2. An unreachable instrument or a saved value no longer reported never blocks or rewrites a step.
   3. What is sent is unchanged (saved protocols run as before), with `vendor/galago-tools` pinned to `4ccd3da` and no regen diff.
-**Plans**: TBD
+**Plans**: 5 plans
+Plans:
+- [ ] 06-01-PLAN.md — Re-pin vendor/galago-tools to 4ccd3da (zero-diff regen gate), tracer: robot/labware/transfer-profile dropdowns on the tool page end to end, user push checkpoint
+- [ ] 06-02-PLAN.md — Server hardening: caps, TTL cache + configure generation, in-flight dedupe, Refresh, throttled logging, D-17 server scans
+- [ ] 06-03-PLAN.md — React-free core: location cascade, calibration filter, ambiguity flags, applyChange, full view model, round-trip and wire proofs
+- [ ] 06-04-PLAN.md — OptionsSelect all modes + Refresh row + status line, tool-page cascade wiring, D-17 client scans
+- [ ] 06-05-PLAN.md — AddToolCommandModal and CommandDetailsDrawer (edit mode only), host scans, full phase gate
 **UI hint**: yes
 **Settle in discuss**: D6, D7, D10, D11 (standard patterns).
 
