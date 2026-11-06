@@ -1019,3 +1019,55 @@ describe("dropdown control invariants (D-09, D-11, D-17)", () => {
     expect(reset?.[0] ?? "").not.toContain("applyChange");
   });
 });
+
+describe("protocol host invariants (D-14, D-15, D-17)", () => {
+  const modal = "components/protocols/AddToolCommandModal.tsx";
+  const drawer = "components/protocols/CommandDetailsDrawer.tsx";
+  const page = "pages/tools/[id].tsx";
+
+  it("exactly the three hosts render OptionsSelect", () => {
+    const files = ["components", "hooks", "pages"].flatMap((dir) => walk(dir)).map(rel);
+    const hosts = files
+      .filter((relPath) => stripComments(read(relPath)).includes("<OptionsSelect"))
+      .sort();
+    expect(hosts).toStrictEqual([modal, drawer, page].sort());
+  });
+
+  it("the drawer reads lists only while editing and writes through applyChange", () => {
+    const src = stripComments(read(drawer));
+    expect(src).toContain("enabled={isEditing}");
+    expect(src).toContain("lookupFieldBinding(");
+    expect(src).toContain("applyChange(");
+  });
+
+  it("the modal keeps the variable picker and writes through applyChange", () => {
+    const src = stripComments(read(modal));
+    expect(src).toContain("lookupFieldBinding(");
+    expect(src).toContain("applyChange(");
+    expect(src).toContain("handleVariableSelect(field.name");
+  });
+
+  it("the modal's handleSubmit keeps its four fill-ins and knows nothing of tool options", () => {
+    const region = extractBracedRegion(stripComments(read(modal)), /const handleSubmit = \(\) =>/);
+    expect(region).not.toBe("");
+    expect(region).toContain("finalParams[field.name] = 0;");
+    expect(region).toContain("finalParams[field.name] = false;");
+    expect(region).toContain("finalParams[field.name] = [];");
+    expect(region).toContain('finalParams[field.name] = "";');
+    for (const pattern of [/OptionsSelect/, /applyChange/, /tool\.options/, /useToolOptions/]) {
+      expect(region, String(pattern)).not.toMatch(pattern);
+    }
+  });
+
+  it("the drawer's handleSaveInputs still spreads the saved params before editedParams", () => {
+    const region = extractBracedRegion(
+      stripComments(read(drawer)),
+      /const handleSaveInputs = \(\) =>/,
+    );
+    expect(region).not.toBe("");
+    expect(region).toMatch(/\.\.\.selectedCommand\.commandInfo\.params,\s*\.\.\.editedParams,/);
+    for (const pattern of [/OptionsSelect/, /applyChange/, /tool\.options/, /useToolOptions/]) {
+      expect(region, String(pattern)).not.toMatch(pattern);
+    }
+  });
+});
