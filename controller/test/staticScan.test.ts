@@ -965,3 +965,57 @@ describe("tool options read path (D-17)", () => {
     expect(src).toContain("sweeps every stack field: no defaultValue and no select");
   });
 });
+
+describe("dropdown control invariants (D-09, D-11, D-17)", () => {
+  const control = "components/tools/OptionsSelect.tsx";
+  const hook = "hooks/useToolOptions.ts";
+  const page = "pages/tools/[id].tsx";
+
+  it("OptionsSelect.tsx and useToolOptions.ts declare no effect hook", () => {
+    for (const file of [control, hook]) {
+      expect(stripComments(read(file)), file).not.toMatch(/\buse(Layout)?Effect\b/);
+    }
+  });
+
+  it("OptionsSelect.tsx has no first-option or default-value selection construct", () => {
+    const src = stripComments(read(control));
+    for (const pattern of [
+      /options\[0\]/,
+      /selectedIndex/,
+      /defaultValue/,
+      /defaultChecked/,
+      /\bselected=/,
+      /placeholder=/,
+    ]) {
+      expect(src, String(pattern)).not.toMatch(pattern);
+    }
+  });
+
+  it("useToolOptions.ts never retries, refetches on focus/reconnect, polls or sets a timer", () => {
+    const src = stripComments(read(hook));
+    expect(src).toContain("retry: false");
+    expect(src).toContain("refetchOnWindowFocus: false");
+    expect(src).toContain("refetchOnReconnect: false");
+    for (const pattern of [/refetchInterval/, /setInterval/, /setTimeout/]) {
+      expect(src, String(pattern)).not.toMatch(pattern);
+    }
+  });
+
+  it("useToolOptions.ts is the only client file reading tool.options", () => {
+    const files = ["components", "hooks", "pages"].flatMap((dir) => walk(dir)).map(rel);
+    const readers = files.filter((relPath) =>
+      stripComments(read(relPath)).includes("tool.options."),
+    );
+    expect(readers).toStrictEqual([hook]);
+  });
+
+  it("the tool page writes bound fields through applyChange and keeps its [selectedCommand] reset effect", () => {
+    const src = stripComments(read(page));
+    expect(src).toContain("applyChange(");
+    const reset = src.match(
+      /useEffect\(\(\) => \{\s*if \(selectedCommand\) \{[\s\S]*?\}, \[selectedCommand\]\);/,
+    );
+    expect(reset).not.toBeNull();
+    expect(reset?.[0] ?? "").not.toContain("applyChange");
+  });
+});

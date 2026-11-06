@@ -31,7 +31,12 @@ import Head from "next/head";
 import { TeachPendant } from "@/components/tools/advanced/teach_pendant/TeachPendant";
 import { commandFields } from "@/components/tools/constants";
 import { omitBlankParams, coerceBooleanParams } from "@/components/tools/commandParams";
-import { lookupFieldBinding } from "@/components/tools/fieldOptions";
+import {
+  applyChange,
+  firstFieldForSource,
+  lookupFieldBinding,
+} from "@/components/tools/fieldOptions";
+import type { FieldBinding } from "@/components/tools/fieldOptions";
 import { OptionsSelect } from "@/components/tools/OptionsSelect";
 import { loadingToast } from "@/components/ui/Toast";
 import { Tool } from "@/types";
@@ -246,14 +251,36 @@ export default function Page() {
   //     executeCommand(commandName, {});
   //   }
   // };
+  // The current command's top-level field names in form order: the first field
+  // of each source carries that source's one Refresh row (D-12).
+  const commandFieldNames = selectedCommand
+    ? (commandOptions[selectedCommand] ?? []).map((f) => f.name)
+    : [];
+
+  // The only writer of an instrument-fed field (D-09, DRP-05): the
+  // operator's choice and its cascade clears (a device change blanks that
+  // side's deck and nest, a deck change blanks the nest) land in ONE
+  // functional state update. No effect, list load or refresh ever writes here.
+  const handleOptionSelect = (binding: FieldBinding, value: string) => {
+    setFormValues((prevValues) => ({ ...prevValues, ...applyChange(binding, value) }));
+  };
+
   const renderFields = (fields: Field[], parentField?: string) => {
     return fields.map((field) => {
-      // Instrument-fed list field (D-10): top-level fields only. The binding map
-      // is closed; every other field renders exactly as before.
+      // Instrument-fed field (D-10), list or device -> deck -> nest cascade:
+      // top-level fields only. The binding map is closed; every other field
+      // renders exactly as before. The tool page has no variables (D-13).
       const binding = parentField
         ? undefined
         : lookupFieldBinding(String(config?.type), selectedCommand, field.name);
-      if (binding !== undefined && binding.role.kind === "list") {
+      if (binding !== undefined) {
+        const showRefresh =
+          firstFieldForSource(
+            commandFieldNames,
+            String(config?.type),
+            selectedCommand,
+            binding.source,
+          ) === field.name;
         return (
           <FormControl key={field.name} my={2}>
             <FormLabel>{field.name}</FormLabel>
@@ -264,8 +291,8 @@ export default function Page() {
               values={formValues}
               enabled={true}
               allowVariables={false}
-              showRefresh={false}
-              onSelect={(v) => handleInputChange(field.name, field.type, v)}
+              showRefresh={showRefresh}
+              onSelect={(v) => handleOptionSelect(binding, v)}
             />
           </FormControl>
         );
