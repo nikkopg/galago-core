@@ -4,12 +4,15 @@
 // turns a tool.options result into the view the shared OptionsSelect renders.
 // commandFields stays untouched (STK-07): a bound field is still a typed
 // "text" field there, which is exactly what the unavailable mode falls back to.
-import type { OptionSourceId, OptionsResult } from "@/server/toolOptions";
+import type { OptionSourceId, OptionsResult, StackDevice } from "@/server/toolOptions";
 
 export const OPTIONS_STALE_MS = 15000;
 export const UNAVAILABLE_HINT = "Instrument list unavailable — type the value";
 export const NOT_REPORTED_SUFFIX = " (not reported by instrument)";
 export const LOADING_LABEL = "Loading…";
+export const AMBIGUOUS_SUFFIX = " (ambiguous — adapter will refuse)";
+export const NO_CALIBRATED_DECKS = "No calibrated decks on this device";
+export const NO_CALIBRATED_NESTS = "No calibrated nests on this deck";
 
 export type CascadeSide = "source" | "destination";
 export type CascadeLevel = "device" | "deck" | "nest";
@@ -108,6 +111,10 @@ export interface SelectOption {
   value: string;
   label: string;
   flag?: "ambiguous" | "not-reported";
+  // Cascade options only: the adapter's "/"-joined path (what ambiguous lists)
+  // and the plain names it was built from.
+  pathKey?: string;
+  names?: { deviceName: string; deckName?: string; nestName?: string };
 }
 
 export interface SelectView {
@@ -170,4 +177,164 @@ export function buildSelectView(input: {
     });
   }
   return { mode: "ok", value: current, options, disabled: false };
+}
+
+
+// ---------------------------------------------------------------------------
+// Location cascade (D-06, D-07, D-08). Built from the one stack.devices tree by
+// position: device index, deck index, nest index. A value is only ever the
+// plain name the operator would have typed; every comparison is
+// String(a) === String(b), never trimmed or case-folded.
+
+export interface CascadeTree {
+  devices: StackDevice[];
+  ambiguous: string[];
+}
+
+export interface CascadeOptions {
+  options: SelectOption[];
+  parentBlank: boolean;
+  emptyNote?: string;
+}
+
+function sameName(a: unknown, b: unknown): boolean {
+  return String(a) === String(b);
+}
+
+function sideField(side: CascadeSide, level: CascadeLevel): string {
+  return side + "_" + level;
+}
+
+function cascadeOption(
+  key: string,
+  value: string,
+  pathKey: string,
+  names: { deviceName: string; deckName?: string; nestName?: string },
+  ambiguous: boolean,
+): SelectOption {
+  const option: SelectOption = {
+    key,
+    value,
+    label: ambiguous ? value + AMBIGUOUS_SUFFIX : value,
+    pathKey,
+    names,
+  };
+  if (ambiguous) option.flag = "ambiguous";
+  return option;
+}
+
+// Flag rule (D-08, RESEARCH Open Question 1, knowledge.py from_devices): a
+// device is flagged when its name is listed; a deck when "device/deck" or the
+// device is; a nest when "device/deck/nest", "device/deck" or the device is.
+// Exact membership on the adapter's bare "/" join, so a name containing "/"
+// that collides with a listed path is flagged too. A flag never hides,
+// disables, merges or picks an option: the operator sees it and chooses.
+//
+// A saved device name shared by several rows offers the decks of every row
+// with that name, in index order (all flagged, since the name is listed): the
+// stored value is only the name, so which row was meant is unknowable, and the
+// adapter refuses ambiguous names anyway.
+export function buildCascadeOptions(
+  tree: CascadeTree,
+  binding: FieldBinding,
+  values: Record<string, unknown>,
+): CascadeOptions {
+  const role = binding.role;
+  if (role.kind !== "cascade") return { options: [], parentBlank: false };
+  const { side, level } = role;
+  const listed = new Set<string>(Array.isArray(tree.ambiguous) ? tree.ambiguous : []);
+  const devices = Array.isArray(tree.devices) ? tree.devices : [];
+
+  if (level === "device") {
+    const options = devices.map((device, d) =>
+      cascadeOption(
+        side + ":device:" + d,
+        device.deviceName,
+        device.deviceName,
+        { deviceName: device.deviceName },
+        listed.has(device.deviceName),
+      ),
+    );
+    return { options, parentBlank: false };
+  }
+
+  const deviceValue = values[sideField(side, "device")];
+  if (isBlankValue(deviceValue)) return { options: [], parentBlank: true };
+
+  if (level === "deck") {
+    const options: SelectOption[] = [];
+    let matchedDevice = false;
+    devices.forEach((device, d) => {
+      if (!sameName(device.deviceName, deviceValue)) return;
+      matchedDevice = true;
+      device.decks.forEach((deck, k) => {
+        if (deck.isCalibrated !== true) return;
+        const path = device.deviceName + "/" + deck.deckName;
+        options.push(
+          cascadeOption(
+            side + ":deck:" + d + ":" + k,
+            deck.deckName,
+            path,
+            { deviceName: device.deviceName, deckName: deck.deckName },
+            listed.has(device.deviceName) || listed.has(path),
+          ),
+        );
+      });
+    });
+    const result: CascadeOptions = { options, parentBlank: false };
+    if (matchedDevice && options.length === 0) result.emptyNote = NO_CALIBRATED_DECKS;
+    return result;
+  }
+
+  // nest: both the device and the deck govern it; either blank means there is
+  // no parent to list from.
+  const deckValue = values[sideField(side, "deck")];
+  if (isBlankValue(deckValue)) return { options: [], parentBlank: true };
+
+  const options: SelectOption[] = [];
+  let matchedDeck = false;
+  devices.forEach((device, d) => {
+    if (!sameName(device.deviceName, deviceValue)) return;
+    device.decks.forEach((deck, k) => {
+      if (deck.isCalibrated !== true || !sameName(deck.deckName, deckValue)) return;
+      matchedDeck = true;
+      const deckPath = device.deviceName + "/" + deck.deckName;
+      const deckFlagged = listed.has(device.deviceName) || listed.has(deckPath);
+      deck.nests.forEach((nest, n) => {
+        if (nest.isCalibrated !== true) return;
+        const path = deckPath + "/" + nest.nestName;
+        options.push(
+          cascadeOption(
+            side + ":nest:" + d + ":" + k + ":" + n,
+            nest.nestName,
+            path,
+            { deviceName: device.deviceName, deckName: deck.deckName, nestName: nest.nestName },
+            deckFlagged || listed.has(path),
+          ),
+        );
+      });
+    });
+  });
+  const result: CascadeOptions = { options, parentBlank: false };
+  if (matchedDeck && options.length === 0) result.emptyNote = NO_CALIBRATED_NESTS;
+  return result;
+}
+
+// The only producer of param patches (D-09, DRP-05). It reads no option list
+// and never picks a first child: an operator's device change clears the same
+// side's deck and nest to "", a deck change clears the nest, anything else
+// returns only its own field. Loading or refreshing a list never calls this.
+export function applyChange(binding: FieldBinding, newValue: string): Record<string, string> {
+  const role = binding.role;
+  if (role.kind === "cascade" && role.level === "device") {
+    return {
+      [binding.field]: newValue,
+      [sideField(role.side, "deck")]: "",
+      [sideField(role.side, "nest")]: "",
+    };
+  }
+  if (role.kind === "cascade" && role.level === "deck") {
+    return { [binding.field]: newValue, [sideField(role.side, "nest")]: "" };
+  }
+  return { [binding.field]: newValue };
 }
