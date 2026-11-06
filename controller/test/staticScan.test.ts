@@ -865,3 +865,103 @@ describe("latch raw reply stays in one bounded collapsible (G-04-2)", () => {
     expect(readBody).toContain("setRawOpen(false)");
   });
 });
+
+// D-17: the dropdown read path is closed on the server. One caller of the
+// instance read method, no command-queue import, a four-source registry, and a
+// strict tool.options input with no command or params, declared above
+// latchStatus (latchStatus.test.ts slices the router from latchStatus down).
+describe("tool options read path (D-17)", () => {
+  const scanDirs = ["server", "components", "hooks", "pages"];
+
+  it("server/toolOptions.ts is the only caller of .readOptions( and server/tools.ts the only definition", () => {
+    const files = scanDirs.flatMap((dir) => walk(dir)).map(rel);
+
+    const callSiteCounts: Record<string, number> = {};
+    const definitionFiles: string[] = [];
+    for (const relPath of files) {
+      const src = stripComments(read(relPath));
+      if (/async readOptions\(/.test(src)) {
+        definitionFiles.push(relPath);
+        continue;
+      }
+      const count = (src.match(/\.readOptions\(/g) ?? []).length;
+      if (count > 0) {
+        callSiteCounts[relPath] = count;
+      }
+    }
+
+    expect(Object.keys(callSiteCounts)).toStrictEqual(["server/toolOptions.ts"]);
+    expect(callSiteCounts["server/toolOptions.ts"]).toBeGreaterThanOrEqual(1);
+    expect(definitionFiles).toStrictEqual(["server/tools.ts"]);
+  });
+
+  it("server/toolOptions.ts never references the command queue", () => {
+    const src = stripComments(read("server/toolOptions.ts"));
+    expect(src).not.toContain("command_queue");
+    expect(src).not.toContain("CommandQueue");
+  });
+
+  it("OPTION_SOURCES declares exactly the four D-02 sources", () => {
+    const src = stripComments(read("server/toolOptions.ts"));
+    const region = extractBracedRegion(src, /export const OPTION_SOURCES/);
+    expect(region.length).toBeGreaterThan(0);
+
+    const bodyStart = region.indexOf("{");
+    function depthAt(index: number): number {
+      let depth = 0;
+      for (let i = bodyStart; i < index; i += 1) {
+        if (region[i] === "{") depth += 1;
+        else if (region[i] === "}") depth -= 1;
+      }
+      return depth;
+    }
+
+    const quotedEntryKeys: string[] = [];
+    for (const match of region.matchAll(/"([^"]+)"\s*:\s*\{/g)) {
+      if (depthAt(match.index ?? 0) === 1) quotedEntryKeys.push(match[1]);
+    }
+    expect(quotedEntryKeys).toStrictEqual([
+      "stack.robots",
+      "stack.devices",
+      "stack.labwareProfiles",
+      "stack.transferProfiles",
+    ]);
+
+    // Nothing else at the first nesting level: no unquoted or non-object key.
+    const firstLevelKeys: string[] = [];
+    for (const match of region.matchAll(/(?:"([^"]+)"|([A-Za-z_$][\w$]*))\s*:/g)) {
+      if (depthAt(match.index ?? 0) === 1) firstLevelKeys.push(match[1] ?? match[2]);
+    }
+    expect(firstLevelKeys).toStrictEqual(quotedEntryKeys);
+  });
+
+  it("the tool.options input is strict, closed to OPTION_SOURCE_IDS, with no command or params", () => {
+    const src = stripComments(read("server/routers/tool.ts"));
+    const optionsAt = src.indexOf("options: procedure");
+    const latchAt = src.indexOf("latchStatus: procedure");
+    expect(optionsAt).toBeGreaterThan(-1);
+    expect(latchAt).toBeGreaterThan(optionsAt);
+
+    const region = src.slice(optionsAt, latchAt);
+    expect(region).toContain(".strict()");
+    expect(region).toContain("OPTION_SOURCE_IDS");
+    expect(region).not.toContain("command");
+    expect(region).not.toContain("params");
+  });
+
+  it("the options procedure is declared above latchStatus", () => {
+    const src = stripComments(read("server/routers/tool.ts"));
+    const optionsAt = src.indexOf("options: procedure");
+    expect(optionsAt).toBeGreaterThan(-1);
+    expect(optionsAt).toBeLessThan(src.indexOf("latchStatus: procedure"));
+    expect(src.indexOf("options: procedure", optionsAt + 1)).toBe(-1);
+  });
+
+  it("test/commandFields.test.ts is left as it is (born-empty sweep untouched)", () => {
+    // The born-empty sweep lives in commandFields.test.ts and is not edited by
+    // this phase; this case only proves the sweep is still there.
+    const src = stripComments(read("test/commandFields.test.ts"));
+    expect(src).toContain('describe("commandFields.stack (D-03, D-07c)"');
+    expect(src).toContain("sweeps every stack field: no defaultValue and no select");
+  });
+});
