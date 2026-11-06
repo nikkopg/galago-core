@@ -1,7 +1,7 @@
 ---
 phase: 06-stack-dropdowns
-verified: 2026-11-06T10:00:00Z
-status: human_needed
+verified: 2026-11-06T13:50:00Z
+status: passed
 score: 17/17 must-haves verified
 covered_files:
   - .planning/phases/06-stack-dropdowns/06-01-PLAN.md
@@ -17,124 +17,137 @@ covered_files:
   - controller/components/protocols/AddToolCommandModal.tsx
   - controller/components/protocols/CommandDetailsDrawer.tsx
   - controller/components/tools/OptionsSelect.tsx
+  - controller/components/tools/ToolsComponent.tsx
+  - controller/components/tools/connectConfig.ts
   - controller/components/tools/fieldOptions.ts
   - controller/hooks/useToolOptions.ts
   - controller/pages/tools/[id].tsx
   - controller/server/routers/tool.ts
   - controller/server/toolOptions.ts
   - controller/server/tools.ts
+  - controller/test/connectConfig.test.ts
   - controller/test/fieldOptions.test.ts
   - controller/test/staticScan.test.ts
   - controller/test/toolOptions.parse.test.ts
   - controller/test/toolOptions.read.test.ts
   - controller/test/toolOptionsRouter.test.ts
   - controller/test/wire.test.ts
-covered_digest: "v3:sha256:04bfea384580376fef36ce4738967245adba724d75a7b374799876785c123293"
+covered_digest: "v3:sha256:11416d821147e845a684ef8ec8702e02661a79e66896eadc0b5424feab43891c"
 behavior_unverified: 0
 overrides_applied: 0
-human_verification:
-  - test: "Open the STACK tool page, AddToolCommandModal and the drawer in edit mode against a live or PAC-simulated STACK. In transfer, get_transfer_estimate and get_labware_presence, pick a value in every bound field (robot, labware_profile, source/destination device, deck, nest, transfer profiles)."
-    expected: "Every dropdown starts empty with nothing preselected. Deck and nest stay disabled until their parent is chosen. Refresh keeps every selection and updates the 'from instrument - N items - fetched hh:mm:ss' line. An ambiguous location shows '(ambiguous - adapter will refuse)' and stays selectable. A saved value the STACK does not report shows '(not reported by instrument)'."
-    why_human: "Vitest runs without jsdom and cannot render React. A simulated STACK also returns no meta_data (06-VALIDATION.md Manual-Only)."
-  - test: "Stop the STACK tool server, then open each of the three hosts."
-    expected: "Every bound field shows a typed input with the hint 'Instrument list unavailable - type the value'. No stale list appears, and the form is never blocked."
-    why_human: "The UI fallback needs the rendered UI (06-VALIDATION.md Manual-Only)."
-  - test: "In the protocol editor, bind a cascade parent (for example source_device) to a {{variable}}, then check its deck and nest. Open a saved step in the run-page drawer read-only and watch the network."
-    expected: "The picker is disabled and shows the variable. Deck and nest become typed inputs with the hint 'child list unavailable while the parent is a variable'. The read-only drawer sends no tool.options request."
-    why_human: "Rendered state and network behaviour. Only the pure view model and the static scans are covered by tests."
+re_verification:
+  previous_status: human_needed
+  previous_score: 17/17
+  gaps_closed:
+    - "Human verification item 1: live render of the dropdowns in all three hosts (UAT tests 4, 5, 6, 8, 9, 11, pass)"
+    - "Human verification item 2: offline typed fallback in all three hosts (UAT test 7, pass)"
+    - "Human verification item 3: variable-bound parent and read-only drawer making no tool.options request (UAT tests 8, 10, pass)"
+    - "Review WR-01: typed fallback wiped cascade children (fixed in faccb5e)"
+    - "Review WR-02: drawer No Variable deleted the key and left a mismatched triple (fixed in faccb5e)"
+  gaps_remaining: []
+  regressions: []
 ---
 
 # Phase 6: STACK Dropdowns Verification Report
 
 **Phase Goal:** The operator fills the STACK `transfer`, `get_transfer_estimate` and `get_labware_presence` forms by picking values the STACK reports, and the shared dropdown layer is ready for Phase 7.
 **Verified:** 2026-11-06
-**Status:** human_needed
-**Re-verification:** No, initial verification
+**Status:** passed
+**Re-verification:** Yes, after review fixes (faccb5e), the Connect All payload fix (1c4f875) and completed human UAT
 
-All code-level must-haves are met. Rendered behaviour against a live STACK has not been checked, and two non-blocking warnings from 06-REVIEW.md are open.
+The previous report was `human_needed` and went stale when covered source changed. Every code-level item was re-checked against the current tree. The three human items are now closed by the completed UAT (`06-UAT.md`, status complete, 11 passed, 0 issues). Both former review warnings are resolved in code. Three info findings remain open and do not affect any requirement.
 
 ## Goal Achievement
 
-### Observable Truths (ROADMAP Success Criteria plus requirements)
+### Observable Truths (ROADMAP Success Criteria)
 
 | # | Truth | Status | Evidence |
 |---|-------|--------|----------|
-| SC1 | The three STACK forms offer instrument-reported dropdowns that start empty and preselect nothing | VERIFIED (render deferred to UAT) | `FIELD_BINDINGS.stack` binds transfer, get_transfer_estimate and get_labware_presence (`fieldOptions.ts:75-90`). `buildSelectView` always emits an explicit empty option and never picks one, even for a single option. The tool page resets `formValues` to `""`. No `defaultValue` or `select` was added to `commandFields` (`constants.ts` has no diff since the plan baseline). |
-| SC2 | An unreachable instrument, or a saved value no longer reported, never blocks or rewrites a step | VERIFIED | `fetchOptions` never throws and maps every failure to `unavailable` (`toolOptions.ts:540-580`). The UI falls back to a typed input. Saved values are kept with the "(not reported by instrument)" flag. A hydrate-then-refresh test confirms children are unchanged. |
-| SC3 | What is sent is unchanged, with vendor/galago-tools pinned to `4ccd3da` and no regen diff | VERIFIED | The submodule HEAD is `4ccd3da656c0e981332018b3d33e16148a8bc513`. The diff of `gen-interfaces` across the phase is empty; only the vendor pointer changed. No submit path changed: `handleSubmit` and `handleSaveInputs` are untouched, and `wire.test.ts` pins that chosen and typed params are equal. |
+| SC1 | The three STACK forms offer instrument-reported dropdowns that start empty and preselect nothing | VERIFIED | `FIELD_BINDINGS.stack` binds transfer, get_transfer_estimate and get_labware_presence. `buildSelectView` emits an explicit empty option and never selects one. `OptionsSelect` has no effect hook that picks a value. UAT test 4 confirmed live: every bound field starts blank, even with a single reported item, and deck/nest stay disabled until the parent is chosen. |
+| SC2 | An unreachable instrument, or a saved value no longer reported, never blocks or rewrites a step | VERIFIED | `fetchOptions` never throws and maps failures to `unavailable`. The UI falls back to a typed input and keeps the saved value with the "(not reported by instrument)" flag. UAT test 7 (STACK server stopped: typed input with hint in all three hosts, no stale list, form not blocked), test 6 (not-reported kept selected) and test 9 (saving an untouched not-reported nest writes the step unchanged) all passed. |
+| SC3 | What is sent is unchanged, with `vendor/galago-tools` pinned to `4ccd3da` and no regen diff | VERIFIED | `git submodule status` shows `4ccd3da656c0e981332018b3d33e16148a8bc513`. `git diff c17e262 HEAD -- controller/gen-interfaces vendor` is empty, so nothing changed since the first verification. Values are plain strings, and `wire.test.ts` still passes. Submit paths are not touched by the fix commits. |
 
-**Score:** 17/17 requirement truths verified, 0 present but behaviour-unverified.
+**Score:** 17/17 requirement truths verified, 0 present but behavior-unverified.
+
+### Re-verification of the changed code
+
+| Change | Check | Result |
+|--------|-------|--------|
+| faccb5e WR-01 | `applyChange(binding, value, kind = "select")` returns `{ [binding.field]: newValue }` first when `kind === "typed"` (`fieldOptions.ts:379-385`). `OptionsSelect` passes `"typed"` from the fallback `<Input>` (`:89`) and `"select"` from the list. All three hosts forward `kind` (`[id].tsx:264`, modal `:296`, drawer `:216`). | VERIFIED. A typed edit cannot clear a deck or nest. New `fieldOptions` test covers it. |
+| faccb5e WR-02 | Drawer (`:271`) and modal (`:339`) call `handleOptionSelect(binding, "", "select")` for "No Variable" on a bound field. That writes `""` and clears the children in one functional update, rather than deleting the key. | VERIFIED. Mismatched triples cannot be produced. |
+| 1c4f875 Connect All | `buildConnectConfig` unwraps the type-keyed stored row (`type in stored ? stored[type] : stored`), reads `simulated` from the row's top level, and still handles a flat legacy row. `ToolsComponent.tsx:81` uses it. `connectConfig.test.ts` has 3 tests. | VERIFIED. |
 
 ### Requirements Coverage
 
-Plan frontmatter declares: 06-01 [STK-08, DRP-01, DRP-04, DRP-07, STK-01, STK-05, STK-06]; 06-02 [DRP-04, DRP-06, DRP-07]; 06-03 [DRP-01, DRP-02, DRP-03, DRP-05, DRP-09, STK-02, STK-03, STK-04, STK-07]; 06-04 [DRP-01, DRP-02, DRP-04, DRP-05, DRP-06, STK-02, STK-03, STK-04, STK-07]; 06-05 [DRP-03, DRP-08, DRP-09, STK-01, STK-02, STK-05, STK-06, STK-07]. The union covers all 17 IDs in ROADMAP Phase 6 and REQUIREMENTS.md. There are no orphaned requirements.
+Plan frontmatter declares: 06-01 [STK-08, DRP-01, DRP-04, DRP-07, STK-01, STK-05, STK-06]; 06-02 [DRP-04, DRP-06, DRP-07]; 06-03 [DRP-01, DRP-02, DRP-03, DRP-05, DRP-09, STK-02, STK-03, STK-04, STK-07]; 06-04 [DRP-01, DRP-02, DRP-04, DRP-05, DRP-06, STK-02, STK-03, STK-04, STK-07]; 06-05 [DRP-03, DRP-08, DRP-09, STK-01, STK-02, STK-05, STK-06, STK-07]. The union covers all 17 IDs in ROADMAP Phase 6 and in REQUIREMENTS.md. No orphaned requirements. REQUIREMENTS.md checkboxes for all but STK-08 are still unticked and its traceability table says "Pending"; that bookkeeping is for the orchestrator and is not a code gap.
 
 | Requirement | Status | Evidence |
 |-------------|--------|----------|
-| DRP-01 empty, nothing preselected | SATISFIED | `buildSelectView` ok branch starts on the empty option. `OptionsSelect` has no effect hook and no code that selects an option. Static scans pin this. |
-| DRP-02 saved value kept, flagged | SATISFIED | Non-blank values not offered get a `not-reported` option and stay selected. Blank values show no flag. Tests cover the uncalibrated deck case. |
-| DRP-03 `{{var}}` binding, bound parent gives typed children | SATISFIED (see WR-02) | `variable-bound` and `child-of-variable` modes are in `buildSelectView`. Modal and drawer pass `allowVariables={true}`. The tool page passes false. |
-| DRP-04 failures give typed input with hint, no stale list | SATISFIED | `deriveOptionsMode` checks `isError` first. Failures evict the cache. Hook uses `retry:false`. Disabled queries read as unavailable. See WR-01 for typed-input behaviour. |
-| DRP-05 children clear only on the parent's onChange | SATISFIED (see WR-01) | `applyChange` is the only patch producer. There is no `useEffect` in `OptionsSelect`, `useToolOptions` or `fieldOptions`. A hydrate-and-refresh test leaves children unchanged. |
-| DRP-06 Refresh sends `refresh:true`, keeps selection | SATISFIED | `useToolOptions.refresh` fetches with `refresh:true` and writes the shared entry. `acceptsRefresh` is false for `get_robot_states`. A 2 s minimum interval protects the manager. |
-| DRP-07 closed registry, deadline, caps, no queue, `{{x}}` names dropped | SATISFIED | Four-entry `OPTION_SOURCES`. Router input is `.strict()` with source enum only. `Tool.readOptions` has a 5 s deadline and is called only from `toolOptions.ts` (static scan). Caps are 256/1000/10000. `isUsableName` drops `{{x}}`. Note: the requirement text says `Tool.executeCommand`, but locked decision D-01 chose a dedicated `readOptions`, and the scans pin it. |
-| DRP-08 drawer dropdowns, reads only in edit mode | SATISFIED | The binding is looked up only when `isEditing`. `enabled={isEditing}`. A static scan asserts the drawer reads only while editing. |
-| DRP-09 sent values unchanged | SATISFIED | Values are plain strings. A round-trip test and `wire.test.ts` confirm identical params. No submit path was modified. |
-| STK-01 robot | SATISFIED | `stack.robots` parses `robotStates` / `robotName`. Bound in all three commands. |
-| STK-02 device/deck/nest cascades by plain names | SATISFIED | `buildCascadeOptions` builds by position from `stack.devices`. Values are plain names, never `unifiedName`. Source and destination are separate. |
-| STK-03 calibrated only | SATISFIED | Decks and nests with `isCalibrated !== true` are skipped. A saved uncalibrated value is kept and flagged. |
-| STK-04 ambiguous flagged, not hidden | SATISFIED | Flag by exact path membership; the option stays selectable. Golden fixtures cover duplicates and names containing `/`. |
-| STK-05 labware_profile | SATISFIED | `stack.labwareProfiles` bound to `labware_profile`. |
-| STK-06 transfer profiles | SATISFIED | `stack.transferProfiles` bound to source and destination profile fields. |
-| STK-07 coverage; step_key and timeout_s typed | SATISFIED | A coverage test asserts that `step_key`, `timeout_s`, `refresh` and every `list_*` / `get_*` tool-page field stay typed. `get_labware_presence` binds only `robot`. |
-| STK-08 pin and no regen diff | SATISFIED | Submodule at `4ccd3da`; empty `gen-interfaces` diff. The orchestrator reports the SHA is reachable at `origin feat/stack-tool`. |
+| DRP-01 empty, nothing preselected | SATISFIED | `buildSelectView`, no selecting effect in `OptionsSelect`, static scans. UAT 4. |
+| DRP-02 saved value kept, flagged | SATISFIED | `not-reported` option, tests, UAT 6 and 9. |
+| DRP-03 `{{var}}` binding, bound parent gives typed children | SATISFIED | `variable-bound` and `child-of-variable` modes. Modal and drawer pass `allowVariables`. UAT 8 (picker disabled showing `{{name}}`, children typed with hint, unbind returns to dropdowns). The WR-02 fix removed the unbind defect. |
+| DRP-04 failures give typed input with hint, no stale list | SATISFIED | `deriveOptionsMode` checks `isError` first, cache eviction, `retry:false`. UAT 7. |
+| DRP-05 children clear only on the parent's own change | SATISFIED | `applyChange` is the only patch producer and has no effect hook. With the WR-01 fix, typed edits no longer clear children either. UAT 4 and 9. |
+| DRP-06 Refresh sends `refresh:true`, keeps selection | SATISFIED | `useToolOptions.refresh`, 2 s minimum interval. UAT 5. |
+| DRP-07 closed registry, deadline, caps, no queue | SATISFIED | Four-entry `OPTION_SOURCES`, strict router input, `Tool.readOptions` with 5 s deadline called only from `toolOptions.ts`, caps 256/1000/10000, `{{x}}` names dropped. Server scans in `staticScan.test.ts` pass. The requirement text mentions `Tool.executeCommand`, but locked decision D-01 chose a dedicated `readOptions`. |
+| DRP-08 drawer dropdowns, reads only in edit mode | SATISFIED | Binding looked up and `enabled={isEditing}` only while editing. UAT 10: read-only run-page drawer sent no `tool.options` request. |
+| DRP-09 sent values unchanged | SATISFIED | Plain strings, `wire.test.ts`, no submit path changed. |
+| STK-01 robot | SATISFIED | `stack.robots`, bound in all three commands. |
+| STK-02 device/deck/nest cascades by plain names | SATISFIED | `buildCascadeOptions` from `stack.devices`; source and destination independent (UAT 4). |
+| STK-03 calibrated only | SATISFIED | Uncalibrated skipped, saved uncalibrated value kept and flagged. UAT 6. |
+| STK-04 ambiguous flagged, not hidden | SATISFIED | Flagged by exact path membership, still selectable. UAT 6 and 11. |
+| STK-05 labware_profile | SATISFIED | `stack.labwareProfiles`. |
+| STK-06 transfer profiles | SATISFIED | `stack.transferProfiles` for source and destination. |
+| STK-07 coverage; step_key and timeout_s typed | SATISFIED | Coverage test pins typed fields. |
+| STK-08 pin and no regen diff | SATISFIED | Submodule at `4ccd3da`, empty `gen-interfaces` diff. UAT 1 and 3 confirm the SHA is on `origin feat/stack-tool`. |
 
 ### Required Artifacts and Wiring
 
 | Artifact | Status | Details |
 |----------|--------|---------|
-| `controller/server/toolOptions.ts` | VERIFIED | 580 lines: parsers, caps, TTL cache, in-flight dedupe, generation invalidation, throttled logging. Called by the router. |
-| `controller/server/tools.ts` `readOptions` | VERIFIED | Direct gRPC call with deadline. Only caller is `toolOptions.ts`. |
-| `controller/server/routers/tool.ts` `options` | VERIFIED | `bumpGeneration` is called on configure, edit, delete and `clearToolStore`. |
-| `controller/components/tools/fieldOptions.ts` | VERIFIED | React-free binding map, cascade builders, `applyChange`, view model. |
-| `controller/components/tools/OptionsSelect.tsx` | VERIFIED | Imported by all three hosts. |
+| `controller/server/toolOptions.ts` | VERIFIED | Parsers, caps, TTL cache, dedupe, generation invalidation. Called by the router. |
+| `controller/server/tools.ts` `readOptions` | VERIFIED | Direct gRPC call with deadline. |
+| `controller/server/routers/tool.ts` `options` | VERIFIED | Generation bumped on configure, edit, delete. |
+| `controller/components/tools/fieldOptions.ts` | VERIFIED | Binding map, cascade builders, `applyChange` with `kind`, view model. |
+| `controller/components/tools/OptionsSelect.tsx` | VERIFIED | Imported by all three hosts, passes `kind`. |
 | `controller/hooks/useToolOptions.ts` | VERIFIED | Wired to `trpc.tool.options`. |
-| Three hosts (`[id].tsx`, `AddToolCommandModal.tsx`, `CommandDetailsDrawer.tsx`) | VERIFIED | Each calls `lookupFieldBinding`, renders `OptionsSelect` and writes through `applyChange`. |
+| `controller/components/tools/connectConfig.ts` | VERIFIED | Used by `ToolsComponent.tsx`, tested. |
+| Three hosts | VERIFIED | Each uses `lookupFieldBinding`, `OptionsSelect` and `applyChange`. |
 
-Data flow: the chain runs from the STACK reply through `Tool.readOptions` to `parse*` and `fetchOptions`, then the tRPC `tool.options` query, `useToolOptions`, `buildFieldView` and the control. The data is real, not static.
+Data flow: STACK reply to `Tool.readOptions`, `parse*`, `fetchOptions`, tRPC `tool.options`, `useToolOptions`, `buildFieldView`, control. The data is real, and UAT observed live lists.
 
 ### Behavioral Spot-Checks and Test Runs
 
 | Check | Result | Status |
 |-------|--------|--------|
 | `cd controller && npx tsc --noEmit` | exit 0 | PASS |
-| Quick run: parse, read, router, fieldOptions, staticScan, commandFields and wire tests | 7 files, 200 tests passed | PASS |
-| Full suite (run by the orchestrator at HEAD 52f7029) | 32 files, 755 tests passed | PASS (not re-run here) |
-| `npm run build` | EACCES: `controller/.next` is root-owned. 06-05 reports a pass on a scratch copy | Environment issue, not a code gap |
+| `cd controller && npx vitest run` (run once at HEAD 796a985) | 33 files, 759 tests passed | PASS |
+| `npm run build` | Not run here. It failed earlier because `controller/.next` is root-owned. 06-05 recorded a pass on a scratch copy. | Environment issue, not a code gap |
 
 Probe execution: no probes declared by the phase. Skipped.
 
+### Human Verification
+
+All three previous items are closed by `06-UAT.md` (11/11 passed, 0 issues, 0 pending). Nothing is outstanding.
+
 ### Anti-Patterns Found
 
-No `TBD`, `FIXME` or `XXX` markers were added by the phase's source diffs. No stubs were found.
+No `TBD`, `FIXME` or `XXX` markers in any covered source file. No stubs.
 
-### Review Warnings (06-REVIEW.md), judged against requirements
+### Open Review Items (06-REVIEW.md, 0 critical, 0 warning, 3 info)
 
-Neither warning defeats a requirement. Both are real defects and should be fixed.
+WR-01 and WR-02 are resolved. The remaining items are info only and are not blockers. None defeats a requirement.
 
-| ID | Judgement |
-|----|-----------|
-| WR-01 typed fallback runs `applyChange` on every keystroke | Does not defeat DRP-04, DRP-05 or DRP-09. DRP-05 says changing a parent clears its children, and a loaded or refreshed list never clears anything, which holds. The cleared fields show as blank, so it is not silent. But editing a hydrated device name while the STACK is unavailable wipes the saved deck and nest, which is poor behaviour. The fix is a separate `onType` write for the typed branch. |
-| WR-02 drawer "No Variable" on a cascade field deletes the key | Does not defeat DRP-03: binding works, and unbinding a draft binding falls back to the saved value. Edge case: a mismatched device/deck/nest triple, or a saved `{{v}}` that cannot be unbound. This was already a limitation of the old input. The fix is to write `""` and clear the children. |
-| IN-01 to IN-04 | Informational and do not affect any requirement. IN-03 (unbounded `ambiguous` strings) is bounded by the 10k-entry cap and gRPC's 4 MB limit. |
-
-### Human Verification Required
-
-See the frontmatter for the three items: live render of the dropdowns in all three hosts, the offline fallback, and the variable-bound and read-only drawer behaviour.
+| ID | Note |
+|----|------|
+| IN-01 | Unbinding a device clears deck and nest variable bindings too. Consistent with D-09, recommend recording as a decision. |
+| IN-02 | The unbind rule is duplicated inline in modal and drawer and has no host-level regression test. |
+| IN-03 | A bound variable absent from the variable list cannot be unbound from the picker. This is an edge case of a deleted variable. The earlier verification noted this as a typed-input limitation. Worth a follow-up fix. |
+| First-review IN-01..03 | `isRefreshing` reset outside `finally`, `clearToolStore` generation bump only on success, no per-string cap on `ambiguous` (bounded by the 10k cap and gRPC's 4 MB limit). |
 
 ### Gaps Summary
 
-No code gaps block the phase goal. All 17 requirements have implementation and test evidence, and the pin and regen gate holds. Status is `human_needed` because rendered UI against a live or simulated STACK is only checkable by the operator. WR-01 and WR-02 are recommended fixes (`/gsd-code-review 06 --fix`) but are not blockers.
+No gaps. All 17 requirements and all 3 ROADMAP success criteria are verified in code and by the completed live UAT. The shared dropdown layer (`fieldOptions.ts`, `OptionsSelect`, `useToolOptions`, closed `OPTION_SOURCES` registry) is host-agnostic and ready for Phase 7.
 
 ---
 

@@ -10,45 +10,45 @@ on its own, and never preselects a physical decision for the operator.
 
 ### Dropdown behaviour (DRP), shared by every instrument-fed field
 
-- [ ] **DRP-01**: The operator sees a dropdown of instrument-reported values for each bound field.
+- [x] **DRP-01**: The operator sees a dropdown of instrument-reported values for each bound field.
   Each dropdown starts empty. Nothing is preselected, not even when only one option exists.
-- [ ] **DRP-02**: When the operator opens a saved step whose value the instrument no longer reports,
+- [x] **DRP-02**: When the operator opens a saved step whose value the instrument no longer reports,
   the value stays selected, marked "(not reported by instrument)". It is never cleared or rewritten.
-- [ ] **DRP-03**: In the protocol editor the operator can still bind any dropdown field to a
+- [x] **DRP-03**: In the protocol editor the operator can still bind any dropdown field to a
   `{{variable}}`. A bound parent field turns its child fields into typed inputs.
-- [ ] **DRP-04**: When the instrument can't be reached, or the read fails or returns no data, the
+- [x] **DRP-04**: When the instrument can't be reached, or the read fails or returns no data, the
   operator gets the plain typed input with an "instrument list unavailable" hint. A stale list is
   never shown.
-- [ ] **DRP-05**: Changing a parent field (device → deck → nest) clears its child fields. Loading
+- [x] **DRP-05**: Changing a parent field (device → deck → nest) clears its child fields. Loading
   options never clears a saved value.
-- [ ] **DRP-06**: The operator can press Refresh on a list to re-read it from the instrument
+- [x] **DRP-06**: The operator can press Refresh on a list to re-read it from the instrument
   (`refresh: true`). Refreshing never clears a selection.
-- [ ] **DRP-07**: Lists are read through one closed server registry of sources, using the instance
+- [x] **DRP-07**: Lists are read through one closed server registry of sources, using the instance
   `Tool.executeCommand` with a deadline. They never go through the command queue, and are never
   polled or retried automatically. Every reply is validated and size-capped. Instrument names that
   look like `{{x}}` are never substituted.
-- [ ] **DRP-08**: The same dropdowns appear when the operator edits a saved step in the step
+- [x] **DRP-08**: The same dropdowns appear when the operator edits a saved step in the step
   details drawer. The drawer reads lists only while it is in edit mode.
-- [ ] **DRP-09**: What is sent stays the same: the selected value is the same string or number the
+- [x] **DRP-09**: What is sent stays the same: the selected value is the same string or number the
   operator would have typed, so existing saved protocols load and run unchanged.
 
 ### STACK fields (STK)
 
-- [ ] **STK-01**: The operator picks `robot` from the robots the STACK manager reports
+- [x] **STK-01**: The operator picks `robot` from the robots the STACK manager reports
   (`get_robot_states`).
-- [ ] **STK-02**: The operator picks source and destination device → deck → nest from the manager's
+- [x] **STK-02**: The operator picks source and destination device → deck → nest from the manager's
   device tree (`list_devices`). Source and destination each have their own cascade. The values sent
   are `deviceName`/`deckName`/`nestName`, never `unifiedName`.
-- [ ] **STK-03**: Only calibrated decks and nests (`isCalibrated: true`) are offered. Uncalibrated
+- [x] **STK-03**: Only calibrated decks and nests (`isCalibrated: true`) are offered. Uncalibrated
   ones are hidden, matching the manager's own refusal (stack-automation-layer `errors.py:185-191`).
   A saved uncalibrated deck or nest is kept as in DRP-02.
-- [ ] **STK-04**: Location names the manager reports as ambiguous are shown and flagged. They are
+- [x] **STK-04**: Location names the manager reports as ambiguous are shown and flagged. They are
   never merged or silently resolved.
-- [ ] **STK-05**: The operator picks `labware_profile` from `list_labware_profiles`. It is never
+- [x] **STK-05**: The operator picks `labware_profile` from `list_labware_profiles`. It is never
   preselected or inferred.
-- [ ] **STK-06**: The operator picks source and destination transfer profiles from
+- [x] **STK-06**: The operator picks source and destination transfer profiles from
   `list_transfer_profiles`.
-- [ ] **STK-07**: Dropdowns cover every STACK command that takes these fields (`transfer`,
+- [x] **STK-07**: Dropdowns cover every STACK command that takes these fields (`transfer`,
   `get_transfer_estimate`, `get_labware_presence`). `step_key` and `timeout_s` stay typed inputs.
 - [x] **STK-08**: `vendor/galago-tools` is pinned by SHA to `4ccd3da`, and the regenerated
   interfaces (ts-proto 1.151.1) show no diff.
@@ -140,22 +140,22 @@ the protocol surface and run page, as waves inside one phase.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DRP-01 | Phase 6 | Pending |
-| DRP-02 | Phase 6 | Pending |
-| DRP-03 | Phase 6 | Pending |
-| DRP-04 | Phase 6 | Pending |
-| DRP-05 | Phase 6 | Pending |
-| DRP-06 | Phase 6 | Pending |
-| DRP-07 | Phase 6 | Pending |
-| DRP-08 | Phase 6 | Pending |
-| DRP-09 | Phase 6 | Pending |
-| STK-01 | Phase 6 | Pending |
-| STK-02 | Phase 6 | Pending |
-| STK-03 | Phase 6 | Pending |
-| STK-04 | Phase 6 | Pending |
-| STK-05 | Phase 6 | Pending |
-| STK-06 | Phase 6 | Pending |
-| STK-07 | Phase 6 | Pending |
+| DRP-01 | Phase 6 | Complete |
+| DRP-02 | Phase 6 | Complete |
+| DRP-03 | Phase 6 | Complete |
+| DRP-04 | Phase 6 | Complete |
+| DRP-05 | Phase 6 | Complete |
+| DRP-06 | Phase 6 | Complete |
+| DRP-07 | Phase 6 | Complete |
+| DRP-08 | Phase 6 | Complete |
+| DRP-09 | Phase 6 | Complete |
+| STK-01 | Phase 6 | Complete |
+| STK-02 | Phase 6 | Complete |
+| STK-03 | Phase 6 | Complete |
+| STK-04 | Phase 6 | Complete |
+| STK-05 | Phase 6 | Complete |
+| STK-06 | Phase 6 | Complete |
+| STK-07 | Phase 6 | Complete |
 | STK-08 | Phase 6 | Complete |
 | PLT-01 | Phase 7 | Pending |
 | PLT-02 | Phase 7 | Pending |

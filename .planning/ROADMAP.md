@@ -42,7 +42,7 @@ guarantee. Research: `.planning/research/SUMMARY.md` (decisions D1-D12).
 **Phase order:** 6 → 7 → 8 → 9. Phase 8 needs nothing from Phases 6-7, so Phase 7 may slip behind its
 galago-tools gate without blocking Phases 8-9.
 
-- [ ] **Phase 6: STACK Dropdowns** - STACK robot, location, labware and transfer-profile fields offer
+- [x] **Phase 6: STACK Dropdowns** - STACK robot, location, labware and transfer-profile fields offer (completed 2026-11-06)
   instrument-reported lists, on one shared dropdown layer (DRP-01..09, STK-01..08).
 - [ ] **Phase 7: F.A.S.T. Plate Dropdowns** - Transfer plate fields offer the instrument's registered plates;
   gated on galago-tools shipping `get_plates` (PLT-01..05).
@@ -64,7 +64,7 @@ picking values the STACK reports, and the shared dropdown layer is ready for Pha
   2. An unreachable instrument or a saved value no longer reported never blocks or rewrites a step.
   3. What is sent is unchanged (saved protocols run as before), with `vendor/galago-tools` pinned to `4ccd3da` and no regen diff.
 
-**Plans**: 5/5 plans executed
+**Plans**: 5/5 plans complete
 Plans:
 **Wave 1**
 - [x] 06-01-PLAN.md — Re-pin vendor/galago-tools to 4ccd3da (zero-diff regen gate), tracer: robot/labware/transfer-profile dropdowns on the tool page end to end, user push checkpoint
@@ -133,7 +133,7 @@ resolution is recorded.
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 6. STACK Dropdowns | 5/5 | In Progress | - |
+| 6. STACK Dropdowns | 5/5 | Complete    | 2026-11-06 |
 | 7. F.A.S.T. Plate Dropdowns | 0/TBD | Not started (external gate) | - |
 | 8. Concurrency Lanes | 0/TBD | Not started | - |
 | 9. Supervised Live Two-Tool Proof | 0/TBD | Not started | - |
