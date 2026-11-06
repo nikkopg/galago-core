@@ -8,6 +8,15 @@ import * as tool_base from "gen-interfaces/tools/grpc_interfaces/tool_base";
 import { installFakeTool, removeFakeTool } from "./helpers/fakeTool";
 import { omitBlankParams, coerceBooleanParams } from "@/components/tools/commandParams";
 import { extractRunState } from "@/server/runState";
+import { parseDeviceTree, parseRobotStates } from "@/server/toolOptions";
+import type { OptionsResult } from "@/server/toolOptions";
+import {
+  applyChange,
+  buildCascadeOptions,
+  listOptions,
+  lookupFieldBinding,
+} from "@/components/tools/fieldOptions";
+import { DEVICE_TREE_GOLDEN, ROBOT_STATES_GOLDEN } from "./fixtures/stackOptions";
 
 describe("wire contract", () => {
   afterEach(async () => {
@@ -225,6 +234,65 @@ describe("wire contract", () => {
       tool_base.Command.encode(untouchedPayload).finish(),
     );
     expect(untouchedDecoded.stack?.list_devices?.refresh).toBeUndefined();
+  });
+
+  // DRP-09 (D-15): a dropdown value is the plain string the operator would
+  // have typed, so the encoded STACK Command is byte-identical either way and no
+  // submit path changes. Options are built from the golden list-read replies
+  // through the real parsers and the client view-model builders. Fakes only —
+  // no STACK motion.
+  it("encodes a dropdown-chosen STACK transfer to the same bytes as the same values typed", () => {
+    const { tool } = installFakeTool("wire-stack", ToolType.stack);
+
+    const robots = parseRobotStates(ROBOT_STATES_GOLDEN);
+    const tree = parseDeviceTree(DEVICE_TREE_GOLDEN);
+    if (typeof robots === "string" || robots.shape !== "list") throw new Error("robots");
+    if (typeof tree === "string" || tree.shape !== "tree") throw new Error("tree");
+    const robotData: OptionsResult = {
+      status: "ok",
+      source: "stack.robots",
+      shape: "list",
+      names: robots.names,
+      degraded: robots.degraded,
+      fetchedAt: 0,
+    };
+
+    const bound = (field: string) => {
+      const found = lookupFieldBinding("stack", "transfer", field);
+      if (found === undefined) throw new Error(field);
+      return found;
+    };
+    // The operator's choices, each through applyChange like a host onChange.
+    let chosen: Record<string, string> = {};
+    const choose = (field: string, options: { value: string }[]) => {
+      expect(options.length).toBe(1);
+      chosen = { ...chosen, ...applyChange(bound(field), options[0].value) };
+    };
+    choose("robot", listOptions(robotData));
+    choose("source_device", buildCascadeOptions(tree, bound("source_device"), chosen).options);
+    choose("source_deck", buildCascadeOptions(tree, bound("source_deck"), chosen).options);
+    choose("source_nest", buildCascadeOptions(tree, bound("source_nest"), chosen).options);
+
+    const typed = {
+      robot: "stack2-6",
+      source_device: "nest-1",
+      source_deck: "deck1",
+      source_nest: "A1",
+    };
+    expect(chosen).toStrictEqual(typed);
+
+    const encode = (params: Record<string, unknown>) =>
+      Array.from(
+        tool_base.Command.encode(
+          tool._payloadForCommand({
+            toolId: "wire-stack",
+            toolType: ToolType.stack,
+            command: "transfer",
+            params: omitBlankParams(params),
+          }),
+        ).finish(),
+      );
+    expect(encode(chosen)).toStrictEqual(encode(typed));
   });
 
   it("carries run_state through StatusReply into the runState envelope", () => {
