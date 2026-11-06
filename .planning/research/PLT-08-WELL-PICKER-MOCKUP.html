@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PLT-08 well picker</title>
+<!--
+  Reference sketch for PLT-08 (Phase 7), approved by the user 2026-11-06.
+  Behaviour to reproduce, not code to copy: the real picker is a React/Chakra
+  component sized from get_plates rowCount x colCount (here fixed at 8x12).
+  - Source grid: pointer-drag a rectangle -> source_start_row/col, num_rows/num_cols.
+  - Destination grid: hover shows a dashed same-size footprint (red if it does
+    not fit); click places it -> dest_start_row/col. No drag on the destination.
+  - Typed fields below stay editable and sync both ways. Nothing selected at start.
+-->
+<style>
+:root{--surface-1:#f7f7f5;--surface-0:#fff;--border-strong:rgba(0,0,0,.25);--text-primary:#1a1a1a;--text-secondary:#5f5e5a;--text-muted:#888780;--text-danger:#a32d2d;color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--surface-1:#252523;--surface-0:#1a1a19;--border-strong:rgba(255,255,255,.25);--text-primary:#f1efe8;--text-secondary:#b4b2a9;--text-muted:#888780;--text-danger:#f09595;color-scheme:dark}}
+:root[data-theme="dark"]{--surface-1:#252523;--surface-0:#1a1a19;--border-strong:rgba(255,255,255,.25);--text-primary:#f1efe8;--text-secondary:#b4b2a9;--text-muted:#888780;--text-danger:#f09595;color-scheme:dark}
+body{margin:0;padding:16px;background:var(--surface-0);color:var(--text-primary);font-family:system-ui,sans-serif}
+.wp{display:grid;grid-template-columns:14px repeat(12,18px);gap:3px;user-select:none;touch-action:none}
+.wp span{font-size:11px;color:var(--text-muted);text-align:center;line-height:18px}
+.w{width:18px;height:18px;border-radius:50%;border:0.5px solid var(--border-strong);background:var(--surface-0);cursor:crosshair;box-sizing:border-box}
+.w.sel{background:#85B7EB;border-color:#185FA5}
+.w.ghost{background:#E1F5EE;border-color:#1D9E75;border-style:dashed}
+.w.put{background:#5DCAA5;border-color:#0F6E56}
+.w.bad{background:#FCEBEB;border-color:#A32D2D}
+.f{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;font-size:12px;color:var(--text-secondary)}
+.f input{width:100%;height:30px;font-size:13px;box-sizing:border-box}
+</style>
+</head>
+<body>
+<div style="background:var(--surface-1);border-radius:12px;padding:1rem 1.25rem;max-width:680px">
+<div style="display:flex;gap:24px;flex-wrap:wrap">
+<div><div style="font-size:13px;font-weight:500;margin-bottom:2px">Source plate</div><div style="font-size:12px;color:var(--text-secondary);margin-bottom:8px">12 · Greiner 96 flat · drag to select</div><div class="wp" id="src"></div></div>
+<div><div style="font-size:13px;font-weight:500;margin-bottom:2px">Destination plate</div><div style="font-size:12px;color:var(--text-secondary);margin-bottom:8px">7 · Corning 96 round · click to place</div><div class="wp" id="dst"></div></div>
+</div>
+<div style="font-size:12px;margin:12px 0 10px;min-height:16px" id="msg"></div>
+<div class="f">
+<label>source_start_row<input id="ssr"></label><label>source_start_col<input id="ssc"></label>
+<label>num_rows<input id="nr"></label><label>num_cols<input id="nc"></label>
+<label>dest_start_row<input id="dsr"></label><label>dest_start_col<input id="dsc"></label>
+</div>
+<div style="margin-top:10px"><button id="clr">Clear selection</button></div>
+</div>
+<script>
+const R=8,C=12,L='ABCDEFGH';let s=null,d=null,drag=null;
+function build(id){const g=document.getElementById(id);g.innerHTML='<span></span>'+[...Array(C)].map((_,c)=>'<span>'+(c+1)+'</span>').join('');for(let r=0;r<R;r++){g.innerHTML+='<span>'+L[r]+'</span>';for(let c=0;c<C;c++)g.innerHTML+='<div class="w" data-r="'+r+'" data-c="'+c+'"></div>'}return g}
+const S=build('src'),D=build('dst'),$=i=>document.getElementById(i),msg=$('msg');
+function paint(hover){S.querySelectorAll('.w').forEach(w=>{const r=+w.dataset.r,c=+w.dataset.c;w.className='w'+(s&&r>=s.r&&r<s.r+s.h&&c>=s.c&&c<s.c+s.w?' sel':'')});
+const t=hover||d;D.querySelectorAll('.w').forEach(w=>{const r=+w.dataset.r,c=+w.dataset.c;let k='';if(s&&t&&r>=t.r&&r<t.r+s.h&&c>=t.c&&c<t.c+s.w){const fits=t.r+s.h<=R&&t.c+s.w<=C;k=!fits?' bad':hover?' ghost':' put'}w.className='w'+k});
+if(s&&t&&(t.r+s.h>R||t.c+s.w>C)){msg.style.color='var(--text-danger)';msg.textContent='Block does not fit the destination plate here'}else{msg.style.color='var(--text-secondary)';msg.textContent=!s?'Nothing selected. Fields start empty.':!d?s.h*s.w+' wells selected. Now place them on the destination.':'Transfer '+s.h*s.w+' wells: '+L[s.r]+(s.c+1)+' → '+L[d.r]+(d.c+1)}}
+function sync(){$('ssr').value=s?L[s.r]:'';$('ssc').value=s?s.c+1:'';$('nr').value=s?s.h:'';$('nc').value=s?s.w:'';$('dsr').value=d?L[d.r]:'';$('dsc').value=d?d.c+1:''}
+const cell=e=>{const w=document.elementFromPoint(e.clientX,e.clientY);return w&&w.classList.contains('w')?w:null};
+S.addEventListener('pointerdown',e=>{const w=cell(e);if(!w)return;drag={r:+w.dataset.r,c:+w.dataset.c};s={r:drag.r,c:drag.c,h:1,w:1};paint();sync();S.setPointerCapture(e.pointerId)});
+S.addEventListener('pointermove',e=>{if(!drag)return;const w=cell(e);if(!w||!S.contains(w))return;const r=+w.dataset.r,c=+w.dataset.c;s={r:Math.min(r,drag.r),c:Math.min(c,drag.c),h:Math.abs(r-drag.r)+1,w:Math.abs(c-drag.c)+1};paint();sync()});
+S.addEventListener('pointerup',()=>{drag=null});
+D.addEventListener('pointermove',e=>{const w=cell(e);if(w&&s)paint({r:+w.dataset.r,c:+w.dataset.c})});
+D.addEventListener('pointerleave',()=>paint());
+D.addEventListener('click',e=>{const w=cell(e);if(!w||!s)return;const t={r:+w.dataset.r,c:+w.dataset.c};if(t.r+s.h>R||t.c+s.w>C)return;d=t;paint();sync()});
+$('clr').onclick=()=>{s=d=null;paint();sync()};
+['ssr','ssc','nr','nc','dsr','dsc'].forEach(i=>$(i).addEventListener('input',()=>{const sr=L.indexOf($('ssr').value.toUpperCase()),sc=+$('ssc').value-1,h=+$('nr').value,wd=+$('nc').value;s=sr>=0&&sc>=0&&h>0&&wd>0?{r:sr,c:sc,h,w:wd}:null;const dr=L.indexOf($('dsr').value.toUpperCase()),dc=+$('dsc').value-1;d=dr>=0&&dc>=0?{r:dr,c:dc}:null;paint()}));
+paint();
+</script>
+</body>
+</html>

@@ -44,8 +44,8 @@ galago-tools gate without blocking Phases 8-9.
 
 - [x] **Phase 6: STACK Dropdowns** - STACK robot, location, labware and transfer-profile fields offer (completed 2026-11-06)
   instrument-reported lists, on one shared dropdown layer (DRP-01..09, STK-01..08).
-- [ ] **Phase 7: F.A.S.T. Plate Dropdowns** - Transfer plate fields offer the instrument's registered plates;
-  gated on galago-tools shipping `get_plates` (PLT-01..05).
+- [ ] **Phase 7: F.A.S.T. Plate Dropdowns** - Transfer plate, deck and tip-reuse fields are dropdowns and the
+  well block is drag-selected on a plate grid; plate parts gated on galago-tools shipping `get_plates` (PLT-01..09).
 - [ ] **Phase 8: Concurrency Lanes** - Behind a default-off flag, one run drives two tool servers at once,
   with lane authoring, per-lane run page and failure freeze (LAN-01..09, LUI-01..06).
 - [ ] **Phase 9: Supervised Live Two-Tool Proof** - A supervised run shows STACK overlapping the F.A.S.T.
@@ -85,18 +85,24 @@ Plans:
 ### Phase 7: F.A.S.T. Plate Dropdowns
 
 **Goal**: The operator picks F.A.S.T. Transfer `source_plate_id` and `dest_plate_id` from the plates the
-instrument has registered.
+instrument has registered, picks decks and tip reuse from fixed lists, and drags the well block on a grid of
+the chosen plate.
 **Depends on**: Phase 6. **External**: galago-tools must freeze a read-only `get_plates` first (contract:
 `.planning/research/FAST-GET-PLATES-CONTRACT.md`); this phase may slip without blocking Phases 8-9.
-**Requirements**: PLT-01, PLT-02, PLT-03, PLT-04, PLT-05
+**Requirements**: PLT-01, PLT-02, PLT-03, PLT-04, PLT-05, PLT-06, PLT-07, PLT-08, PLT-09
 **Success Criteria** (what must be TRUE):
   1. Gate: a frozen galago-tools `get_plates` answers through `ExecuteCommand` mid-Transfer, and the submodule is re-pinned to it with the exact expected interface diff.
   2. The plate fields are dropdowns of registered plates (id and description, numeric id sent) that start empty, like Phase 6.
   3. Invalid or duplicate plate ids are rejected or flagged, an unset plate never becomes `0`, and `get_plates` is never a step or tool-page command.
+  4. Deck (1-6) fields are dropdowns that start empty and `tip_reuse` is a checkbox that starts checked (`reuse`; unchecked = `fresh`); these need no `get_plates` and may land in an early wave.
+  5. Matching the approved mockup (`research/PLT-08-WELL-PICKER-MOCKUP.html`), dragging on the source grid sets start row/col and block size, and a click on the destination grid places the same-size footprint. Typed fields sit in a collapsed "Edit as fields" section that opens on its own for a hidden grid, a `{{variable}}` or a flagged value, and stay in sync; a block that does not fit is flagged, never clipped.
+  6. Source and destination plates of different sizes (96 vs 384) are flagged on the destination grid before the run, since fast-mcp refuses cross-format transfers.
 
 **Plans**: TBD
 **UI hint**: yes
-**Settle in discuss**: inherits D6, D10, D11 from Phase 6; open item is the frozen `get_plates` shape.
+**Settle in discuss**: inherits D6, D10, D11 from Phase 6; open items are the frozen `get_plates` shape, the
+grid picker's placement (inline vs modal, 384-well sizing), and whether it reuses
+`components/ui/PlateGrid.tsx` styling. No new npm dependencies: drag is built on pointer events.
 
 ### Phase 8: Concurrency Lanes
 
