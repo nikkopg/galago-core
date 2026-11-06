@@ -28,6 +28,9 @@ import { trpc } from "@/utils/trpc";
 import { capitalizeFirst } from "@/utils/parser";
 import { successToast } from "../ui/Toast";
 import { AdvancedParameters } from "@/types";
+import { applyChange, firstFieldForSource, lookupFieldBinding } from "../tools/fieldOptions";
+import type { FieldBinding } from "../tools/fieldOptions";
+import { OptionsSelect } from "../tools/OptionsSelect";
 
 interface CommandDetailsDrawerProps {
   isOpen: boolean;
@@ -206,6 +209,14 @@ export const CommandDetailsDrawer: React.FC<CommandDetailsDrawerProps> = (props)
 
   const advancedParams = getAdvancedParameters();
 
+  // The only writer of an instrument-fed param (D-09, DRP-05): the operator's
+  // choice and its cascade clears land in ONE state update. A cleared child is
+  // written as "" and never deleted, because a deleted key would fall back to
+  // the saved value in handleSaveInputs' merge.
+  const handleOptionSelect = (binding: FieldBinding, value: string) => {
+    setEditedParams((prevParams) => ({ ...prevParams, ...applyChange(binding, value) }));
+  };
+
   // Render the appropriate input field based on parameter type and name
   const renderParameterInput = (key: string, value: any) => {
     // Get current value (from editedParams if available, otherwise from command)
@@ -214,6 +225,57 @@ export const CommandDetailsDrawer: React.FC<CommandDetailsDrawerProps> = (props)
     // Check if it's a variable reference
     const isVariable = isVariableReference(currentValue);
     const variableName = isVariable ? getVariableNameFromReference(currentValue as string) : "";
+
+    // Instrument-fed param, edit mode only (D-14, DRP-08): looked up from the
+    // saved step's tool type, command and param key. The read-only drawer (run
+    // page) never mounts OptionsSelect and so issues no list read.
+    const binding = isEditing
+      ? lookupFieldBinding(
+          selectedCommand.commandInfo.toolType,
+          selectedCommand.commandInfo.command,
+          key,
+        )
+      : undefined;
+    if (binding !== undefined) {
+      const savedParams: Record<string, unknown> = selectedCommand.commandInfo.params;
+      const showRefresh =
+        firstFieldForSource(
+          Object.keys(savedParams),
+          selectedCommand.commandInfo.toolType,
+          selectedCommand.commandInfo.command,
+          binding.source,
+        ) === key;
+      return (
+        <HStack width="100%" spacing={2} alignItems="flex-start">
+          <OptionsSelect
+            toolId={selectedCommand.commandInfo.toolId}
+            binding={binding}
+            value={currentValue}
+            values={{ ...savedParams, ...editedParams }}
+            enabled={isEditing}
+            allowVariables={true}
+            showRefresh={showRefresh}
+            onSelect={(v) => handleOptionSelect(binding, v)}
+          />
+          <Select
+            width="180px"
+            value={variableName}
+            onChange={(e) => {
+              if (isEditing) {
+                handleVariableSelect(key, e.target.value);
+              }
+            }}
+            isDisabled={!isEditing}>
+            <option value="">No Variable</option>
+            {availableVariables?.map((variable) => (
+              <option key={variable.id} value={variable.name}>
+                {variable.name}
+              </option>
+            ))}
+          </Select>
+        </HStack>
+      );
+    }
 
     // For labware parameters, render a dropdown
     if (key === "labware") {
