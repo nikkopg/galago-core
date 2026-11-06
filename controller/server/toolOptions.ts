@@ -64,7 +64,16 @@ type ParsedTree = {
   ambiguous: string[];
   degraded: boolean;
 };
-type Parsed = ParsedList | ParsedTree | "bad_reply";
+// "too_large": the reply is over a cap. It is rejected whole, never truncated
+// (D-03, T-06-05).
+type Parsed = ParsedList | ParsedTree | "bad_reply" | "too_large";
+
+// Reply caps (RESEARCH A1, discretion values). Over a list or tree cap the
+// whole reply is unavailable too_large; a name over the length cap is dropped
+// and the list marked degraded. Nothing is ever sliced to fit.
+export const MAX_NAME_LENGTH = 256;
+export const MAX_LIST_ITEMS = 1000;
+export const MAX_TREE_NODES = 10000;
 
 interface OptionSourceEntry {
   toolType: string;
@@ -78,11 +87,20 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-// A usable instrument-reported name: a string, non-empty after trim, and not a
-// {{variable}} reference (raw or trimmed), which run-time substitution could
-// expand into a value the operator never chose (T-06-03). Kept verbatim.
+// Explicit own-property read (T-06-09): a key is never resolved through the
+// prototype chain, and a reply object is never spread, merged or key-iterated.
+function own(obj: Record<string, unknown>, key: string): unknown {
+  return Object.prototype.hasOwnProperty.call(obj, key) ? obj[key] : undefined;
+}
+
+// A usable instrument-reported name: a string of at most MAX_NAME_LENGTH
+// characters (checked on the raw length, before any other work), non-empty
+// after trim, and not a {{variable}} reference (raw or trimmed), which run-time
+// substitution could expand into a value the operator never chose (T-06-03).
+// Kept verbatim.
 function isUsableName(value: unknown): value is string {
   if (typeof value !== "string") return false;
+  if (value.length > MAX_NAME_LENGTH) return false;
   const trimmed = value.trim();
   if (trimmed === "") return false;
   return !isVariableLike(value) && !isVariableLike(trimmed);
@@ -92,15 +110,16 @@ function isUsableName(value: unknown): value is string {
 // what this source asked for.
 function checkKind(meta: unknown, kind: string): Record<string, unknown> | undefined {
   if (!isPlainObject(meta)) return undefined;
-  if (meta["kind"] !== kind) return undefined;
+  if (own(meta, "kind") !== kind) return undefined;
   return meta;
 }
 
 function parseNameList(meta: unknown, kind: string, listKey: string, nameKey: string): Parsed {
   const root = checkKind(meta, kind);
   if (root === undefined) return "bad_reply";
-  const items = root[listKey];
+  const items = own(root, listKey);
   if (!Array.isArray(items)) return "bad_reply";
+  if (items.length > MAX_LIST_ITEMS) return "too_large";
   const names: string[] = [];
   let degraded = false;
   for (const item of items) {
@@ -108,7 +127,7 @@ function parseNameList(meta: unknown, kind: string, listKey: string, nameKey: st
       degraded = true;
       continue;
     }
-    const name = item[nameKey];
+    const name = own(item, nameKey);
     if (isUsableName(name)) {
       names.push(name);
     } else {
@@ -126,19 +145,45 @@ export function parseProfiles(meta: unknown, expectedKind: string): Parsed {
   return parseNameList(meta, expectedKind, "profiles", "name");
 }
 
+// Counts every device, deck and nest node with length reads only, so an
+// oversized tree is rejected before any per-node work. Stops counting as soon
+// as the cap is passed.
+function countTreeNodes(rawDevices: unknown[]): number {
+  let count = rawDevices.length;
+  for (const rawDevice of rawDevices) {
+    if (count > MAX_TREE_NODES) return count;
+    if (!isPlainObject(rawDevice)) continue;
+    const rawDecks = own(rawDevice, "decks");
+    if (!Array.isArray(rawDecks)) continue;
+    count += rawDecks.length;
+    for (const rawDeck of rawDecks) {
+      if (count > MAX_TREE_NODES) return count;
+      if (!isPlainObject(rawDeck)) continue;
+      const rawNests = own(rawDeck, "nests");
+      if (Array.isArray(rawNests)) count += rawNests.length;
+    }
+  }
+  return count;
+}
+
 export function parseDeviceTree(meta: unknown): Parsed {
   const root = checkKind(meta, "deviceTree");
   if (root === undefined) return "bad_reply";
-  const rawDevices = root["devices"];
+  const rawDevices = own(root, "devices");
   if (!Array.isArray(rawDevices)) return "bad_reply";
+  if (rawDevices.length > MAX_LIST_ITEMS) return "too_large";
+  if (countTreeNodes(rawDevices) > MAX_TREE_NODES) return "too_large";
 
   let degraded = false;
 
   // ambiguous: absent means [], anything but an array of strings is bad_reply.
-  const rawAmbiguous = root["ambiguous"];
+  // Entries are carried verbatim: an over-long one can never match an offered
+  // path, so it needs no length check.
+  const rawAmbiguous = own(root, "ambiguous");
   let ambiguous: string[] = [];
   if (rawAmbiguous !== undefined) {
     if (!Array.isArray(rawAmbiguous)) return "bad_reply";
+    if (rawAmbiguous.length > MAX_TREE_NODES) return "too_large";
     for (const entry of rawAmbiguous) {
       if (typeof entry !== "string") return "bad_reply";
     }
@@ -151,43 +196,43 @@ export function parseDeviceTree(meta: unknown): Parsed {
       degraded = true;
       continue;
     }
-    const deviceName = rawDevice["deviceName"];
+    const deviceName = own(rawDevice, "deviceName");
     if (!isUsableName(deviceName)) {
       degraded = true;
       continue;
     }
     const decks: StackDeck[] = [];
-    const rawDecks = rawDevice["decks"];
+    const rawDecks = own(rawDevice, "decks");
     if (Array.isArray(rawDecks)) {
       for (const rawDeck of rawDecks) {
         if (!isPlainObject(rawDeck)) {
           degraded = true;
           continue;
         }
-        const deckName = rawDeck["deckName"];
+        const deckName = own(rawDeck, "deckName");
         if (!isUsableName(deckName)) {
           degraded = true;
           continue;
         }
         const nests: StackNest[] = [];
-        const rawNests = rawDeck["nests"];
+        const rawNests = own(rawDeck, "nests");
         if (Array.isArray(rawNests)) {
           for (const rawNest of rawNests) {
             if (!isPlainObject(rawNest)) {
               degraded = true;
               continue;
             }
-            const nestName = rawNest["nestName"];
+            const nestName = own(rawNest, "nestName");
             if (!isUsableName(nestName)) {
               degraded = true;
               continue;
             }
-            nests.push({ nestName, isCalibrated: rawNest["isCalibrated"] === true });
+            nests.push({ nestName, isCalibrated: own(rawNest, "isCalibrated") === true });
           }
         } else {
           degraded = true;
         }
-        decks.push({ deckName, isCalibrated: rawDeck["isCalibrated"] === true, nests });
+        decks.push({ deckName, isCalibrated: own(rawDeck, "isCalibrated") === true, nests });
       }
     } else {
       degraded = true;
@@ -273,13 +318,13 @@ export async function fetchOptions(
     }
 
     if (reply.response !== ResponseCode.SUCCESS) {
-      const kind = isPlainObject(reply.meta) ? reply.meta["kind"] : undefined;
+      const kind = isPlainObject(reply.meta) ? own(reply.meta, "kind") : undefined;
       return unavailable(source, kind === "readFailed" ? "read_failed" : "tool_refused");
     }
     if (reply.meta === undefined || reply.meta === null) return unavailable(source, "no_data");
 
     const parsed = entry.parse(reply.meta);
-    if (parsed === "bad_reply") return unavailable(source, "bad_reply");
+    if (parsed === "bad_reply" || parsed === "too_large") return unavailable(source, parsed);
 
     if (parsed.shape === "list") {
       return {
