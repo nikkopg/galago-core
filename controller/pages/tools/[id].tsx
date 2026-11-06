@@ -261,7 +261,10 @@ export default function Page() {
               toolId={config?.name}
               binding={binding}
               value={formValues[field.name]}
+              values={formValues}
               enabled={true}
+              allowVariables={false}
+              showRefresh={false}
               onSelect={(v) => handleInputChange(field.name, field.type, v)}
             />
           </FormControl>
