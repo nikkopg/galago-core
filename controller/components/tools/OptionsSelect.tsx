@@ -24,7 +24,7 @@ import {
   REFRESHING_LABEL,
   SOURCE_LABELS,
 } from "@/components/tools/fieldOptions";
-import type { FieldBinding, SelectOption } from "@/components/tools/fieldOptions";
+import type { ChangeKind, FieldBinding, SelectOption } from "@/components/tools/fieldOptions";
 
 export interface OptionsSelectProps {
   toolId: string | undefined;
@@ -34,7 +34,9 @@ export interface OptionsSelectProps {
   enabled: boolean;
   allowVariables: boolean;
   showRefresh: boolean;
-  onSelect: (value: string) => void;
+  // kind tells the host whether this was a list choice ("select", cascade
+  // clears apply) or a typed-fallback edit ("typed", own field only).
+  onSelect: (value: string, kind: ChangeKind) => void;
 }
 
 export function OptionsSelect({
@@ -84,7 +86,7 @@ export function OptionsSelect({
         <Input
           type="text"
           value={view.value}
-          onChange={(e) => onSelect(e.target.value)}
+          onChange={(e) => onSelect(e.target.value, "typed")}
           aria-label={binding.field}
           aria-describedby={ariaDescribedBy}
         />
@@ -95,7 +97,7 @@ export function OptionsSelect({
           aria-busy={view.mode === "loading" ? true : undefined}
           aria-label={binding.field}
           aria-describedby={ariaDescribedBy}
-          onChange={(e) => onSelect(e.target.value)}>
+          onChange={(e) => onSelect(e.target.value, "select")}>
           {view.options.map((option) => {
             const color = optionColor(option);
             return (

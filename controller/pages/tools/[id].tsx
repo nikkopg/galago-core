@@ -36,7 +36,7 @@ import {
   firstFieldForSource,
   lookupFieldBinding,
 } from "@/components/tools/fieldOptions";
-import type { FieldBinding } from "@/components/tools/fieldOptions";
+import type { ChangeKind, FieldBinding } from "@/components/tools/fieldOptions";
 import { OptionsSelect } from "@/components/tools/OptionsSelect";
 import { loadingToast } from "@/components/ui/Toast";
 import { Tool } from "@/types";
@@ -261,8 +261,8 @@ export default function Page() {
   // operator's choice and its cascade clears (a device change blanks that
   // side's deck and nest, a deck change blanks the nest) land in ONE
   // functional state update. No effect, list load or refresh ever writes here.
-  const handleOptionSelect = (binding: FieldBinding, value: string) => {
-    setFormValues((prevValues) => ({ ...prevValues, ...applyChange(binding, value) }));
+  const handleOptionSelect = (binding: FieldBinding, value: string, kind: ChangeKind) => {
+    setFormValues((prevValues) => ({ ...prevValues, ...applyChange(binding, value, kind) }));
   };
 
   const renderFields = (fields: Field[], parentField?: string) => {
@@ -292,7 +292,7 @@ export default function Page() {
               enabled={true}
               allowVariables={false}
               showRefresh={showRefresh}
-              onSelect={(v) => handleOptionSelect(binding, v)}
+              onSelect={(v, kind) => handleOptionSelect(binding, v, kind)}
             />
           </FormControl>
         );

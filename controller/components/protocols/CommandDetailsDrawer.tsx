@@ -29,7 +29,7 @@ import { capitalizeFirst } from "@/utils/parser";
 import { successToast } from "../ui/Toast";
 import { AdvancedParameters } from "@/types";
 import { applyChange, firstFieldForSource, lookupFieldBinding } from "../tools/fieldOptions";
-import type { FieldBinding } from "../tools/fieldOptions";
+import type { ChangeKind, FieldBinding } from "../tools/fieldOptions";
 import { OptionsSelect } from "../tools/OptionsSelect";
 
 interface CommandDetailsDrawerProps {
@@ -213,8 +213,8 @@ export const CommandDetailsDrawer: React.FC<CommandDetailsDrawerProps> = (props)
   // choice and its cascade clears land in ONE state update. A cleared child is
   // written as "" and never deleted, because a deleted key would fall back to
   // the saved value in handleSaveInputs' merge.
-  const handleOptionSelect = (binding: FieldBinding, value: string) => {
-    setEditedParams((prevParams) => ({ ...prevParams, ...applyChange(binding, value) }));
+  const handleOptionSelect = (binding: FieldBinding, value: string, kind: ChangeKind) => {
+    setEditedParams((prevParams) => ({ ...prevParams, ...applyChange(binding, value, kind) }));
   };
 
   // Render the appropriate input field based on parameter type and name
@@ -255,13 +255,21 @@ export const CommandDetailsDrawer: React.FC<CommandDetailsDrawerProps> = (props)
             enabled={isEditing}
             allowVariables={true}
             showRefresh={showRefresh}
-            onSelect={(v) => handleOptionSelect(binding, v)}
+            onSelect={(v, kind) => handleOptionSelect(binding, v, kind)}
           />
           <Select
             width="180px"
             value={variableName}
             onChange={(e) => {
-              if (isEditing) {
+              if (!isEditing) return;
+              if (e.target.value === "") {
+                // Unbinding an instrument-fed field writes a blank and clears
+                // its cascade children (WR-02). Deleting the key would fall
+                // back to the saved value and could leave a mismatched
+                // device/deck/nest triple, and could not unbind a saved
+                // {{variable}} at all.
+                handleOptionSelect(binding, "", "select");
+              } else {
                 handleVariableSelect(key, e.target.value);
               }
             }}

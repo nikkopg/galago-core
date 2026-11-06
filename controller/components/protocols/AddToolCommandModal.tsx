@@ -59,7 +59,7 @@ import {
 } from "lucide-react";
 import { warningToast } from "../ui/Toast";
 import { applyChange, firstFieldForSource, lookupFieldBinding } from "../tools/fieldOptions";
-import type { FieldBinding } from "../tools/fieldOptions";
+import type { ChangeKind, FieldBinding } from "../tools/fieldOptions";
 import { OptionsSelect } from "../tools/OptionsSelect";
 
 interface AddToolCommandModalProps {
@@ -293,8 +293,8 @@ export const AddToolCommandModal: React.FC<AddToolCommandModalProps> = ({
   // choice and its cascade clears (a device change blanks that side's deck and
   // nest, a deck change blanks the nest) land in ONE state update. No effect,
   // list load or refresh ever writes here.
-  const handleOptionSelect = (binding: FieldBinding, value: string) => {
-    setCommandParams((prevParams) => ({ ...prevParams, ...applyChange(binding, value) }));
+  const handleOptionSelect = (binding: FieldBinding, value: string, kind: ChangeKind) => {
+    setCommandParams((prevParams) => ({ ...prevParams, ...applyChange(binding, value, kind) }));
   };
 
   const renderField = (field: Field) => {
@@ -326,12 +326,21 @@ export const AddToolCommandModal: React.FC<AddToolCommandModalProps> = ({
             enabled={isOpen}
             allowVariables={true}
             showRefresh={showRefresh}
-            onSelect={(v) => handleOptionSelect(binding, v)}
+            onSelect={(v, kind) => handleOptionSelect(binding, v, kind)}
           />
           <Select
             width="180px"
             value={variableName}
-            onChange={(e) => handleVariableSelect(field.name, e.target.value)}>
+            onChange={(e) => {
+              if (e.target.value === "") {
+                // Unbinding an instrument-fed field writes a blank and clears
+                // its cascade children, so no stale deck/nest is left under a
+                // device that is no longer bound.
+                handleOptionSelect(binding, "", "select");
+              } else {
+                handleVariableSelect(field.name, e.target.value);
+              }
+            }}>
             <option value="">No Variable</option>
             {fetchedVariables?.map((variable) => (
               <option key={variable.id} value={variable.name}>

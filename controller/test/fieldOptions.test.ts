@@ -414,6 +414,20 @@ describe("applyChange (D-09): the only patch producer", () => {
     }
   });
 
+  it("a typed edit (fallback input) writes only its own field, never clearing children (WR-01)", () => {
+    expect(applyChange(deepFreeze(binding("source_device")), "Dev", "typed")).toStrictEqual({
+      source_device: "Dev",
+    });
+    expect(applyChange(binding("destination_deck"), "Deck", "typed")).toStrictEqual({
+      destination_deck: "Deck",
+    });
+    expect(applyChange(binding("robot"), "R", "typed")).toStrictEqual({ robot: "R" });
+    // an explicit "select" behaves exactly like the default
+    expect(applyChange(binding("source_device"), "X", "select")).toStrictEqual(
+      applyChange(binding("source_device"), "X"),
+    );
+  });
+
   it("keeps the chosen value exactly and returns a new object each time", () => {
     const b = binding("source_device");
     const first = applyChange(b, " Dev ");

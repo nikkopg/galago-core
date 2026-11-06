@@ -365,11 +365,23 @@ export function buildCascadeOptions(
   return result;
 }
 
+// How the operator changed a field: "select" is a choice from the instrument
+// list (cascade clears apply), "typed" is a keystroke in the typed fallback
+// input, which writes only its own field so editing a saved device or deck
+// name never wipes the children below it.
+export type ChangeKind = "select" | "typed";
+
 // The only producer of param patches (D-09, DRP-05). It reads no option list
-// and never picks a first child: an operator's device change clears the same
-// side's deck and nest to "", a deck change clears the nest, anything else
-// returns only its own field. Loading or refreshing a list never calls this.
-export function applyChange(binding: FieldBinding, newValue: string): Record<string, string> {
+// and never picks a first child: an operator's device choice clears the same
+// side's deck and nest to "", a deck choice clears the nest, anything else
+// (and any typed edit) returns only its own field. Loading or refreshing a
+// list never calls this.
+export function applyChange(
+  binding: FieldBinding,
+  newValue: string,
+  kind: ChangeKind = "select",
+): Record<string, string> {
+  if (kind === "typed") return { [binding.field]: newValue };
   const role = binding.role;
   if (role.kind === "cascade" && role.level === "device") {
     return {
