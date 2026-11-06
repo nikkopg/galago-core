@@ -4,6 +4,24 @@
 // transferProfiles, deviceTree, readFailed); nothing is imported from there.
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
+// Chainable stand-in for the drizzle client, used only by the edit and delete
+// lifecycle cases (06-02). Plain functions, so restoreAllMocks leaves it intact.
+const { dbMock, dbRows } = vi.hoisted(() => {
+  const dbRows: { returning: unknown[] } = { returning: [] };
+  const chain: Record<string, unknown> = {};
+  const self = () => chain;
+  chain.update = self;
+  chain.set = self;
+  chain.where = self;
+  chain.delete = self;
+  chain.insert = self;
+  chain.values = async () => undefined;
+  chain.returning = async () => dbRows.returning;
+  return { dbMock: chain, dbRows };
+});
+
+vi.mock("@/db/client", () => ({ db: dbMock, sqlite: {} }));
+
 vi.mock("@/db/helpers", () => ({
   findOne: vi.fn(),
   findOneOrFail: vi.fn(),
@@ -19,6 +37,8 @@ import { ToolType } from "gen-interfaces/controller";
 import { ResponseCode } from "gen-interfaces/tools/grpc_interfaces/tool_base";
 import { toolRouter } from "@/server/routers/tool";
 import Tool from "@/server/tools";
+import { findMany, findOne, getSelectedWorkcellId } from "@/db/helpers";
+import { resetToolOptionsStateForTest } from "@/server/toolOptions";
 import { installFakeTool, removeFakeTool, FakeGrpc } from "./helpers/fakeTool";
 
 const ROBOT_STATES = { kind: "robotStates", robots: [{ robotName: "stack2-6", state: "idle" }] };
@@ -66,6 +86,7 @@ describe("tool.options query (06-01 tracer)", () => {
   let stackGrpc: FakeGrpc;
 
   beforeEach(() => {
+    resetToolOptionsStateForTest();
     stackGrpc = installFakeTool("stack-1", ToolType.stack).grpc;
     stackGrpc.executeCommand.mockResolvedValue(ok(ROBOT_STATES));
   });
@@ -284,5 +305,116 @@ describe("tool.options query (06-01 tracer)", () => {
     ).rejects.toThrow();
     await expect(c.options({ toolId: "stack-1", source: "fast.plates" })).rejects.toThrow();
     expect(stackGrpc.executeCommand).not.toHaveBeenCalled();
+  });
+});
+
+// Every tool lifecycle route invalidates that tool's cached option lists
+// (D-04): after configure, edit (old and new name), delete or clearToolStore the
+// next tool.options read goes live instead of returning the cached list.
+describe("tool lifecycle routes invalidate cached options (06-02)", () => {
+  const STACK_ROW = {
+    id: 3,
+    name: "stack-1",
+    type: "stack",
+    ip: "127.0.0.1",
+    port: 1,
+    workcellId: 1,
+    config: {},
+  };
+
+  let stackGrpc: FakeGrpc;
+
+  async function readTwice(toolId: string, grpc: FakeGrpc) {
+    await caller().options({ toolId, source: "stack.robots" });
+    await caller().options({ toolId, source: "stack.robots" });
+    expect(grpc.executeCommand).toHaveBeenCalledTimes(1);
+  }
+
+  function reinstall(toolId: string): FakeGrpc {
+    const grpc = installFakeTool(toolId, ToolType.stack).grpc;
+    grpc.executeCommand.mockResolvedValue(ok(ROBOT_STATES));
+    return grpc;
+  }
+
+  beforeEach(() => {
+    resetToolOptionsStateForTest();
+    vi.mocked(getSelectedWorkcellId).mockResolvedValue(1);
+    vi.mocked(findMany).mockResolvedValue([STACK_ROW]);
+    stackGrpc = reinstall("stack-1");
+    dbRows.returning = [];
+  });
+
+  afterEach(async () => {
+    await removeFakeTool("stack-1");
+    await removeFakeTool("stack-old");
+    vi.restoreAllMocks();
+  });
+
+  it("a successful configure makes the next read go live", async () => {
+    await readTwice("stack-1", stackGrpc);
+    stackGrpc.configure.mockResolvedValue({ response: ResponseCode.SUCCESS, error_message: "" });
+    await caller().configure({ toolId: "stack-1", config: {} });
+    expect(stackGrpc.configure).toHaveBeenCalledTimes(1);
+
+    await caller().options({ toolId: "stack-1", source: "stack.robots" });
+    expect(stackGrpc.executeCommand).toHaveBeenCalledTimes(2);
+  });
+
+  it("a failed configure still makes the next read go live", async () => {
+    await readTwice("stack-1", stackGrpc);
+    stackGrpc.configure.mockRejectedValue(Object.assign(new Error("down"), { code: 14 }));
+    await expect(caller().configure({ toolId: "stack-1", config: {} })).rejects.toThrow();
+
+    await caller().options({ toolId: "stack-1", source: "stack.robots" });
+    expect(stackGrpc.executeCommand).toHaveBeenCalledTimes(2);
+  });
+
+  it("a configure refused by the tool still makes the next read go live", async () => {
+    await readTwice("stack-1", stackGrpc);
+    stackGrpc.configure.mockResolvedValue({
+      response: ResponseCode.DRIVER_ERROR,
+      error_message: "refused",
+    });
+    await expect(caller().configure({ toolId: "stack-1", config: {} })).rejects.toThrow();
+
+    await caller().options({ toolId: "stack-1", source: "stack.robots" });
+    expect(stackGrpc.executeCommand).toHaveBeenCalledTimes(2);
+  });
+
+  it("edit invalidates both the pre-edit name and the updated name", async () => {
+    const oldGrpc = reinstall("stack-old");
+    await readTwice("stack-old", oldGrpc);
+    await readTwice("stack-1", stackGrpc);
+
+    vi.mocked(findOne).mockResolvedValue({ ...STACK_ROW, name: "stack-old" });
+    dbRows.returning = [{ ...STACK_ROW, name: "stack-1" }];
+    await caller().edit({ id: 3, type: "stack", name: "stack-1", ip: "127.0.0.1", port: 1 });
+
+    await caller().options({ toolId: "stack-old", source: "stack.robots" });
+    expect(oldGrpc.executeCommand).toHaveBeenCalledTimes(2);
+
+    // edit removed the stack-1 Tool; a reconnected one must not see the old list.
+    const fresh = reinstall("stack-1");
+    await caller().options({ toolId: "stack-1", source: "stack.robots" });
+    expect(fresh.executeCommand).toHaveBeenCalledTimes(1);
+  });
+
+  it("delete makes the next read of that tool go live", async () => {
+    await readTwice("stack-1", stackGrpc);
+    dbRows.returning = [STACK_ROW];
+    await caller().delete(3);
+
+    const fresh = reinstall("stack-1");
+    await caller().options({ toolId: "stack-1", source: "stack.robots" });
+    expect(fresh.executeCommand).toHaveBeenCalledTimes(1);
+  });
+
+  it("clearToolStore makes every next read go live", async () => {
+    await readTwice("stack-1", stackGrpc);
+    await caller().clearToolStore();
+
+    const fresh = reinstall("stack-1");
+    await caller().options({ toolId: "stack-1", source: "stack.robots" });
+    expect(fresh.executeCommand).toHaveBeenCalledTimes(1);
   });
 });
