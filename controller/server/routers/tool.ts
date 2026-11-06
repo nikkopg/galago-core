@@ -10,7 +10,12 @@ import Tool from "@/server/tools";
 import CommandQueue from "@/server/command_queue";
 import { recoveryControl } from "@/server/recoveryControl";
 import { LATCH_READ_COMMAND, extractLatch } from "@/server/recoveryActions";
-import { fetchOptions, OPTION_SOURCE_IDS } from "@/server/toolOptions";
+import {
+  bumpAllGenerations,
+  bumpGeneration,
+  fetchOptions,
+  OPTION_SOURCE_IDS,
+} from "@/server/toolOptions";
 import { normalizeToolKey as normalize } from "@/server/toolKey";
 import { Config } from "gen-interfaces/tools/grpc_interfaces/tool_base";
 import { ToolType } from "gen-interfaces/controller";
@@ -289,6 +294,9 @@ export const toolRouter = router({
 
       // Clean up Tool class cache
       await Tool.removeTool(updatedTool.name);
+      // Invalidate cached option lists under both names (D-04).
+      bumpGeneration(existing.name);
+      bumpGeneration(updatedTool.name);
 
       await db.insert(logs).values({
         level: "info",
@@ -339,6 +347,7 @@ export const toolRouter = router({
 
     // Clean up Tool class cache
     await Tool.removeTool(deleted[0].name);
+    bumpGeneration(deleted[0].name);
 
     await db.insert(logs).values({
       level: "info",
@@ -461,6 +470,7 @@ export const toolRouter = router({
 
   clearToolStore: procedure.mutation(async () => {
     await Tool.clearToolStore();
+    bumpAllGenerations();
     return { message: "Tool store cleared successfully" };
   }),
 
@@ -477,7 +487,12 @@ export const toolRouter = router({
       if (toolId === "Tool Box") {
         const toolbox = Tool.toolBoxConfig();
         const tool = Tool.forId("Tool Box", toolbox.ip, toolbox.port, toolbox.type as ToolType);
-        return await tool.configure(config);
+        try {
+          return await tool.configure(config);
+        } finally {
+          // After configure settles, success or failure (D-04).
+          bumpGeneration("Tool Box");
+        }
       }
 
       // Get tool metadata from DB
@@ -491,8 +506,14 @@ export const toolRouter = router({
         toolRecord.type as ToolType,
       );
 
-      // Execute configuration
-      return await tool.configure(config);
+      // Execute configuration. The cached option lists are invalidated after
+      // configure settles, success or failure, so a read that raced it is never
+      // stored (D-04).
+      try {
+        return await tool.configure(config);
+      } finally {
+        bumpGeneration(toolRecord.name);
+      }
     }),
 
   runCommand: procedure

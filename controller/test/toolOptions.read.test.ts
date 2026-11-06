@@ -230,7 +230,10 @@ describe("fetchOptions cache and refresh (06-02)", () => {
   it("a failed read after TTL expiry never falls back to the cached list", async () => {
     await fetchOptions("stack-1", "stack.robots", false);
     at(OPTIONS_CACHE_TTL_MS);
-    grpc.executeCommand.mockResolvedValueOnce({ response: ResponseCode.SUCCESS, error_message: "" });
+    grpc.executeCommand.mockResolvedValueOnce({
+      response: ResponseCode.SUCCESS,
+      error_message: "",
+    });
     expect(await fetchOptions("stack-1", "stack.robots", false)).toStrictEqual({
       status: "unavailable",
       source: "stack.robots",

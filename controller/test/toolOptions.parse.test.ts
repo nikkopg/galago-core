@@ -47,17 +47,17 @@ describe("list caps (MAX_LIST_ITEMS)", () => {
   it("labware profiles: 1000 ok, 1001 too_large", () => {
     const atCap = parseProfiles(profilesWithCount("labwareProfiles", 1000), "labwareProfiles");
     expect((atCap as { names: string[] }).names).toHaveLength(1000);
-    expect(
-      parseProfiles(profilesWithCount("labwareProfiles", 1001), "labwareProfiles"),
-    ).toBe("too_large");
+    expect(parseProfiles(profilesWithCount("labwareProfiles", 1001), "labwareProfiles")).toBe(
+      "too_large",
+    );
   });
 
   it("transfer profiles: 1000 ok, 1001 too_large", () => {
     const atCap = parseProfiles(profilesWithCount("transferProfiles", 1000), "transferProfiles");
     expect((atCap as { names: string[] }).names).toHaveLength(1000);
-    expect(
-      parseProfiles(profilesWithCount("transferProfiles", 1001), "transferProfiles"),
-    ).toBe("too_large");
+    expect(parseProfiles(profilesWithCount("transferProfiles", 1001), "transferProfiles")).toBe(
+      "too_large",
+    );
   });
 
   it("devices array: 1000 devices ok, 1001 devices too_large", () => {
@@ -88,9 +88,7 @@ describe("tree node cap (MAX_TREE_NODES over devices + decks + nests)", () => {
     const tree = deviceTreeWithShape(1, 1);
     const atCap = parseDeviceTree({ ...tree, ambiguous: new Array(10000).fill("a,b") });
     expect((atCap as { ambiguous: string[] }).ambiguous).toHaveLength(10000);
-    expect(parseDeviceTree({ ...tree, ambiguous: new Array(10001).fill("a,b") })).toBe(
-      "too_large",
-    );
+    expect(parseDeviceTree({ ...tree, ambiguous: new Array(10001).fill("a,b") })).toBe("too_large");
   });
 
   it("an over-long ambiguous string is carried verbatim", () => {
@@ -146,7 +144,11 @@ describe("name rules (D-03: dropped, never sliced)", () => {
         {
           deviceName: "dev",
           decks: [
-            { deckName: "deck", isCalibrated: false, nests: [{ nestName: "A1", isCalibrated: false }] },
+            {
+              deckName: "deck",
+              isCalibrated: false,
+              nests: [{ nestName: "A1", isCalibrated: false }],
+            },
           ],
         },
       ],
@@ -235,7 +237,9 @@ describe("unknown keys and prototype keys (T-06-09)", () => {
       devices: [
         {
           deviceName: "d",
-          decks: [{ deckName: "k", isCalibrated: false, nests: [{ nestName: "n", isCalibrated: false }] }],
+          decks: [
+            { deckName: "k", isCalibrated: false, nests: [{ nestName: "n", isCalibrated: false }] },
+          ],
         },
       ],
     });
@@ -321,13 +325,20 @@ describe("boundary rendering: nothing is preselected", () => {
     };
   }
 
-  it.each([1, MAX_LIST_ITEMS])("a parsed list of %i item(s) renders ok with the blank value", (n) => {
-    const parsed = parseRobotStates(robotStatesWithCount(n)) as { names: string[] };
-    expect(parsed.names).toHaveLength(n);
-    const view = buildSelectView({ mode: "ok", value: undefined, offered: listOptions(okList(parsed.names)) });
-    expect(view.mode).toBe("ok");
-    expect(view.value).toBe("");
-    expect(view.options[0]).toStrictEqual({ key: "empty", value: "", label: "" });
-    expect(view.options).toHaveLength(n + 1);
-  });
+  it.each([1, MAX_LIST_ITEMS])(
+    "a parsed list of %i item(s) renders ok with the blank value",
+    (n) => {
+      const parsed = parseRobotStates(robotStatesWithCount(n)) as { names: string[] };
+      expect(parsed.names).toHaveLength(n);
+      const view = buildSelectView({
+        mode: "ok",
+        value: undefined,
+        offered: listOptions(okList(parsed.names)),
+      });
+      expect(view.mode).toBe("ok");
+      expect(view.value).toBe("");
+      expect(view.options[0]).toStrictEqual({ key: "empty", value: "", label: "" });
+      expect(view.options).toHaveLength(n + 1);
+    },
+  );
 });

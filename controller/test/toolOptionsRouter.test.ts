@@ -353,7 +353,10 @@ describe("tool lifecycle routes invalidate cached options (06-02)", () => {
   it("a successful configure makes the next read go live", async () => {
     await readTwice("stack-1", stackGrpc);
     stackGrpc.configure.mockResolvedValue({ response: ResponseCode.SUCCESS, error_message: "" });
-    await caller().configure({ toolId: "stack-1", config: {} });
+    await caller().configure({
+      toolId: "stack-1",
+      config: { toolId: "stack-1", simulated: false },
+    });
     expect(stackGrpc.configure).toHaveBeenCalledTimes(1);
 
     await caller().options({ toolId: "stack-1", source: "stack.robots" });
@@ -363,7 +366,9 @@ describe("tool lifecycle routes invalidate cached options (06-02)", () => {
   it("a failed configure still makes the next read go live", async () => {
     await readTwice("stack-1", stackGrpc);
     stackGrpc.configure.mockRejectedValue(Object.assign(new Error("down"), { code: 14 }));
-    await expect(caller().configure({ toolId: "stack-1", config: {} })).rejects.toThrow();
+    await expect(
+      caller().configure({ toolId: "stack-1", config: { toolId: "stack-1", simulated: false } }),
+    ).rejects.toThrow();
 
     await caller().options({ toolId: "stack-1", source: "stack.robots" });
     expect(stackGrpc.executeCommand).toHaveBeenCalledTimes(2);
@@ -375,7 +380,9 @@ describe("tool lifecycle routes invalidate cached options (06-02)", () => {
       response: ResponseCode.DRIVER_ERROR,
       error_message: "refused",
     });
-    await expect(caller().configure({ toolId: "stack-1", config: {} })).rejects.toThrow();
+    await expect(
+      caller().configure({ toolId: "stack-1", config: { toolId: "stack-1", simulated: false } }),
+    ).rejects.toThrow();
 
     await caller().options({ toolId: "stack-1", source: "stack.robots" });
     expect(stackGrpc.executeCommand).toHaveBeenCalledTimes(2);

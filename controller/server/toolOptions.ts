@@ -9,6 +9,8 @@ import Tool from "./tools";
 import { ResponseCode } from "gen-interfaces/tools/grpc_interfaces/tool_base";
 import { status } from "@grpc/grpc-js";
 import { isVariableLike } from "@/utils/variableRef";
+import { logAction, sanitizeLogText } from "./logger";
+import { normalizeToolKey } from "./toolKey";
 
 export type UnavailableReason =
   | "not_connected"
@@ -285,8 +287,273 @@ function unavailable(source: OptionSourceId, reason: UnavailableReason): Options
   return { status: "unavailable", source, reason };
 }
 
+// Server-side cache timing (D-04, RESEARCH A2). Only ok results are cached; a
+// refresh within REFRESH_MIN_INTERVAL_MS of the last successful live refresh
+// for the same key receives that result instead of reloading the STACK manager
+// again (T-06-04). Audit rows are throttled per (tool, source, event).
+export const OPTIONS_CACHE_TTL_MS = 15000;
+export const REFRESH_MIN_INTERVAL_MS = 2000;
+export const OPTIONS_LOG_THROTTLE_MS = 60000;
+
+type OkResult = Extract<OptionsResult, { status: "ok" }>;
+
+interface ToolOptionsState {
+  // Bumped by clearToolStore: invalidates every tool at once.
+  epoch: number;
+  // Per-tool configure generation, keyed by normalized tool id.
+  generations: Map<string, number>;
+  cache: Map<string, { result: OkResult; storedAt: number }>;
+  inFlight: Map<string, Promise<OptionsResult>>;
+  lastRefresh: Map<string, { result: OkResult; completedAt: number }>;
+  lastLog: Map<string, number>;
+}
+
+// One state object on a globalThis key (RESEARCH A4, same idiom as the tool
+// store in server/tools.ts) so the lifecycle routes and tool.options share it
+// even if Next bundles the routes separately.
+const STATE_KEY = "__tool_options_state";
+
+function getState(): ToolOptionsState {
+  const g = globalThis as unknown as Record<string, ToolOptionsState | undefined>;
+  let state = g[STATE_KEY];
+  if (state === undefined) {
+    state = {
+      epoch: 0,
+      generations: new Map(),
+      cache: new Map(),
+      inFlight: new Map(),
+      lastRefresh: new Map(),
+      lastLog: new Map(),
+    };
+    g[STATE_KEY] = state;
+  }
+  return state;
+}
+
+// Normalized tool ids are [a-z0-9]* only, so "|" can never collide.
+function cacheKey(state: ToolOptionsState, toolKey: string, source: OptionSourceId): string {
+  const generation = state.generations.get(toolKey) ?? 0;
+  return `${toolKey}|${state.epoch}|${generation}|${source}`;
+}
+
+function dropToolEntries(state: ToolOptionsState, toolKey: string): void {
+  const prefix = `${toolKey}|`;
+  for (const key of Array.from(state.cache.keys())) {
+    if (key.startsWith(prefix)) state.cache.delete(key);
+  }
+  for (const key of Array.from(state.lastRefresh.keys())) {
+    if (key.startsWith(prefix)) state.lastRefresh.delete(key);
+  }
+}
+
+// Invalidates one tool's cached lists. Called by the tool lifecycle routes
+// (configure, edit, delete). A read that began before the bump is never stored.
+export function bumpGeneration(toolId: string): void {
+  const state = getState();
+  const toolKey = normalizeToolKey(toolId);
+  state.generations.set(toolKey, (state.generations.get(toolKey) ?? 0) + 1);
+  dropToolEntries(state, toolKey);
+}
+
+// Invalidates every tool's cached lists (tool.clearToolStore).
+export function bumpAllGenerations(): void {
+  const state = getState();
+  state.epoch += 1;
+  state.cache.clear();
+  state.lastRefresh.clear();
+}
+
+export function resetToolOptionsStateForTest(): void {
+  delete (globalThis as unknown as Record<string, unknown>)[STATE_KEY];
+}
+
+// One audit row per throttle key per OPTIONS_LOG_THROTTLE_MS. The whole details
+// string goes through sanitizeLogText (T-06-06). Never throws.
+function logThrottled(
+  state: ToolOptionsState,
+  throttleKey: string,
+  now: number,
+  row: { level: string; action: string; details: string },
+): void {
+  const last = state.lastLog.get(throttleKey);
+  if (last !== undefined && now - last < OPTIONS_LOG_THROTTLE_MS) return;
+  state.lastLog.set(throttleKey, now);
+  try {
+    void logAction({ level: row.level, action: row.action, details: sanitizeLogText(row.details) });
+  } catch {
+    // Logging must never change a read's outcome.
+  }
+}
+
+interface LiveOutcome {
+  result: OptionsResult;
+  errorCode?: unknown;
+}
+
+// One live read: never cached, never retried. Maps every failure to a closed
+// reason code; errorCode is kept for the audit row only.
+async function readLive(
+  tool: Tool,
+  entry: OptionSourceEntry,
+  source: OptionSourceId,
+  refresh: boolean,
+): Promise<LiveOutcome> {
+  const params: Record<string, boolean> = refresh && entry.acceptsRefresh ? { refresh: true } : {};
+
+  let reply;
+  try {
+    reply = await tool.readOptions(entry.toolType, entry.command, params);
+  } catch (e) {
+    const code = isPlainObject(e) ? e["code"] : undefined;
+    return {
+      result: unavailable(source, code === status.DEADLINE_EXCEEDED ? "timeout" : "transport"),
+      errorCode: code,
+    };
+  }
+
+  if (reply.response !== ResponseCode.SUCCESS) {
+    const kind = isPlainObject(reply.meta) ? own(reply.meta, "kind") : undefined;
+    return { result: unavailable(source, kind === "readFailed" ? "read_failed" : "tool_refused") };
+  }
+  if (reply.meta === undefined || reply.meta === null) {
+    return { result: unavailable(source, "no_data") };
+  }
+
+  const parsed = entry.parse(reply.meta);
+  if (parsed === "bad_reply" || parsed === "too_large") {
+    return { result: unavailable(source, parsed) };
+  }
+
+  if (parsed.shape === "list") {
+    return {
+      result: {
+        status: "ok",
+        source,
+        shape: "list",
+        names: parsed.names,
+        degraded: parsed.degraded,
+        fetchedAt: Date.now(),
+      },
+    };
+  }
+  return {
+    result: {
+      status: "ok",
+      source,
+      shape: "tree",
+      devices: parsed.devices,
+      ambiguous: parsed.ambiguous,
+      degraded: parsed.degraded,
+      fetchedAt: Date.now(),
+    },
+  };
+}
+
+// Runs one live read and applies its outcome to the shared state: an ok result
+// is stored only if the tool's epoch and generation are unchanged since the
+// read began; any failure evicts the cache and last-refresh entries for the key
+// (D-04: a failed live read never falls back to a cached list, DRP-04).
+async function settleLive(
+  state: ToolOptionsState,
+  tool: Tool,
+  toolId: string,
+  toolKey: string,
+  key: string,
+  entry: OptionSourceEntry,
+  source: OptionSourceId,
+  refresh: boolean,
+): Promise<OptionsResult> {
+  let outcome: LiveOutcome;
+  try {
+    outcome = await readLive(tool, entry, source, refresh);
+  } catch {
+    outcome = { result: unavailable(source, "bad_reply") };
+  }
+  const result = outcome.result;
+  const now = Date.now();
+
+  if (result.status === "ok") {
+    if (cacheKey(state, toolKey, source) === key) {
+      state.cache.set(key, { result, storedAt: now });
+      if (refresh) state.lastRefresh.set(key, { result, completedAt: now });
+    }
+  } else {
+    state.cache.delete(key);
+    state.lastRefresh.delete(key);
+    const code =
+      (result.reason === "transport" || result.reason === "timeout") &&
+      outcome.errorCode !== undefined
+        ? `, Code: ${String(outcome.errorCode)}`
+        : "";
+    logThrottled(state, `${toolKey}|${source}|${result.reason}`, now, {
+      level: "warning",
+      action: "Tool Options Read Failed",
+      details: `Tool: ${toolId}, Source: ${source}, Reason: ${result.reason}${code}`,
+    });
+  }
+
+  if (refresh) {
+    const outcomeText = result.status === "ok" ? "ok" : `unavailable (${result.reason})`;
+    logThrottled(state, `${toolKey}|${source}|refresh`, now, {
+      level: "info",
+      action: "Tool Options Refreshed",
+      details: `Tool: ${toolId}, Source: ${source}, Result: ${outcomeText}`,
+    });
+  }
+  return result;
+}
+
+// Cache / dedupe / refresh front of the live read. Synchronous up to the
+// in-flight registration so concurrent callers in the same tick join it.
+function readThrough(
+  tool: Tool,
+  toolId: string,
+  entry: OptionSourceEntry,
+  source: OptionSourceId,
+  refresh: boolean,
+): Promise<OptionsResult> {
+  const state = getState();
+  const toolKey = normalizeToolKey(toolId);
+  const key = cacheKey(state, toolKey, source);
+  const now = Date.now();
+
+  if (refresh) {
+    const last = state.lastRefresh.get(key);
+    if (last !== undefined && now - last.completedAt < REFRESH_MIN_INTERVAL_MS) {
+      return Promise.resolve(last.result);
+    }
+  } else {
+    const cached = state.cache.get(key);
+    if (cached !== undefined && now - cached.storedAt < OPTIONS_CACHE_TTL_MS) {
+      return Promise.resolve(cached.result);
+    }
+  }
+
+  // A refresh never joins a plain read (it must reach the adapter with the
+  // refresh flag), so it has its own in-flight key.
+  const flightKey = refresh ? `${key}:refresh` : key;
+  const joined = state.inFlight.get(flightKey);
+  if (joined !== undefined) return joined;
+
+  const promise: Promise<OptionsResult> = settleLive(
+    state,
+    tool,
+    toolId,
+    toolKey,
+    key,
+    entry,
+    source,
+    refresh,
+  ).finally(() => {
+    if (state.inFlight.get(flightKey) === promise) state.inFlight.delete(flightKey);
+  });
+  state.inFlight.set(flightKey, promise);
+  return promise;
+}
+
 // Reads one registry source from one connected tool. Never throws and returns
 // only closed reason codes, never raw error or tool message text (T-06-07).
+// Pre-send checks (not_connected, wrong_tool_type) run first and send nothing.
 export async function fetchOptions(
   toolId: string,
   source: OptionSourceId,
@@ -306,45 +573,7 @@ export async function fetchOptions(
     if (tool === undefined) return unavailable(source, "not_connected");
     if (String(tool.type) !== entry.toolType) return unavailable(source, "wrong_tool_type");
 
-    const params: Record<string, boolean> =
-      refresh === true && entry.acceptsRefresh ? { refresh: true } : {};
-
-    let reply;
-    try {
-      reply = await tool.readOptions(entry.toolType, entry.command, params);
-    } catch (e) {
-      const code = isPlainObject(e) ? e["code"] : undefined;
-      return unavailable(source, code === status.DEADLINE_EXCEEDED ? "timeout" : "transport");
-    }
-
-    if (reply.response !== ResponseCode.SUCCESS) {
-      const kind = isPlainObject(reply.meta) ? own(reply.meta, "kind") : undefined;
-      return unavailable(source, kind === "readFailed" ? "read_failed" : "tool_refused");
-    }
-    if (reply.meta === undefined || reply.meta === null) return unavailable(source, "no_data");
-
-    const parsed = entry.parse(reply.meta);
-    if (parsed === "bad_reply" || parsed === "too_large") return unavailable(source, parsed);
-
-    if (parsed.shape === "list") {
-      return {
-        status: "ok",
-        source,
-        shape: "list",
-        names: parsed.names,
-        degraded: parsed.degraded,
-        fetchedAt: Date.now(),
-      };
-    }
-    return {
-      status: "ok",
-      source,
-      shape: "tree",
-      devices: parsed.devices,
-      ambiguous: parsed.ambiguous,
-      degraded: parsed.degraded,
-      fetchedAt: Date.now(),
-    };
+    return await readThrough(tool, toolId, entry, source, refresh === true);
   } catch {
     return unavailable(source, "bad_reply");
   }
