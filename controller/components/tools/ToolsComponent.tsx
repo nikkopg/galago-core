@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { trpc } from "@/utils/trpc";
 import ToolStatusCard from "@/components/tools/ToolStatusCard";
+import { buildConnectConfig } from "@/components/tools/connectConfig";
 import {
   Box,
   VStack,
@@ -77,11 +78,7 @@ export const ToolStatusCardsComponent: React.FC<ToolStatusCardsProps> = (_props)
             // Use mutateAsync to properly catch errors for this specific tool
             await configureMutation.mutateAsync({
               toolId: tool.name,
-              config: {
-                toolId: tool.name,
-                simulated: tool.config.simulated,
-                [tool.type]: tool.config,
-              },
+              config: buildConnectConfig(tool),
             });
 
             // Record successful configuration
