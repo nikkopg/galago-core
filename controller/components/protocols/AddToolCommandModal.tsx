@@ -58,6 +58,9 @@ import {
   Volume2,
 } from "lucide-react";
 import { warningToast } from "../ui/Toast";
+import { applyChange, firstFieldForSource, lookupFieldBinding } from "../tools/fieldOptions";
+import type { FieldBinding } from "../tools/fieldOptions";
+import { OptionsSelect } from "../tools/OptionsSelect";
 
 interface AddToolCommandModalProps {
   isOpen: boolean;
@@ -286,11 +289,59 @@ export const AddToolCommandModal: React.FC<AddToolCommandModalProps> = ({
     return "";
   };
 
+  // The only writer of an instrument-fed field (D-09, DRP-05): the operator's
+  // choice and its cascade clears (a device change blanks that side's deck and
+  // nest, a deck change blanks the nest) land in ONE state update. No effect,
+  // list load or refresh ever writes here.
+  const handleOptionSelect = (binding: FieldBinding, value: string) => {
+    setCommandParams((prevParams) => ({ ...prevParams, ...applyChange(binding, value) }));
+  };
+
   const renderField = (field: Field) => {
     // Get current value
     const currentValue = commandParams[field.name];
     const isVariable = isVariableReference(currentValue);
     const variableName = isVariable ? getVariableNameFromReference(currentValue) : "";
+
+    // Instrument-fed field (D-10, D-11): the list (or device -> deck -> nest
+    // cascade) takes the place of the typed input; the per-field variable
+    // picker stays beside it unchanged (D-13). Every other field renders as
+    // before.
+    const binding = lookupFieldBinding(selectedToolType, selectedCommand, field.name);
+    if (binding !== undefined) {
+      const showRefresh =
+        firstFieldForSource(
+          fields.map((f) => f.name),
+          selectedToolType,
+          selectedCommand,
+          binding.source,
+        ) === field.name;
+      return (
+        <HStack width="100%" alignItems="flex-start">
+          <OptionsSelect
+            toolId={selectedToolData?.name}
+            binding={binding}
+            value={commandParams[field.name]}
+            values={commandParams}
+            enabled={isOpen}
+            allowVariables={true}
+            showRefresh={showRefresh}
+            onSelect={(v) => handleOptionSelect(binding, v)}
+          />
+          <Select
+            width="180px"
+            value={variableName}
+            onChange={(e) => handleVariableSelect(field.name, e.target.value)}>
+            <option value="">No Variable</option>
+            {fetchedVariables?.map((variable) => (
+              <option key={variable.id} value={variable.name}>
+                {variable.name}
+              </option>
+            ))}
+          </Select>
+        </HStack>
+      );
+    }
 
     // For labware fields, use a dropdown with available labware
     if (field.name === "labware") {
