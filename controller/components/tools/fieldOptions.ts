@@ -5,6 +5,7 @@
 // commandFields stays untouched (STK-07): a bound field is still a typed
 // "text" field there, which is exactly what the unavailable mode falls back to.
 import type { OptionSourceId, OptionsResult, StackDevice } from "@/server/toolOptions";
+import { isVariableLike } from "@/utils/variableRef";
 
 export const OPTIONS_STALE_MS = 15000;
 export const UNAVAILABLE_HINT = "Instrument list unavailable — type the value";
@@ -13,6 +14,18 @@ export const LOADING_LABEL = "Loading…";
 export const AMBIGUOUS_SUFFIX = " (ambiguous — adapter will refuse)";
 export const NO_CALIBRATED_DECKS = "No calibrated decks on this device";
 export const NO_CALIBRATED_NESTS = "No calibrated nests on this deck";
+export const VARIABLE_PARENT_HINT = "child list unavailable while the parent is a variable";
+export const DEGRADED_SUFFIX = " · some entries skipped";
+export const REFRESH_LABEL = "Refresh";
+export const REFRESHING_LABEL = "Refreshing…";
+
+// The {source} word in the Refresh button's aria-label ("Refresh {source} list").
+export const SOURCE_LABELS: Record<OptionSourceId, string> = {
+  "stack.robots": "robots",
+  "stack.devices": "devices",
+  "stack.labwareProfiles": "labware profiles",
+  "stack.transferProfiles": "transfer profiles",
+};
 
 export type CascadeSide = "source" | "destination";
 export type CascadeLevel = "device" | "deck" | "nest";
@@ -139,14 +152,41 @@ function isBlankValue(value: unknown): boolean {
   return value === undefined || value === null || value === "";
 }
 
+// Precedence (D-11, D-13): variable-bound, then child-of-variable (both only
+// when the host allows variables), then unavailable, loading, ok. The optional
+// inputs default to the 06-01 behaviour when omitted. A view never carries a
+// patch: the value shown is always the value passed in, untouched.
 export function buildSelectView(input: {
   mode: OptionsMode;
   value: unknown;
   offered: SelectOption[];
+  allowVariables?: boolean;
+  ancestorVariableBound?: boolean;
+  parentBlank?: boolean;
+  emptyNote?: string;
 }): SelectView {
   const { mode, value, offered } = input;
   const blank = isBlankValue(value);
   const current = blank ? "" : String(value);
+
+  if (input.allowVariables === true && isVariableLike(value)) {
+    return {
+      mode: "variable-bound",
+      value: current,
+      options: [{ key: "variable", value: current, label: current }],
+      disabled: true,
+    };
+  }
+
+  if (input.allowVariables === true && input.ancestorVariableBound === true) {
+    return {
+      mode: "child-of-variable",
+      value: current,
+      options: [],
+      disabled: false,
+      hint: VARIABLE_PARENT_HINT,
+    };
+  }
 
   if (mode === "unavailable") {
     return {
@@ -167,7 +207,11 @@ export function buildSelectView(input: {
   }
 
   // ok: born on the explicit empty option; nothing is ever picked for the operator.
-  const options: SelectOption[] = [{ key: "empty", value: "", label: "" }, ...offered];
+  const emptyOption: SelectOption = { key: "empty", value: "", label: "" };
+  if (input.parentBlank === true && blank) {
+    return { mode: "ok", value: "", options: [emptyOption], disabled: true };
+  }
+  const options: SelectOption[] = [emptyOption, ...offered];
   if (!blank && !offered.some((option) => String(option.value) === current)) {
     options.push({
       key: "not-reported",
@@ -176,9 +220,10 @@ export function buildSelectView(input: {
       flag: "not-reported",
     });
   }
-  return { mode: "ok", value: current, options, disabled: false };
+  const view: SelectView = { mode: "ok", value: current, options, disabled: false };
+  if (input.emptyNote !== undefined) view.note = input.emptyNote;
+  return view;
 }
-
 
 // ---------------------------------------------------------------------------
 // Location cascade (D-06, D-07, D-08). Built from the one stack.devices tree by
@@ -337,4 +382,97 @@ export function applyChange(binding: FieldBinding, newValue: string): Record<str
     return { [binding.field]: newValue, [sideField(role.side, "nest")]: "" };
   }
   return { [binding.field]: newValue };
+}
+
+// Whether a cascade field's own-side parent (deck: the device; nest: the device
+// or the deck) is a {{variable}} reference, so its list cannot be known.
+export function cascadeAncestorBound(
+  binding: FieldBinding,
+  values: Record<string, unknown>,
+): boolean {
+  const role = binding.role;
+  if (role.kind !== "cascade" || role.level === "device") return false;
+  if (isVariableLike(values[sideField(role.side, "device")])) return true;
+  return role.level === "nest" && isVariableLike(values[sideField(role.side, "deck")]);
+}
+
+// The single function every host renders a bound field from. It returns a
+// view only, never a patch: the host's own onChange goes through applyChange.
+// An ok mode whose data does not fit the binding's shape (a list for a cascade
+// or a tree for a list) falls back to the typed input rather than guessing.
+export function buildFieldView(input: {
+  binding: FieldBinding;
+  value: unknown;
+  values: Record<string, unknown>;
+  mode: OptionsMode;
+  data: OptionsResult | undefined;
+  allowVariables: boolean;
+}): SelectView {
+  const { binding, value, values, data, allowVariables } = input;
+  let mode = input.mode;
+  let offered: SelectOption[] = [];
+  let parentBlank = false;
+  let emptyNote: string | undefined;
+
+  if (mode === "ok") {
+    if (data === undefined || data.status !== "ok") {
+      mode = "unavailable";
+    } else if (binding.role.kind === "list") {
+      if (data.shape === "list") offered = listOptions(data);
+      else mode = "unavailable";
+    } else if (data.shape === "tree") {
+      const built = buildCascadeOptions(
+        { devices: data.devices, ambiguous: data.ambiguous },
+        binding,
+        values,
+      );
+      offered = built.options;
+      parentBlank = built.parentBlank;
+      emptyNote = built.emptyNote;
+    } else {
+      mode = "unavailable";
+    }
+  }
+
+  return buildSelectView({
+    mode,
+    value,
+    offered,
+    allowVariables,
+    ancestorVariableBound: cascadeAncestorBound(binding, values),
+    parentBlank,
+    emptyNote,
+  });
+}
+
+// The first field, in form order, bound to the given source: where that
+// source's one Refresh row sits (D-12).
+export function firstFieldForSource(
+  fieldNames: string[],
+  toolType: string,
+  command: string | undefined,
+  source: OptionSourceId,
+): string | undefined {
+  for (const name of fieldNames) {
+    const binding = lookupFieldBinding(toolType, command, name);
+    if (binding !== undefined && binding.source === source) return name;
+  }
+  return undefined;
+}
+
+function pad2(n: number): string {
+  return n < 10 ? "0" + n : String(n);
+}
+
+// "from instrument · N items · fetched hh:mm:ss" in local 24-hour time from the
+// server's fetchedAt (a cached list shows its original read time). Built from
+// getHours/getMinutes/getSeconds so the output never depends on the locale.
+export function formatStatusLine(data: OptionsResult): string {
+  if (data.status !== "ok") return "";
+  const count = data.shape === "list" ? data.names.length : data.devices.length;
+  const at = new Date(data.fetchedAt);
+  const time = pad2(at.getHours()) + ":" + pad2(at.getMinutes()) + ":" + pad2(at.getSeconds());
+  const line =
+    "from instrument · " + count + (count === 1 ? " item" : " items") + " · fetched " + time;
+  return data.degraded ? line + DEGRADED_SUFFIX : line;
 }
