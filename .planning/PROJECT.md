@@ -121,11 +121,16 @@ operator-decides-recovery guarantee.
   panel renders for STACK with born-empty fields, blank-omitting/boolean-coercing STACK sends, and
   the Reply `meta_data` panel through the shared bounded display — Phase 5 (verification 20/20,
   UAT 4/4 live against the rebuilt galago-web + PAC simulator, 2026-11-02)
+- ✓ DRP-01..09, STK-01..08 — v1.2: STACK command dropdowns inferred from the stack-automation-layer
+  (robot, source/destination device → deck → nest, labware profile, transfer profiles) for
+  `transfer`, `get_transfer_estimate` and `get_labware_presence`, plus the shared dropdown layer
+  (`tool.options` registry read, `OptionsSelect`, `applyChange` cascade) ready for Phase 7 — born
+  empty, typed fallback when the instrument is unreachable, saved values never rewritten,
+  `vendor/galago-tools` pinned to `4ccd3da` with a zero-diff regen — Phase 6 (verification 17/17,
+  UAT 11/11 live, 2026-11-06)
 
 ### Active
 
-- [ ] STACK command dropdowns inferred from the stack-automation-layer (robot, device/deck/nest,
-  labware profile, transfer profiles) — v1.2
 - [ ] F.A.S.T. source/dest plate dropdowns from the instrument's registered plates — v1.2
 - [ ] Per-toolId concurrency lanes for live two-tool runs — v1.2
 
@@ -212,6 +217,9 @@ operator-decides-recovery guarantee.
 | v1.1 display: tri-state `lastReply` (undefined born hidden / null completed-no-data / reply object) + one shared BoundedRawJson for all raw replies | Born-hidden AND legible empty state from one state variable; a single bounded display instead of a second styled copy (05-02) | ✓ Phase 5 |
 | v1.1 send pipeline: `omitBlankParams` + `coerceBooleanParams` scoped to STACK sends; NaN treated as blank | Operator-typed `false` reaches the wire; cleared number fields are omitted; other tool types pass verbatim (05-04) | ✓ Phase 5 (CR-01/WR-01 proven live) |
 | Production-build lesson: `next build` fatals on an eslint-disable comment for a rule the config doesn't define | UAT container rebuild surfaced it; `commandParams.ts` disabled-comment replaced by a precise typed cast (bf928c0) | ✓ Phase 5 (found during verification work, re-reviewed 0 critical/warning) |
+| v1.2 options read: dedicated `Tool.readOptions` (Metadata, 5 s deadline, never queued) over a closed four-source registry instead of `Tool.executeCommand` (D-01) | A dropdown read must never queue behind or race a running step; failures map to a closed reason set and fall back to a typed input | ✓ Phase 6 |
+| v1.2 cascade: `applyChange` is the only patch producer; children clear only on the parent's user change, never on hydrate/refresh; typed fallback writes only its own field | A saved step is never rewritten by a list refresh; review WR-01/WR-02 tightened the typed and unbind paths (faccb5e) | ✓ Phase 6 |
+| Connect All sends the stored type-keyed sub-config via `buildConnectConfig` (1c4f875) | Upstream #186 double-wrapped `tools.config`, so every tool server refused with `Config.host is required`; found during Phase 6 UAT | ✓ Phase 6 (container rebuilt) |
 
 ## Evolution
 
@@ -231,4 +239,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-11-05 after starting v1.2 milestone*
+*Last updated: 2026-11-06 after Phase 6*

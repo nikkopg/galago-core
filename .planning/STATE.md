@@ -22,11 +22,11 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-11-05)
+See: .planning/PROJECT.md (updated 2026-11-06)
 
 **Core value:** While an instrument step runs, the operator sees what the instrument is doing and
 decides every recovery action; the web app never acts on its own or pre-selects a physical decision.
-**Current focus:** Phase 6 — STACK Dropdowns
+**Current focus:** Phase 7 — F.A.S.T. Plate Dropdowns
 concurrency lanes)
 
 ## Current Position
@@ -36,7 +36,7 @@ Plan: Not started
 Status: Ready to plan
 Last activity: 2026-11-06 — Phase 06 complete, transitioned to Phase 7
 
-Progress: [███░░░░░░░] 25% (0 of 4 v1.2 phases)
+Progress: [███░░░░░░░] 25% (1 of 4 v1.2 phases)
 
 ## Performance Metrics
 
@@ -161,6 +161,8 @@ Recent decisions affecting current work:
 - [Phase 05]: 05-04: isBlank NaN-as-blank is narrow (only Number.isNaN; real 0/false pass) and the cleared NumberInput stores "" at the source — WR-01 closed twice over; full gate 608/608 (599 unregressed + 9 new)
 - [Phase 05]: 05-04: valid-RED scaffold procedure (#3770): pass-through stub in the test commit so targets fail on assertion; junit RED records in 05-04-tdd-red/, RED_EVIDENCE_OK x3 before GREEN
 - [Phase 06]: 06-01: Tool.readOptions throws on transport/deadline; fetchOptions owns the closed reason mapping
+- [Phase 06]: applyChange is the only cascade patch producer; a typed fallback edit writes only its own field and "No Variable" writes "" through applyChange (faccb5e, review WR-01/WR-02)
+- [Phase 06]: Connect All builds its configure payload with buildConnectConfig (unwraps the type-keyed tools.config); found and fixed during UAT (1c4f875)
 
 ### Pending Todos
 
@@ -168,6 +170,15 @@ Recent decisions affecting current work:
 
 ### Blockers/Concerns
 
+- [Phase 6]: `06-REVIEW-DISPOSITION.md` has 7 open info advisories, none blocking: re-review IN-01 device
+  unbind also clears variable-bound deck/nest; IN-02 unbind rule duplicated in modal + drawer with no
+  host-level test; IN-03 a bound variable missing from the list cannot be unbound from the picker;
+  first-review IN-01..IN-04 (refresh `isRefreshing` outside `finally`, `clearToolStore` generation bump
+  only on success, no per-string cap on `ambiguous`, redundant wire assertion).
+- [Phase 6]: No `06-SECURITY.md` yet while security enforcement is on — run `/gsd-secure-phase 6`.
+- [Phase 6, galago-tools]: the launcher's stop does not wait for the tool process to exit and its port
+  check is IPv4-connect only, so a quick restart can crash on `Address already in use` (seen on STACK2-6
+  2026-11-06). galago-tools repo, not fixed here.
 - [Phase 7]: Hard-gated on galago-tools freezing a read-only F.A.S.T. `get_plates` that answers while a
   Transfer runs (`FastServer.ExecuteCommand` otherwise refuses reads while BUSY), proven by a test through
   `ExecuteCommand`. Contract is still "proposed": `.planning/research/FAST-GET-PLATES-CONTRACT.md`. Phase 7
@@ -215,10 +226,11 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-05T13:43:06.250Z
+Last session: 2026-11-06T13:55:00Z
 Stopped at: Phase 06 complete, ready to plan Phase 7
 Resume file: None
 
 ## Operator Next Steps
 
-- Discuss Phase 6 with /gsd-discuss-phase 6 (settle D6, D7, D10, D11), then /gsd-plan-phase 6
+- Phase 7 is hard-gated on galago-tools `get_plates` (see Blockers); discuss with /gsd-discuss-phase 7 once the contract is frozen, or plan Phase 8 first (it does not depend on 6-7)
+- /gsd-secure-phase 6 (security enforcement on, no SECURITY.md yet)
