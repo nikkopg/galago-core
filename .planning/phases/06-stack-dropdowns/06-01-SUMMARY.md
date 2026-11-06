@@ -75,9 +75,9 @@ coverage:
   - id: D4
     description: "The pinned SHA 4ccd3da is fetchable from the GitHub URL in .gitmodules"
     requirement: "STK-08"
-    verification: []
-    human_judgment: true
-    rationale: "Requires the user's own push of galago-tools feat/stack-tool (Task 3, human-action). At the time of writing GitHub's feat/stack-tool is still 9592509."
+    verification: ["git ls-remote https://github.com/nikkopg/galago-tools.git feat/stack-tool prints 4ccd3da656c0e981332018b3d33e16148a8bc513 (verified 2026-11-06 after the user's push)"]
+    human_judgment: false
+    rationale: "The user pushed galago-tools feat/stack-tool (Task 3, human-action); the orchestrator re-ran ls-remote and it now prints 4ccd3da."
 duration: 9min
 completed: 2026-11-05
 status: complete
@@ -90,7 +90,7 @@ status: complete
 ## Performance
 
 - **Duration:** 9 min (2026-11-05T13:37Z to 13:43Z)
-- **Tasks:** 2 of 3 executed; Task 3 (human-action push) is pending, see below
+- **Tasks:** 3 of 3 (Task 3 was the user's push, verified 2026-11-06)
 - **Files:** 10 changed (6 created, 4 modified)
 
 ## Accomplishments
@@ -105,15 +105,11 @@ status: complete
 
 1. **Task 1: Pin vendor/galago-tools to 4ccd3da** - `0cbd3d2` (chore)
 2. **Task 2 (tracer): dropdowns end to end** - `c7da55a` (feat)
-3. **Task 3: user pushes galago-tools feat/stack-tool** - PENDING (human-action)
+3. **Task 3: user pushes galago-tools feat/stack-tool** - DONE (human-action, verified by ls-remote 2026-11-06)
 
-## Pending Human Action (Task 3, T-06-12)
+## Human Action (Task 3, T-06-12): resolved
 
-GitHub's `feat/stack-tool` is still `9592509`, so `git submodule update --init` on another machine cannot fetch 4ccd3da. The sibling clone at `/home/formulatrix/data/nikko/galago-tools` already has `feat/stack-tool` at `4ccd3da656c0e981332018b3d33e16148a8bc513`. The user runs the push (Claude pushes nothing):
-
-`git -C /home/formulatrix/data/nikko/galago-tools push origin feat/stack-tool`
-
-Then verify: `git ls-remote https://github.com/nikkopg/galago-tools.git feat/stack-tool` must print `4ccd3da656c0e981332018b3d33e16148a8bc513`. This summary is marked complete for the code work; the push is the only open item of this plan.
+The user pushed `feat/stack-tool` from the sibling clone (Claude pushed nothing). On 2026-11-06, `git ls-remote https://github.com/nikkopg/galago-tools.git feat/stack-tool` printed `4ccd3da656c0e981332018b3d33e16148a8bc513`, so the submodule pin can be fetched from a fresh clone.
 
 ## Deviations from Plan
 
@@ -138,4 +134,4 @@ None. The new `tool.options` surface is the one in the plan's threat model (T-06
 - `git rev-parse HEAD:vendor/galago-tools` is 4ccd3da656c0e981332018b3d33e16148a8bc513; regen NO_DIFF reproduced
 - Acceptance greps pass (`options: procedure` line 546 is above `latchStatus: procedure` line 571; fieldOptions.ts has no react import; toolOptions.ts has no command-queue import)
 - `tsc --noEmit` exit 0; full vitest 623 passed
-- NOT yet verified: Task 3's `git ls-remote` check (needs the user's push)
+- Task 3: `git ls-remote` prints 4ccd3da656c0e981332018b3d33e16148a8bc513 (verified 2026-11-06)
