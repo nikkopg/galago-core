@@ -1,3 +1,5 @@
+import { isNoZeroFillField } from "./fieldOptions";
+
 // Pure param-strip for STACK command sends (D-04 planner decision: omit
 // blanks). proto3 optional fields encode on presence, so a sent empty string
 // is wire-visible while an omitted key is absent — a blank is dropped, an
@@ -6,6 +8,10 @@
 // params pass through verbatim so F.A.S.T. wire behavior stays byte-identical
 // to today. The chosen behaviour is pinned against the real encoder by the
 // 05-03 blank-optional wire case.
+//
+// fillMissingParams is the protocol modal's save-time fill-in (D-07, PLT-04):
+// an unset plate or deck is saved as "", never 0; every other field keeps the
+// legacy fill-in.
 
 // Blank = undefined, null, the empty string or a NaN number; everything else —
 // including 0 and false — is kept. (NaN blank, 05-04: Chakra's NumberInput
@@ -83,4 +89,35 @@ export function omitBlankParams<T extends Record<string, unknown>>(params: T): T
     result[key] = isPlainRecord(value) ? omitBlankParams(value) : value;
   }
   return result as T;
+}
+
+// The protocol modal's save-time fill-in. Copies `params` and fills every field
+// still undefined: the no-zero-fill fields (unset plate or deck, D-07) get ""
+// and never 0, otherwise number -> 0, boolean -> false, text_array -> [] and
+// anything else -> "". A value already set, a 0 included, is kept. The
+// no-zero-fill check comes BEFORE the number fill-in. Pure and non-mutating;
+// the field metadata is accepted structurally like coerceBooleanParams.
+export function fillMissingParams(
+  fields: ReadonlyArray<{ name: string; type: unknown }>,
+  params: Record<string, unknown>,
+  toolType: string,
+  command: string | undefined,
+): Record<string, unknown> {
+  const finalParams: Record<string, unknown> = { ...params };
+  fields.forEach((field) => {
+    if (finalParams[field.name] === undefined) {
+      if (isNoZeroFillField(toolType, command, field.name)) {
+        finalParams[field.name] = "";
+      } else if (field.type === "number") {
+        finalParams[field.name] = 0;
+      } else if (field.type === "boolean") {
+        finalParams[field.name] = false;
+      } else if (field.type === "text_array") {
+        finalParams[field.name] = [];
+      } else {
+        finalParams[field.name] = "";
+      }
+    }
+  });
+  return finalParams;
 }

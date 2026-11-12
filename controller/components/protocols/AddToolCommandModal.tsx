@@ -65,11 +65,13 @@ import {
   isCheckboxBinding,
   isStaticBinding,
   lookupFieldBinding,
+  isNoZeroFillField,
   lookupLocalBinding,
   newStepDefaults,
 } from "../tools/fieldOptions";
 import type { ChangeKind, FieldBinding, LocalBinding } from "../tools/fieldOptions";
 import { OptionsSelect } from "../tools/OptionsSelect";
+import { fillMissingParams } from "../tools/commandParams";
 import { StaticSelect } from "../tools/StaticSelect";
 import { TipReuseCheckbox } from "../tools/TipReuseCheckbox";
 
@@ -225,23 +227,9 @@ export const AddToolCommandModal: React.FC<AddToolCommandModalProps> = ({
   };
 
   const handleSubmit = () => {
-    // Ensure all fields have values (default or entered)
-    const finalParams = { ...commandParams };
-
-    // Add missing fields with empty strings to ensure they're saved
-    fields.forEach((field: Field) => {
-      if (finalParams[field.name] === undefined) {
-        if (field.type === "number") {
-          finalParams[field.name] = 0;
-        } else if (field.type === "boolean") {
-          finalParams[field.name] = false;
-        } else if (field.type === "text_array") {
-          finalParams[field.name] = [];
-        } else {
-          finalParams[field.name] = "";
-        }
-      }
-    });
+    // Ensure all fields have values (default or entered). An unset plate or
+    // deck is saved as "" and never 0 (D-07, PLT-04).
+    const finalParams = fillMissingParams(fields, commandParams, selectedToolType, selectedCommand);
 
     const newCommand = {
       commandInfo: {
@@ -589,7 +577,11 @@ export const AddToolCommandModal: React.FC<AddToolCommandModalProps> = ({
 
     // Default field rendering based on type
     switch (field.type) {
-      case "number":
+      case "number": {
+        // A no-zero-fill field (unset plate or deck, D-07) shows an empty box
+        // when unset and writes "" when cleared, so the display matches what is
+        // saved. Every other number field keeps its display and parse-or-0 write.
+        const noZeroFill = isNoZeroFillField(selectedToolType, selectedCommand, field.name);
         return (
           <HStack width="100%">
             <NumberInput
@@ -601,11 +593,17 @@ export const AddToolCommandModal: React.FC<AddToolCommandModalProps> = ({
                     ? currentValue
                     : field.defaultValue !== undefined
                       ? field.defaultValue
-                      : 0
+                      : noZeroFill
+                        ? ""
+                        : 0
               }
               onChange={(value) => {
                 if (!isVariable) {
-                  setCommandParams({ ...commandParams, [field.name]: parseFloat(value) || 0 });
+                  const parsed = parseFloat(value);
+                  setCommandParams({
+                    ...commandParams,
+                    [field.name]: noZeroFill ? (Number.isNaN(parsed) ? "" : parsed) : parsed || 0,
+                  });
                 }
               }}
               isDisabled={isVariable}>
@@ -624,6 +622,7 @@ export const AddToolCommandModal: React.FC<AddToolCommandModalProps> = ({
             </Select>
           </HStack>
         );
+      }
       case "text_array":
         return (
           <HStack width="100%">

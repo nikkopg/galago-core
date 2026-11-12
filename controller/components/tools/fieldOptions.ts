@@ -399,6 +399,28 @@ export function checkboxNextValue(binding: CheckboxBinding, state: CheckboxState
   return state === "checked" ? binding.role.unchecked : binding.role.checked;
 }
 
+// Fields whose unset value is saved as "" and never as 0 (D-07, PLT-04: "an
+// unset plate is never saved as 0"). A 0 would read as a real plate or deck;
+// the adapter refuses a blank before any motion. Every other field keeps the
+// legacy save-time fill-in.
+export const NO_ZERO_FILL_FIELDS: Record<string, Record<string, readonly string[]>> = {
+  fast: {
+    transfer: ["source_deck", "dest_deck", "source_plate_id", "dest_plate_id"],
+  },
+};
+
+export function isNoZeroFillField(
+  toolType: string,
+  command: string | undefined,
+  fieldName: string,
+): boolean {
+  if (command === undefined) return false;
+  const commands = own(NO_ZERO_FILL_FIELDS, toolType);
+  if (commands === undefined) return false;
+  const names = own(commands, command);
+  return names !== undefined && names.includes(fieldName);
+}
+
 // The one allowed default on a Transfer field (PLT-07, user decision
 // 2026-11-06): a new F.A.S.T. transfer form starts with tip_reuse "reuse". It is
 // written only when a new form initialises, never when a saved step opens.
