@@ -19,6 +19,17 @@ export const DEGRADED_SUFFIX = " · some entries skipped";
 export const REFRESH_LABEL = "Refresh";
 export const REFRESHING_LABEL = "Refreshing…";
 
+// The one definition of the F.A.S.T. deck-slot count (D-08). It mirrors
+// _DECK_SLOTS = 6 in vendor/galago-tools/tools/fast/server.py:129; the adapter
+// refuses a source_deck or dest_deck outside 1-DECK_SLOTS before any motion.
+// The deck option list below is derived from it, never written out.
+export const DECK_SLOTS = 6;
+export const DECK_SLOT_OPTIONS: readonly number[] = Array.from(
+  { length: DECK_SLOTS },
+  (_, index) => index + 1,
+);
+export const NOT_A_DECK_SLOT_SUFFIX = " (not a deck slot 1-6)";
+
 // The {source} word in the Refresh button's aria-label ("Refresh {source} list").
 export const SOURCE_LABELS: Record<OptionSourceId, string> = {
   "stack.robots": "robots",
@@ -101,6 +112,64 @@ export function lookupFieldBinding(
   return own(fields, fieldName);
 }
 
+// ---------------------------------------------------------------------------
+// Local bindings (PLT-06): F.A.S.T. fields whose control needs no instrument
+// read. A static binding offers an in-code option list (the deck slots). It is
+// a separate map from FIELD_BINDINGS so lookupFieldBinding stays unchanged and
+// no field is ever both instrument-fed and local.
+
+export type StaticRole = {
+  kind: "static";
+  options: readonly number[];
+  notListedSuffix: string;
+};
+
+export interface StaticBinding {
+  field: string;
+  role: StaticRole;
+}
+
+export type LocalBinding = StaticBinding;
+
+export function isStaticBinding(b: LocalBinding): b is StaticBinding {
+  return b.role.kind === "static";
+}
+
+function deckBinding(field: string): StaticBinding {
+  return {
+    field,
+    role: { kind: "static", options: DECK_SLOT_OPTIONS, notListedSuffix: NOT_A_DECK_SLOT_SUFFIX },
+  };
+}
+
+function byLocalField(bindings: LocalBinding[]): Record<string, LocalBinding> {
+  const out: Record<string, LocalBinding> = {};
+  for (const binding of bindings) {
+    out[binding.field] = binding;
+  }
+  return out;
+}
+
+export const LOCAL_BINDINGS: Record<string, Record<string, Record<string, LocalBinding>>> = {
+  fast: {
+    transfer: byLocalField([deckBinding("source_deck"), deckBinding("dest_deck")]),
+  },
+};
+
+// Same own-property discipline as lookupFieldBinding at every level.
+export function lookupLocalBinding(
+  toolType: string,
+  command: string | undefined,
+  fieldName: string,
+): LocalBinding | undefined {
+  if (command === undefined) return undefined;
+  const commands = own(LOCAL_BINDINGS, toolType);
+  if (commands === undefined) return undefined;
+  const fields = own(commands, command);
+  if (fields === undefined) return undefined;
+  return own(fields, fieldName);
+}
+
 export type OptionsMode = "loading" | "ok" | "unavailable";
 
 // isError is checked first (a query in error keeps its previous data, which
@@ -164,6 +233,7 @@ export function buildSelectView(input: {
   ancestorVariableBound?: boolean;
   parentBlank?: boolean;
   emptyNote?: string;
+  notListedSuffix?: string;
 }): SelectView {
   const { mode, value, offered } = input;
   const blank = isBlankValue(value);
@@ -216,13 +286,56 @@ export function buildSelectView(input: {
     options.push({
       key: "not-reported",
       value: current,
-      label: current + NOT_REPORTED_SUFFIX,
+      label: current + (input.notListedSuffix ?? NOT_REPORTED_SUFFIX),
       flag: "not-reported",
     });
   }
   const view: SelectView = { mode: "ok", value: current, options, disabled: false };
   if (input.emptyNote !== undefined) view.note = input.emptyNote;
   return view;
+}
+
+// One option per slot, in order. Read-free: the list is the binding's own.
+export function staticOptions(binding: StaticBinding): SelectOption[] {
+  return binding.role.options.map((n) => ({
+    key: "slot-" + n,
+    value: String(n),
+    label: String(n),
+  }));
+}
+
+// A static field is born on the explicit empty option; a saved value that is not
+// one of the slots stays selected as one flagged extra option and is never
+// rewritten (D-08). A view never carries a patch.
+export function buildStaticView(input: {
+  binding: StaticBinding;
+  value: unknown;
+  allowVariables: boolean;
+}): SelectView {
+  return buildSelectView({
+    mode: "ok",
+    value: input.value,
+    offered: staticOptions(input.binding),
+    allowVariables: input.allowVariables,
+    notListedSuffix: input.binding.role.notListedSuffix,
+  });
+}
+
+// An all-ASCII-digit string becomes a number (the wire field is an int32);
+// anything else, including "", "3.5" and " 3", is returned verbatim so
+// re-selecting a saved odd option never turns it into NaN.
+export function numericPatch(field: string, value: string): Record<string, string | number> {
+  if (/^[0-9]+$/.test(value)) return { [field]: Number(value) };
+  return { [field]: value };
+}
+
+// The only producer of patches for a local binding. Nothing calls it except an
+// operator event; opening or rendering a form never does.
+export function applyLocalChange(
+  binding: LocalBinding,
+  value: string,
+): Record<string, string | number> {
+  return numericPatch(binding.field, value);
 }
 
 // ---------------------------------------------------------------------------

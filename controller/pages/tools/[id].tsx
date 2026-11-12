@@ -33,11 +33,15 @@ import { commandFields } from "@/components/tools/constants";
 import { omitBlankParams, coerceBooleanParams } from "@/components/tools/commandParams";
 import {
   applyChange,
+  applyLocalChange,
   firstFieldForSource,
+  isStaticBinding,
   lookupFieldBinding,
+  lookupLocalBinding,
 } from "@/components/tools/fieldOptions";
-import type { ChangeKind, FieldBinding } from "@/components/tools/fieldOptions";
+import type { ChangeKind, FieldBinding, LocalBinding } from "@/components/tools/fieldOptions";
 import { OptionsSelect } from "@/components/tools/OptionsSelect";
+import { StaticSelect } from "@/components/tools/StaticSelect";
 import { loadingToast } from "@/components/ui/Toast";
 import { Tool } from "@/types";
 
@@ -265,8 +269,33 @@ export default function Page() {
     setFormValues((prevValues) => ({ ...prevValues, ...applyChange(binding, value, kind) }));
   };
 
+  // The only writer of a local (read-free) field: the operator's choice lands in
+  // ONE functional state update through applyLocalChange. No effect or render
+  // ever writes here.
+  const handleLocalSelect = (binding: LocalBinding, value: string) => {
+    setFormValues((prevValues) => ({ ...prevValues, ...applyLocalChange(binding, value) }));
+  };
+
   const renderFields = (fields: Field[], parentField?: string) => {
     return fields.map((field) => {
+      // Local F.A.S.T. field (PLT-06): no instrument read, so it is looked up
+      // before the instrument-fed binding. Top-level fields only.
+      const localBinding = parentField
+        ? undefined
+        : lookupLocalBinding(String(config?.type), selectedCommand, field.name);
+      if (localBinding !== undefined && isStaticBinding(localBinding)) {
+        return (
+          <FormControl key={field.name} my={2}>
+            <FormLabel>{field.name}</FormLabel>
+            <StaticSelect
+              binding={localBinding}
+              value={formValues[field.name]}
+              allowVariables={false}
+              onSelect={(v) => handleLocalSelect(localBinding, v)}
+            />
+          </FormControl>
+        );
+      }
       // Instrument-fed field (D-10), list or device -> deck -> nest cascade:
       // top-level fields only. The binding map is closed; every other field
       // renders exactly as before. The tool page has no variables (D-13).

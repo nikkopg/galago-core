@@ -12,9 +12,11 @@ import { parseDeviceTree, parseRobotStates } from "@/server/toolOptions";
 import type { OptionsResult } from "@/server/toolOptions";
 import {
   applyChange,
+  applyLocalChange,
   buildCascadeOptions,
   listOptions,
   lookupFieldBinding,
+  lookupLocalBinding,
 } from "@/components/tools/fieldOptions";
 import { DEVICE_TREE_GOLDEN, ROBOT_STATES_GOLDEN } from "./fixtures/stackOptions";
 
@@ -89,6 +91,45 @@ describe("wire contract", () => {
     const decoded = tool_base.Command.decode(tool_base.Command.encode(payload).finish());
     expect(decoded.fast?.transfer?.expected_tray_id).toBe(7);
     expect(decoded.fast?.transfer?.volume).toBe(50);
+  });
+
+  // PLT-06 (DRP-09 carried): a deck chosen from the static select is written by
+  // applyLocalChange as a number and reaches the REAL generated encoder as an
+  // int32; tip_reuse keeps the string it was given.
+  it("encodes decks chosen through applyLocalChange as int32 on the F.A.S.T. transfer", () => {
+    const { tool } = installFakeTool("wire-fast", ToolType.fast);
+    const sourceDeck = lookupLocalBinding("fast", "transfer", "source_deck");
+    const destDeck = lookupLocalBinding("fast", "transfer", "dest_deck");
+    expect(sourceDeck).toBeDefined();
+    expect(destDeck).toBeDefined();
+    if (sourceDeck === undefined || destDeck === undefined) return;
+
+    const params = {
+      source_deck: "",
+      dest_deck: "",
+      source_plate_id: 10,
+      dest_plate_id: 11,
+      source_start_row: "A",
+      source_start_col: 1,
+      dest_start_row: "A",
+      dest_start_col: 1,
+      num_rows: 1,
+      num_cols: 1,
+      volume: 50,
+      tip_reuse: "fresh",
+      ...applyLocalChange(sourceDeck, "3"),
+      ...applyLocalChange(destDeck, "5"),
+    };
+    const payload = tool._payloadForCommand({
+      toolId: "wire-fast",
+      toolType: ToolType.fast,
+      command: "transfer",
+      params,
+    });
+    const decoded = tool_base.Command.decode(tool_base.Command.encode(payload).finish());
+    expect(decoded.fast?.transfer?.source_deck).toBe(3);
+    expect(decoded.fast?.transfer?.dest_deck).toBe(5);
+    expect(decoded.fast?.transfer?.tip_reuse).toBe("fresh");
   });
 
   // GEN-04a (D-07a): the operator acknowledge payload survives the REAL
