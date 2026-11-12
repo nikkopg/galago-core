@@ -28,9 +28,19 @@ import { trpc } from "@/utils/trpc";
 import { capitalizeFirst } from "@/utils/parser";
 import { successToast } from "../ui/Toast";
 import { AdvancedParameters } from "@/types";
-import { applyChange, firstFieldForSource, lookupFieldBinding } from "../tools/fieldOptions";
-import type { ChangeKind, FieldBinding } from "../tools/fieldOptions";
+import {
+  applyChange,
+  applyLocalChange,
+  firstFieldForSource,
+  isCheckboxBinding,
+  isStaticBinding,
+  lookupFieldBinding,
+  lookupLocalBinding,
+} from "../tools/fieldOptions";
+import type { ChangeKind, FieldBinding, LocalBinding } from "../tools/fieldOptions";
 import { OptionsSelect } from "../tools/OptionsSelect";
+import { StaticSelect } from "../tools/StaticSelect";
+import { TipReuseCheckbox } from "../tools/TipReuseCheckbox";
 
 interface CommandDetailsDrawerProps {
   isOpen: boolean;
@@ -217,6 +227,14 @@ export const CommandDetailsDrawer: React.FC<CommandDetailsDrawerProps> = (props)
     setEditedParams((prevParams) => ({ ...prevParams, ...applyChange(binding, value, kind) }));
   };
 
+  // The only writer of a local-binding param (D-16): the operator's choice
+  // lands in ONE functional update. A blank is written as "" and never deleted,
+  // because a deleted key would fall back to the saved value in handleSaveInputs'
+  // merge.
+  const handleLocalSelect = (binding: LocalBinding, value: string) => {
+    setEditedParams((prevParams) => ({ ...prevParams, ...applyLocalChange(binding, value) }));
+  };
+
   // Render the appropriate input field based on parameter type and name
   const renderParameterInput = (key: string, value: any) => {
     // Get current value (from editedParams if available, otherwise from command)
@@ -225,6 +243,58 @@ export const CommandDetailsDrawer: React.FC<CommandDetailsDrawerProps> = (props)
     // Check if it's a variable reference
     const isVariable = isVariableReference(currentValue);
     const variableName = isVariable ? getVariableNameFromReference(currentValue as string) : "";
+
+    // Local F.A.S.T. param (deck select, Reuse tips checkbox), edit mode only
+    // (D-16, DRP-08): looked up from the saved step's tool type, command and
+    // param key. The read-only drawer (run page) keeps its plain rendering.
+    const localBinding = isEditing
+      ? lookupLocalBinding(
+          selectedCommand.commandInfo.toolType,
+          selectedCommand.commandInfo.command,
+          key,
+        )
+      : undefined;
+    if (localBinding !== undefined) {
+      return (
+        <HStack width="100%" spacing={2} alignItems="flex-start">
+          {isStaticBinding(localBinding) && (
+            <StaticSelect
+              binding={localBinding}
+              value={currentValue}
+              allowVariables={true}
+              onSelect={(v) => handleLocalSelect(localBinding, v)}
+            />
+          )}
+          {isCheckboxBinding(localBinding) && (
+            <TipReuseCheckbox
+              binding={localBinding}
+              value={currentValue}
+              allowVariables={true}
+              onSelect={(v) => handleLocalSelect(localBinding, v)}
+            />
+          )}
+          <Select
+            width="180px"
+            value={variableName}
+            onChange={(e) => {
+              if (!isEditing) return;
+              if (e.target.value === "") {
+                handleLocalSelect(localBinding, "");
+              } else {
+                handleVariableSelect(key, e.target.value);
+              }
+            }}
+            isDisabled={!isEditing}>
+            <option value="">No Variable</option>
+            {availableVariables?.map((variable) => (
+              <option key={variable.id} value={variable.name}>
+                {variable.name}
+              </option>
+            ))}
+          </Select>
+        </HStack>
+      );
+    }
 
     // Instrument-fed param, edit mode only (D-14, DRP-08): looked up from the
     // saved step's tool type, command and param key. The read-only drawer (run

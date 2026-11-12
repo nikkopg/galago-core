@@ -58,9 +58,20 @@ import {
   Volume2,
 } from "lucide-react";
 import { warningToast } from "../ui/Toast";
-import { applyChange, firstFieldForSource, lookupFieldBinding } from "../tools/fieldOptions";
-import type { ChangeKind, FieldBinding } from "../tools/fieldOptions";
+import {
+  applyChange,
+  applyLocalChange,
+  firstFieldForSource,
+  isCheckboxBinding,
+  isStaticBinding,
+  lookupFieldBinding,
+  lookupLocalBinding,
+  newStepDefaults,
+} from "../tools/fieldOptions";
+import type { ChangeKind, FieldBinding, LocalBinding } from "../tools/fieldOptions";
 import { OptionsSelect } from "../tools/OptionsSelect";
+import { StaticSelect } from "../tools/StaticSelect";
+import { TipReuseCheckbox } from "../tools/TipReuseCheckbox";
 
 interface AddToolCommandModalProps {
   isOpen: boolean;
@@ -146,6 +157,10 @@ export const AddToolCommandModal: React.FC<AddToolCommandModalProps> = ({
           }
         }
       });
+
+      // The one allowed default on a new transfer step (PLT-07): written here,
+      // after the defaultValue loop, and only when a new form initialises.
+      Object.assign(initialParams, newStepDefaults(selectedToolType, selectedCommand));
 
       setCommandParams(initialParams);
     } else {
@@ -297,11 +312,61 @@ export const AddToolCommandModal: React.FC<AddToolCommandModalProps> = ({
     setCommandParams((prevParams) => ({ ...prevParams, ...applyChange(binding, value, kind) }));
   };
 
+  // The only writer of a local-binding field (D-08, D-09): the operator's
+  // choice lands in ONE functional state update. Nothing writes on render.
+  const handleLocalSelect = (binding: LocalBinding, value: string) => {
+    setCommandParams((prevParams) => ({ ...prevParams, ...applyLocalChange(binding, value) }));
+  };
+
   const renderField = (field: Field) => {
     // Get current value
     const currentValue = commandParams[field.name];
     const isVariable = isVariableReference(currentValue);
     const variableName = isVariable ? getVariableNameFromReference(currentValue) : "";
+
+    // Local F.A.S.T. field (D-08, D-09): the deck select or the Reuse tips
+    // checkbox takes the place of the left input; the per-field variable picker
+    // stays beside it unchanged. "No Variable" writes a blank.
+    const localBinding = lookupLocalBinding(selectedToolType, selectedCommand, field.name);
+    if (localBinding !== undefined) {
+      return (
+        <HStack width="100%" alignItems="flex-start">
+          {isStaticBinding(localBinding) && (
+            <StaticSelect
+              binding={localBinding}
+              value={commandParams[field.name]}
+              allowVariables={true}
+              onSelect={(v) => handleLocalSelect(localBinding, v)}
+            />
+          )}
+          {isCheckboxBinding(localBinding) && (
+            <TipReuseCheckbox
+              binding={localBinding}
+              value={commandParams[field.name]}
+              allowVariables={true}
+              onSelect={(v) => handleLocalSelect(localBinding, v)}
+            />
+          )}
+          <Select
+            width="180px"
+            value={variableName}
+            onChange={(e) => {
+              if (e.target.value === "") {
+                handleLocalSelect(localBinding, "");
+              } else {
+                handleVariableSelect(field.name, e.target.value);
+              }
+            }}>
+            <option value="">No Variable</option>
+            {fetchedVariables?.map((variable) => (
+              <option key={variable.id} value={variable.name}>
+                {variable.name}
+              </option>
+            ))}
+          </Select>
+        </HStack>
+      );
+    }
 
     // Instrument-fed field (D-10, D-11): the list (or device -> deck -> nest
     // cascade) takes the place of the typed input; the per-field variable
