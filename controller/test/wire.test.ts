@@ -137,8 +137,9 @@ describe("wire contract", () => {
   // regenerated codec the refresh flag and the bare read both round-trip.
   it("encodes the get_plates read into the fast Command oneof (07-05)", () => {
     const withRefresh = tool_base.Command.decode(
-      tool_base.Command.encode({ fast: { get_plates: { refresh: true } } } as tool_base.Command)
-        .finish(),
+      tool_base.Command.encode({
+        fast: { get_plates: { refresh: true } },
+      } as tool_base.Command).finish(),
     );
     expect(withRefresh.fast?.get_plates).toBeDefined();
     expect(withRefresh.fast?.get_plates?.refresh).toBe(true);
