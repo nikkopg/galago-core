@@ -46,3 +46,14 @@ TBD. A likely shape:
    instrument is offline: fall back to a number input, or show the last-known list.
 
 Source and destination can be different plate types, so both dropdowns list all registered plates.
+
+## Resolution
+
+Resolved by Phase 7 plans 07-05, 07-06 and 07-08: 07-05 re-pinned galago-tools for the read-only
+`get_plates` command and regenerated the fast interfaces, 07-06 added the `fast.plates` source to
+the closed `tool.options` registry, and 07-08 rendered `source_plate_id` and `dest_plate_id` as
+dropdowns of the registered plates in the tool page, `AddToolCommandModal` and
+`CommandDetailsDrawer`. The offline question is settled by D-03 (a numeric typed input with an
+"Instrument list unavailable" hint, never a stale list), and the select-only limitation is solved by
+the Phase 6 field-binding map (`FIELD_BINDINGS`), so no new field type was needed. The variable
+picker keeps working for both fields.
