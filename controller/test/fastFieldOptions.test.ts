@@ -29,11 +29,7 @@ import {
   isWellsBinding,
   plateListInput,
 } from "@/components/tools/fieldOptions";
-import type {
-  CheckboxBinding,
-  FieldBinding,
-  StaticBinding,
-} from "@/components/tools/fieldOptions";
+import type { CheckboxBinding, FieldBinding, StaticBinding } from "@/components/tools/fieldOptions";
 import type { OptionsResult } from "@/server/toolOptions";
 import { commandFields } from "@/components/tools/constants";
 import { WELL_FIELDS } from "@/components/tools/wellGeometry";

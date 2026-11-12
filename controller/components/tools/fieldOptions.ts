@@ -5,7 +5,8 @@
 // commandFields stays untouched (STK-07): a bound field is still a typed
 // "text" field there, which is exactly what the unavailable mode falls back to.
 import type { OptionSourceId, OptionsResult, StackDevice } from "@/server/toolOptions";
-import { plateLabel } from "@/components/tools/wellGeometry";
+import { WELL_FIELDS, plateLabel, wellFieldPatch } from "@/components/tools/wellGeometry";
+import type { PlateListInput, WellField } from "@/components/tools/wellGeometry";
 import { isVariableLike } from "@/utils/variableRef";
 
 export const OPTIONS_STALE_MS = 15000;
@@ -150,7 +151,19 @@ export interface CheckboxBinding {
   role: CheckboxRole;
 }
 
-export type LocalBinding = StaticBinding | CheckboxBinding;
+// The six well fields share one picker (D-11): each is a typed input whose
+// writes go through wellFieldPatch, and the host renders the picker once at the
+// first of them.
+export interface WellsBinding {
+  field: string;
+  role: { kind: "wells" };
+}
+
+export type LocalBinding = StaticBinding | CheckboxBinding | WellsBinding;
+
+export function isWellsBinding(b: LocalBinding): b is WellsBinding {
+  return b.role.kind === "wells";
+}
 
 export function isStaticBinding(b: LocalBinding): b is StaticBinding {
   return b.role.kind === "static";
@@ -184,6 +197,7 @@ export const LOCAL_BINDINGS: Record<string, Record<string, Record<string, LocalB
         field: "tip_reuse",
         role: { kind: "checkbox", checked: "reuse", unchecked: "fresh" },
       },
+      ...WELL_FIELDS.map((field): LocalBinding => ({ field, role: { kind: "wells" } })),
     ]),
   },
 };
@@ -390,7 +404,33 @@ export function applyLocalChange(
   value: string,
 ): Record<string, string | number> {
   if (isCheckboxBinding(binding)) return { [binding.field]: value };
+  if (isWellsBinding(binding)) return wellFieldPatch(binding.field as WellField, value);
   return numericPatch(binding.field, value);
+}
+
+// True only for the first name, in the host's own field order, whose local
+// binding is wells: where that host renders the picker once (D-11).
+export function isWellGroupAnchor(
+  fieldNames: readonly string[],
+  toolType: string,
+  command: string | undefined,
+  fieldName: string,
+): boolean {
+  for (const name of fieldNames) {
+    const binding = lookupLocalBinding(toolType, command, name);
+    if (binding !== undefined && isWellsBinding(binding)) return name === fieldName;
+  }
+  return false;
+}
+
+// The picker's plate list from the shared fast.plates read. Anything but an ok
+// plates result reads as unavailable; loading carries no plates.
+export function plateListInput(mode: OptionsMode, data: OptionsResult | undefined): PlateListInput {
+  if (mode === "loading") return { mode: "loading", plates: [] };
+  if (mode === "ok" && data !== undefined && data.status === "ok" && data.shape === "plates") {
+    return { mode: "ok", plates: data.plates };
+  }
+  return { mode: "unavailable", plates: [] };
 }
 
 export type CheckboxState = "checked" | "unchecked" | "indeterminate";

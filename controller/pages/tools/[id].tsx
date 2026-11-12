@@ -37,6 +37,8 @@ import {
   firstFieldForSource,
   isCheckboxBinding,
   isStaticBinding,
+  isWellGroupAnchor,
+  isWellsBinding,
   lookupFieldBinding,
   lookupLocalBinding,
   newStepDefaults,
@@ -45,6 +47,9 @@ import type { ChangeKind, FieldBinding, LocalBinding } from "@/components/tools/
 import { OptionsSelect } from "@/components/tools/OptionsSelect";
 import { StaticSelect } from "@/components/tools/StaticSelect";
 import { TipReuseCheckbox } from "@/components/tools/TipReuseCheckbox";
+import { FastTransferWellPicker } from "@/components/tools/WellPicker";
+import { wellFieldPatch, wellFieldText } from "@/components/tools/wellGeometry";
+import type { WellField } from "@/components/tools/wellGeometry";
 import { loadingToast } from "@/components/ui/Toast";
 import { Tool } from "@/types";
 
@@ -283,6 +288,12 @@ export default function Page() {
     setFormValues((prevValues) => ({ ...prevValues, ...applyLocalChange(binding, value) }));
   };
 
+  // The only writer of the six well fields from a drag, a click or Clear: ONE
+  // functional state merge. Plate changes and list loads never reach it.
+  const handleWellPatch = (patch: Record<string, string | number>) => {
+    setFormValues((prevValues) => ({ ...prevValues, ...patch }));
+  };
+
   const renderFields = (fields: Field[], parentField?: string) => {
     return fields.map((field) => {
       // Local F.A.S.T. field (PLT-06): no instrument read, so it is looked up
@@ -314,6 +325,34 @@ export default function Page() {
               onSelect={(v) => handleLocalSelect(localBinding, v)}
             />
           </FormControl>
+        );
+      }
+      // The six well fields: one picker at the first of them, nothing at the rest.
+      if (localBinding !== undefined && isWellsBinding(localBinding)) {
+        if (
+          !isWellGroupAnchor(commandFieldNames, String(config?.type), selectedCommand, field.name)
+        ) {
+          return null;
+        }
+        return (
+          <Box key="well-picker" my={2}>
+            <FastTransferWellPicker
+              toolId={config?.name}
+              enabled={true}
+              values={formValues}
+              allowVariables={false}
+              fieldsLayout="grid"
+              onPatch={handleWellPatch}
+              renderField={(name: WellField) => (
+                <Input
+                  value={wellFieldText(formValues[name])}
+                  aria-label={name}
+                  inputMode={name.endsWith("_start_row") ? undefined : "numeric"}
+                  onChange={(e) => handleWellPatch(wellFieldPatch(name, e.target.value))}
+                />
+              )}
+            />
+          </Box>
         );
       }
       // Instrument-fed field (D-10), list or device -> deck -> nest cascade:

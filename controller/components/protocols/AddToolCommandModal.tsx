@@ -64,6 +64,8 @@ import {
   firstFieldForSource,
   isCheckboxBinding,
   isStaticBinding,
+  isWellGroupAnchor,
+  isWellsBinding,
   lookupFieldBinding,
   isNoZeroFillField,
   lookupLocalBinding,
@@ -74,6 +76,9 @@ import { OptionsSelect } from "../tools/OptionsSelect";
 import { fillMissingParams } from "../tools/commandParams";
 import { StaticSelect } from "../tools/StaticSelect";
 import { TipReuseCheckbox } from "../tools/TipReuseCheckbox";
+import { FastTransferWellPicker } from "../tools/WellPicker";
+import { wellFieldPatch, wellFieldText } from "../tools/wellGeometry";
+import type { WellField } from "../tools/wellGeometry";
 
 interface AddToolCommandModalProps {
   isOpen: boolean;
@@ -304,6 +309,49 @@ export const AddToolCommandModal: React.FC<AddToolCommandModalProps> = ({
   // choice lands in ONE functional state update. Nothing writes on render.
   const handleLocalSelect = (binding: LocalBinding, value: string) => {
     setCommandParams((prevParams) => ({ ...prevParams, ...applyLocalChange(binding, value) }));
+  };
+
+  // The only writer of the six well fields from a drag, a click or Clear: ONE
+  // functional state merge. Plate changes and list loads never reach it.
+  const handleWellPatch = (patch: Record<string, string | number>) => {
+    setCommandParams((prevParams) => ({ ...prevParams, ...patch }));
+  };
+
+  // One well field inside the picker's "Edit as fields" section: the typed input
+  // with the per-field variable picker beside it. The input is born empty and
+  // never shows a painted 0 (wellFieldText).
+  const renderWellField = (name: WellField) => {
+    const value = commandParams[name];
+    const variableName = isVariableReference(value) ? getVariableNameFromReference(value) : "";
+    return (
+      <HStack width="100%" alignItems="flex-start">
+        <Input
+          flex={1}
+          value={wellFieldText(value)}
+          aria-label={name}
+          inputMode={name.endsWith("_start_row") ? undefined : "numeric"}
+          isDisabled={isVariableReference(value)}
+          onChange={(e) => handleWellPatch(wellFieldPatch(name, e.target.value))}
+        />
+        <Select
+          width="180px"
+          value={variableName}
+          onChange={(e) => {
+            if (e.target.value === "") {
+              handleWellPatch(wellFieldPatch(name, ""));
+            } else {
+              handleVariableSelect(name, e.target.value);
+            }
+          }}>
+          <option value="">No Variable</option>
+          {fetchedVariables?.map((variable) => (
+            <option key={variable.id} value={variable.name}>
+              {variable.name}
+            </option>
+          ))}
+        </Select>
+      </HStack>
+    );
   };
 
   const renderField = (field: Field) => {
@@ -974,6 +1022,38 @@ export const AddToolCommandModal: React.FC<AddToolCommandModalProps> = ({
             {fields.length > 0 ? (
               <VStack spacing={4} align="stretch" width="100%">
                 {fields.map((field: Field) => {
+                  // The six well fields: one picker at the first of them, none at
+                  // the rest. The typed fields live inside the picker.
+                  const wellsBinding = lookupLocalBinding(
+                    selectedToolType,
+                    selectedCommand,
+                    field.name,
+                  );
+                  if (wellsBinding !== undefined && isWellsBinding(wellsBinding)) {
+                    if (
+                      !isWellGroupAnchor(
+                        fields.map((f) => f.name),
+                        selectedToolType,
+                        selectedCommand,
+                        field.name,
+                      )
+                    ) {
+                      return null;
+                    }
+                    return (
+                      <Box key={field.name}>
+                        <FastTransferWellPicker
+                          toolId={selectedToolData?.name}
+                          enabled={isOpen}
+                          values={commandParams}
+                          allowVariables={true}
+                          fieldsLayout="rows"
+                          onPatch={handleWellPatch}
+                          renderField={renderWellField}
+                        />
+                      </Box>
+                    );
+                  }
                   const isVariable = isVariableReference(commandParams[field.name]);
                   const variableName = isVariable
                     ? getVariableNameFromReference(commandParams[field.name])

@@ -23,6 +23,8 @@ import {
   useColorModeValue,
 } from "@chakra-ui/react";
 import { ChevronDownIcon, ChevronRightIcon, WarningTwoIcon } from "@chakra-ui/icons";
+import { useToolOptions } from "@/hooks/useToolOptions";
+import { plateListInput } from "@/components/tools/fieldOptions";
 import {
   CLEAR_PATCH,
   CLEAR_SELECTION_LABEL,
@@ -437,4 +439,16 @@ export function WellPicker({
       </Collapse>
     </Box>
   );
+}
+
+// The wrapper every host renders. It reads the plate list through the same
+// (toolId, fast.plates) react-query entry the plate dropdowns use, so there is
+// no extra read, poll or retry (D-16). WellPicker itself stays read-free.
+export function FastTransferWellPicker({
+  toolId,
+  enabled,
+  ...rest
+}: { toolId: string | undefined; enabled: boolean } & Omit<WellPickerProps, "plates">) {
+  const { mode, data } = useToolOptions(toolId, "fast.plates", enabled);
+  return <WellPicker plates={plateListInput(mode, data)} {...rest} />;
 }
