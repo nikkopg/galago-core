@@ -62,7 +62,7 @@ on its own, and never preselects a physical decision for the operator.
   exactly `GetPlates` plus oneof entry 11, and `Transfer.expected_tray_id = 13` is unchanged.
 - [ ] **PLT-03**: The operator picks `source_plate_id` and `dest_plate_id` from the registered
   plates. The label shows the id and description, and the value is the numeric id.
-- [ ] **PLT-04**: Plate entries whose id is not an integer ≥ 1 are rejected, never truncated.
+- [x] **PLT-04**: Plate entries whose id is not an integer ≥ 1 are rejected, never truncated.
   Duplicate ids are flagged. An unset plate is never saved as `0`.
 - [x] **PLT-05**: `get_plates` never appears as a protocol step or a tool-page command.
 - [x] **PLT-06**: `source_deck` and `dest_deck` are dropdowns of deck slots 1-6 (the tool server's
@@ -193,7 +193,7 @@ the protocol surface and run page, as waves inside one phase.
 | PLT-01 | Phase 7 | Complete |
 | PLT-02 | Phase 7 | Complete |
 | PLT-03 | Phase 7 | Pending |
-| PLT-04 | Phase 7 | Pending |
+| PLT-04 | Phase 7 | Complete |
 | PLT-05 | Phase 7 | Complete |
 | PLT-06 | Phase 7 | Complete |
 | PLT-07 | Phase 7 | Complete |
