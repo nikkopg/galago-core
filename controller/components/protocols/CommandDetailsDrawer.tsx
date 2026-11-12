@@ -34,6 +34,8 @@ import {
   firstFieldForSource,
   isCheckboxBinding,
   isStaticBinding,
+  isWellGroupAnchor,
+  isWellsBinding,
   lookupFieldBinding,
   lookupLocalBinding,
 } from "../tools/fieldOptions";
@@ -41,6 +43,9 @@ import type { ChangeKind, FieldBinding, LocalBinding } from "../tools/fieldOptio
 import { OptionsSelect } from "../tools/OptionsSelect";
 import { StaticSelect } from "../tools/StaticSelect";
 import { TipReuseCheckbox } from "../tools/TipReuseCheckbox";
+import { FastTransferWellPicker } from "../tools/WellPicker";
+import { wellFieldPatch, wellFieldText } from "../tools/wellGeometry";
+import type { WellField } from "../tools/wellGeometry";
 
 interface CommandDetailsDrawerProps {
   isOpen: boolean;
@@ -233,6 +238,53 @@ export const CommandDetailsDrawer: React.FC<CommandDetailsDrawerProps> = (props)
   // merge.
   const handleLocalSelect = (binding: LocalBinding, value: string) => {
     setEditedParams((prevParams) => ({ ...prevParams, ...applyLocalChange(binding, value) }));
+  };
+
+  // The only writer of the six well fields from a drag, a click, a typed edit or
+  // Clear: ONE functional merge into editedParams. A plate change, a list load
+  // or opening the drawer never reaches it. handleSaveInputs still spreads the
+  // saved params first, so a blank written here wins over the saved value.
+  const handleWellPatch = (patch: Record<string, string | number>) => {
+    setEditedParams((prev) => ({ ...prev, ...patch }));
+  };
+
+  // One well field in the picker's "Edit as fields" section (edit mode only):
+  // the typed input born as saved (wellFieldText) with the per-field variable
+  // picker beside it. The "No Variable" choice writes "" rather than deleting
+  // the key, so the save merge cannot fall back to the saved value.
+  const renderWellField = (name: WellField) => {
+    const saved = selectedCommand.commandInfo.params[name];
+    const value = editedParams[name] !== undefined ? editedParams[name] : saved;
+    const variableName = isVariableReference(value) ? getVariableNameFromReference(value) : "";
+    return (
+      <HStack width="100%" spacing={2} alignItems="flex-start">
+        <Input
+          flex={1}
+          value={wellFieldText(value)}
+          aria-label={name}
+          inputMode={name.endsWith("_start_row") ? undefined : "numeric"}
+          isDisabled={isVariableReference(value)}
+          onChange={(e) => handleWellPatch(wellFieldPatch(name, e.target.value))}
+        />
+        <Select
+          width="180px"
+          value={variableName}
+          onChange={(e) => {
+            if (e.target.value === "") {
+              handleWellPatch(wellFieldPatch(name, ""));
+            } else {
+              handleVariableSelect(name, e.target.value);
+            }
+          }}>
+          <option value="">No Variable</option>
+          {availableVariables?.map((variable) => (
+            <option key={variable.id} value={variable.name}>
+              {variable.name}
+            </option>
+          ))}
+        </Select>
+      </HStack>
+    );
   };
 
   // Render the appropriate input field based on parameter type and name
@@ -622,6 +674,42 @@ export const CommandDetailsDrawer: React.FC<CommandDetailsDrawerProps> = (props)
               </Text>
               <VStack align="stretch" spacing={4} width="100%">
                 {Object.entries(selectedCommand.commandInfo.params).map(([key, value], index) => {
+                  // The six well fields, edit mode only: one picker at the first
+                  // saved well key, nothing at the rest. The read-only drawer (run
+                  // page) renders them exactly as before: no grid and no read.
+                  const wellsBinding = isEditing
+                    ? lookupLocalBinding(
+                        selectedCommand.commandInfo.toolType,
+                        selectedCommand.commandInfo.command,
+                        key,
+                      )
+                    : undefined;
+                  if (wellsBinding !== undefined && isWellsBinding(wellsBinding)) {
+                    if (
+                      !isWellGroupAnchor(
+                        Object.keys(selectedCommand.commandInfo.params),
+                        selectedCommand.commandInfo.toolType,
+                        selectedCommand.commandInfo.command,
+                        key,
+                      )
+                    ) {
+                      return null;
+                    }
+                    return (
+                      <Box key="well-picker">
+                        <FastTransferWellPicker
+                          toolId={selectedCommand.commandInfo.toolId}
+                          enabled={isEditing}
+                          values={{ ...selectedCommand.commandInfo.params, ...editedParams }}
+                          allowVariables={true}
+                          fieldsLayout="rows"
+                          onPatch={handleWellPatch}
+                          renderField={renderWellField}
+                        />
+                      </Box>
+                    );
+                  }
+
                   // Get current value (from editedParams if available, otherwise from command)
                   const currentValue = editedParams[key] !== undefined ? editedParams[key] : value;
 

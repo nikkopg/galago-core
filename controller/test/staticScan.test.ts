@@ -1172,3 +1172,102 @@ describe("F.A.S.T. local field invariants (D-07, D-08, D-09, D-17)", () => {
     expect(src).toMatch(/isEditing\s*\?\s*lookupLocalBinding\(/);
   });
 });
+
+describe("F.A.S.T. well picker invariants (D-10, D-13, D-16, D-17)", () => {
+  const picker = "components/tools/WellPicker.tsx";
+  const geometry = "components/tools/wellGeometry.ts";
+  const modal = "components/protocols/AddToolCommandModal.tsx";
+  const drawer = "components/protocols/CommandDetailsDrawer.tsx";
+  const page = "pages/tools/[id].tsx";
+
+  const clientFiles = () => ["components", "hooks", "pages"].flatMap((dir) => walk(dir)).map(rel);
+
+  it("WellPicker.tsx declares no effect hook, timer, DOM point lookup or raw-HTML injection", () => {
+    const src = stripComments(read(picker));
+    for (const pattern of [
+      /\buse(Layout)?Effect\b/,
+      /setTimeout/,
+      /setInterval/,
+      /elementFromPoint/,
+      /dangerouslySetInnerHTML/,
+    ]) {
+      expect(src, String(pattern)).not.toMatch(pattern);
+    }
+  });
+
+  it("WellPicker.tsx handles pointer cancel and lost capture", () => {
+    const src = stripComments(read(picker));
+    expect(src).toContain("onPointerCancel");
+    expect(src).toContain("onLostPointerCapture");
+  });
+
+  it("WellPicker.tsx has no first-option, initial-value or selection construct", () => {
+    const src = stripComments(read(picker));
+    for (const pattern of [
+      /options\[0\]/,
+      /selectedIndex/,
+      /defaultValue/,
+      /defaultChecked/,
+      /\bselected=/,
+      /placeholder=/,
+    ]) {
+      expect(src, String(pattern)).not.toMatch(pattern);
+    }
+  });
+
+  it("WellPicker.tsx never names tool.options and its only read passes fast.plates", () => {
+    const src = stripComments(read(picker));
+    expect(src).not.toContain("tool.options");
+    const calls = src.match(/useToolOptions\(/g) ?? [];
+    expect(calls).toHaveLength(1);
+    expect(src).toContain('useToolOptions(toolId, "fast.plates"');
+  });
+
+  it("wellGeometry.ts imports neither React nor Chakra UI", () => {
+    const src = stripComments(read(geometry));
+    expect(src).not.toMatch(/from\s+["']react["']/);
+    expect(src).not.toMatch(/from\s+["']@chakra-ui\//);
+  });
+
+  it("StaticSelect, TipReuseCheckbox and WellPicker inject no raw HTML", () => {
+    for (const file of [
+      "components/tools/StaticSelect.tsx",
+      "components/tools/TipReuseCheckbox.tsx",
+      picker,
+    ]) {
+      expect(stripComments(read(file)), file).not.toContain("dangerouslySetInnerHTML");
+    }
+  });
+
+  it("exactly the three hosts render <FastTransferWellPicker", () => {
+    const hosts = clientFiles()
+      .filter((relPath) => stripComments(read(relPath)).includes("<FastTransferWellPicker"))
+      .sort();
+    expect(hosts).toStrictEqual([modal, drawer, page].sort());
+  });
+
+  it("the bare WellPicker element appears only in WellPicker.tsx", () => {
+    const users = clientFiles().filter((relPath) =>
+      /<WellPicker[\s>/]/.test(stripComments(read(relPath))),
+    );
+    expect(users).toStrictEqual([picker]);
+  });
+
+  it("the drawer mounts the picker only while editing and never reads while read-only", () => {
+    const src = stripComments(read(drawer));
+    const element = src.match(/<FastTransferWellPicker[\s\S]*?\/>/);
+    expect(element).not.toBeNull();
+    expect(element?.[0] ?? "").toContain("enabled={isEditing}");
+    expect(src).toMatch(/isEditing\s*\?\s*lookupLocalBinding\(/);
+  });
+
+  it("CLEAR_PATCH is referenced only by wellGeometry.ts and WellPicker.tsx", () => {
+    const files = ["server", "components", "hooks", "pages", "utils"]
+      .flatMap((dir) => walk(dir))
+      .map(rel);
+    const users = files
+      .filter((relPath) => /\bCLEAR_PATCH\b/.test(stripComments(read(relPath))))
+      .sort();
+    expect(users).toStrictEqual([geometry, picker].sort());
+  });
+});
