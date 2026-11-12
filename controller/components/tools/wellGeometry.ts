@@ -7,6 +7,8 @@
 // a plate change never does (D-12, D-13, PLT-09). The only import allowed is
 // isVariableLike from @/utils/variableRef (used by the value classification).
 
+import { isVariableLike } from "@/utils/variableRef";
+
 // The six well fields in the mockup's order (D-12).
 export const WELL_FIELDS = [
   "source_start_row",
@@ -179,30 +181,153 @@ export function wellFieldPatch(field: WellField, text: string): Record<string, s
   return { [field]: text };
 }
 
-// ---- RED-phase skeleton for Task 2 (every function throws, constants empty) ----
-const todo = (): never => {
-  throw new Error("not implemented");
-};
-export const SOURCE_PLATE_TITLE = "";
-export const DEST_PLATE_TITLE = "";
-export const DRAG_CAPTION_SUFFIX = "";
-export const PLACE_CAPTION_SUFFIX = "";
-export const NOTHING_SELECTED = "";
-export const SOURCE_MISFIT = "";
-export const DEST_MISFIT = "";
-export const UNSHOWABLE_STATUS = "";
-export const GRID_UNAVAILABLE_STATUS = "";
-export const LOADING_PLATES = "";
-export const EDIT_AS_FIELDS_LABEL = "";
-export const CLEAR_SELECTION_LABEL = "";
-export const KEPT_OPEN_GRID = "";
-export const KEPT_OPEN_VARIABLE = "";
-export const KEPT_OPEN_FLAG = "";
+// ---- Copy constants (exact strings from 07-UI-SPEC.md) ----
+export const SOURCE_PLATE_TITLE = "Source plate";
+export const DEST_PLATE_TITLE = "Destination plate";
+export const DRAG_CAPTION_SUFFIX = " · drag to select";
+export const PLACE_CAPTION_SUFFIX = " · click to place";
+export const NOTHING_SELECTED = "Nothing selected. Fields start empty.";
+export const SOURCE_MISFIT = "Source block does not fit the source plate";
+export const DEST_MISFIT = "Block does not fit the destination plate here";
+export const UNSHOWABLE_STATUS =
+  "Some saved values can't be shown on the grid — see Edit as fields";
+export const GRID_UNAVAILABLE_STATUS = "A plate grid is unavailable — use the fields below";
+export const LOADING_PLATES = "Loading plates…";
+export const EDIT_AS_FIELDS_LABEL = "Edit as fields";
+export const CLEAR_SELECTION_LABEL = "Clear selection";
+export const KEPT_OPEN_GRID = "Kept open: a plate grid is unavailable";
+export const KEPT_OPEN_VARIABLE = "Kept open: a field holds a variable";
+export const KEPT_OPEN_FLAG = "Kept open: a value needs attention";
+
+type Values = Record<string, unknown>;
+
+// ---- Value classification (D-13, D-14, PLT-09) ----
+
+// n is the 0-based row index for rows and the integer for columns and counts.
 export type WellValue =
   | { kind: "blank" }
   | { kind: "variable" }
   | { kind: "ok"; n: number }
   | { kind: "flag"; text: string };
+
+const KEPT = "— kept as saved";
+
+// A whole number from 1: an integer number >= 1 or an all-digit string whose
+// number is >= 1. The string "0" is NOT blank and is flagged; only the number 0
+// is the legacy blank.
+function wholeFromOne(value: unknown): number | undefined {
+  if (typeof value === "number") return Number.isInteger(value) && value >= 1 ? value : undefined;
+  if (typeof value === "string" && /^[0-9]+$/.test(value)) {
+    const n = Number(value);
+    return n >= 1 ? n : undefined;
+  }
+  return undefined;
+}
+
+export function classifyWellValue(
+  field: WellField,
+  value: unknown,
+  size: PlateSize | undefined,
+  allowVariables: boolean,
+): WellValue {
+  if (isBlankWell(value)) return { kind: "blank" };
+  if (allowVariables && isVariableLike(value)) return { kind: "variable" };
+  const v = String(value);
+  if (field === "source_start_row" || field === "dest_start_row") {
+    const idx = parseRowLabel(value);
+    if (idx === undefined) {
+      return { kind: "flag", text: `Row '${v}' is not a 1-2 letter row ${KEPT}` };
+    }
+    if (size && idx >= size.rows) {
+      return {
+        kind: "flag",
+        text: `Row '${v}' is past the last row (${rowLabel(size.rows - 1)}) ${KEPT}`,
+      };
+    }
+    return { kind: "ok", n: idx };
+  }
+  const n = wholeFromOne(value);
+  if (field === "source_start_col" || field === "dest_start_col") {
+    if (n === undefined) {
+      return { kind: "flag", text: `Column '${v}' is not a whole number from 1 ${KEPT}` };
+    }
+    if (size && n > size.cols) {
+      return { kind: "flag", text: `Column ${n} is past the last column (${size.cols}) ${KEPT}` };
+    }
+    return { kind: "ok", n };
+  }
+  if (n === undefined) {
+    return { kind: "flag", text: `${field} must be a whole number from 1 ${KEPT}` };
+  }
+  return { kind: "ok", n };
+}
+
+type Classified = Partial<Record<WellField, WellValue>>;
+
+function classifyAll(
+  values: Values,
+  sourceSize: PlateSize | undefined,
+  destSize: PlateSize | undefined,
+  allowVariables: boolean,
+): Classified {
+  const out: Classified = {};
+  for (const f of WELL_FIELDS) {
+    const size = f === "dest_start_row" || f === "dest_start_col" ? destSize : sourceSize;
+    out[f] = classifyWellValue(f, values[f], size, allowVariables);
+  }
+  return out;
+}
+
+// Flagged wins over blank; blank or variable gives none; otherwise the rect.
+export function sourceBlock(
+  values: Values,
+  size: PlateSize | undefined,
+  allowVariables: boolean,
+): { kind: "none" } | { kind: "flagged" } | { kind: "block"; rect: Rect } {
+  const c = classifyAll(values, size, undefined, allowVariables);
+  const parts = SOURCE_WELL_FIELDS.map((f) => c[f] as WellValue);
+  if (parts.some((p) => p.kind === "flag")) return { kind: "flagged" };
+  const [row, col, h, w] = parts;
+  if (row.kind !== "ok" || col.kind !== "ok" || h.kind !== "ok" || w.kind !== "ok") {
+    return { kind: "none" };
+  }
+  return { kind: "block", rect: { r: row.n, c: col.n - 1, h: h.n, w: w.n } };
+}
+
+export function destOrigin(
+  values: Values,
+  size: PlateSize | undefined,
+  allowVariables: boolean,
+): { kind: "none" } | { kind: "flagged" } | { kind: "origin"; cell: Cell } {
+  const c = classifyAll(values, undefined, size, allowVariables);
+  const parts = DEST_WELL_FIELDS.map((f) => c[f] as WellValue);
+  if (parts.some((p) => p.kind === "flag")) return { kind: "flagged" };
+  const [row, col] = parts;
+  if (row.kind !== "ok" || col.kind !== "ok") return { kind: "none" };
+  return { kind: "origin", cell: { r: row.n, c: col.n - 1 } };
+}
+
+export function fieldFlags(
+  values: Values,
+  sourceSize: PlateSize | undefined,
+  destSize: PlateSize | undefined,
+  allowVariables: boolean,
+): Partial<Record<WellField, string>> {
+  const c = classifyAll(values, sourceSize, destSize, allowVariables);
+  const out: Partial<Record<WellField, string>> = {};
+  for (const f of WELL_FIELDS) {
+    const v = c[f];
+    if (v && v.kind === "flag") out[f] = v.text;
+  }
+  return out;
+}
+
+// ---- Per-side plate grid (D-05, D-14, PLT-09) ----
+
+export function plateLabel(id: number | string, description: string): string {
+  return description.trim() === "" ? String(id) : `${id} · ${description}`;
+}
+
 export type HiddenCause =
   | "no-plate"
   | "variable"
@@ -210,10 +335,165 @@ export type HiddenCause =
   | "not-reported"
   | "no-size"
   | "duplicate-sizes";
+
 export type GridSide =
   | { kind: "grid"; size: PlateSize; label: string }
   | { kind: "loading"; text: string }
   | { kind: "hidden"; cause: HiddenCause; text: string };
+
+function usableSize(p: PlateInfo): PlateSize | undefined {
+  const { rowCount: rows, colCount: cols } = p;
+  if (rows === null || cols === null) return undefined;
+  if (!Number.isInteger(rows) || !Number.isInteger(cols) || rows < 1 || cols < 1) return undefined;
+  return { rows, cols };
+}
+
+export function plateGridSide(
+  side: "source" | "destination",
+  list: PlateListInput,
+  plateValue: unknown,
+  allowVariables: boolean,
+): GridSide {
+  if (plateValue === undefined || plateValue === null || plateValue === "") {
+    return {
+      kind: "hidden",
+      cause: "no-plate",
+      text: `Choose a ${side} plate to show its grid`,
+    };
+  }
+  if (allowVariables && isVariableLike(plateValue)) {
+    return {
+      kind: "hidden",
+      cause: "variable",
+      text: `The ${side} plate is set by a variable — type the wells below`,
+    };
+  }
+  if (list.mode === "loading") return { kind: "loading", text: LOADING_PLATES };
+  if (list.mode === "unavailable") {
+    return {
+      kind: "hidden",
+      cause: "unavailable",
+      text: "Plate list unavailable — type the wells below",
+    };
+  }
+  const id = String(plateValue);
+  const matches = list.plates.filter((p) => String(p.id) === id);
+  if (matches.length === 0) {
+    return {
+      kind: "hidden",
+      cause: "not-reported",
+      text: `Plate ${id} is not reported by the instrument — type the wells below`,
+    };
+  }
+  const sizes = matches.map(usableSize);
+  const first = sizes[0];
+  if (sizes.some((s) => s === undefined) || first === undefined) {
+    return {
+      kind: "hidden",
+      cause: "no-size",
+      text: `Plate ${id} has no usable size — type the wells below`,
+    };
+  }
+  if (sizes.some((s) => s && sizeMismatch(s, first))) {
+    return {
+      kind: "hidden",
+      cause: "duplicate-sizes",
+      text: `Plate ${id} is listed twice with different sizes — type the wells below`,
+    };
+  }
+  return {
+    kind: "grid",
+    size: first,
+    label: plateLabel(matches[0].id, matches[0].description),
+  };
+}
+
+const sizeOfSide = (s: GridSide): PlateSize | undefined => (s.kind === "grid" ? s.size : undefined);
+
+const startLabel = (cell: Cell): string => `${rowLabel(cell.r)}${cell.c + 1}`;
+
+// ---- Status line (UI-SPEC rows 1-7, first match wins) ----
+
+export function statusLine(input: {
+  source: GridSide;
+  dest: GridSide;
+  values: Values;
+  allowVariables: boolean;
+  hover?: Cell;
+}): { text: string; tone: "muted" | "danger" } {
+  const { source, dest, values, allowVariables, hover } = input;
+  const sSize = sizeOfSide(source);
+  const dSize = sizeOfSide(dest);
+  const block = sourceBlock(values, sSize, allowVariables);
+  const origin = destOrigin(values, dSize, allowVariables);
+
+  // 1. Source misfit.
+  if (block.kind === "block" && sSize && !fitsAt(block.rect, block.rect, sSize)) {
+    return { text: SOURCE_MISFIT, tone: "danger" };
+  }
+  // 2. Destination misfit at the hovered or placed origin (a size mismatch does not skip it).
+  if (block.kind === "block" && dSize) {
+    const at = hover ?? (origin.kind === "origin" ? origin.cell : undefined);
+    if (at && !fitsAt(at, block.rect, dSize)) return { text: DEST_MISFIT, tone: "danger" };
+  }
+  // 3. A saved value that cannot be shown.
+  if (Object.keys(fieldFlags(values, sSize, dSize, allowVariables)).length > 0) {
+    return { text: UNSHOWABLE_STATUS, tone: "danger" };
+  }
+  // 4. Either grid hidden (loading is not hidden).
+  if (source.kind === "hidden" || dest.kind === "hidden") {
+    return { text: GRID_UNAVAILABLE_STATUS, tone: "muted" };
+  }
+  // 5. No source block.
+  if (block.kind !== "block") return { text: NOTHING_SELECTED, tone: "muted" };
+  const n = block.rect.h * block.rect.w;
+  const wells = n === 1 ? "1 well" : `${n} wells`;
+  // 6. Block, no destination.
+  if (origin.kind !== "origin") {
+    return { text: `${wells} selected. Now place them on the destination.`, tone: "muted" };
+  }
+  // 7. Block placed.
+  return {
+    text: `Transfer ${wells}: ${startLabel(block.rect)} → ${startLabel(origin.cell)}`,
+    tone: "muted",
+  };
+}
+
+// ---- "Edit as fields" force-open (D-14, D-16) ----
+
+export function forceOpen(input: {
+  source: GridSide;
+  dest: GridSide;
+  values: Values;
+  allowVariables: boolean;
+}): { forced: boolean; note?: string } {
+  const { source, dest, values, allowVariables } = input;
+  if (source.kind === "hidden" || dest.kind === "hidden") {
+    return { forced: true, note: KEPT_OPEN_GRID };
+  }
+  if (allowVariables && WELL_FIELDS.some((f) => isVariableLike(values[f]))) {
+    return { forced: true, note: KEPT_OPEN_VARIABLE };
+  }
+  const sSize = sizeOfSide(source);
+  const dSize = sizeOfSide(dest);
+  if (Object.keys(fieldFlags(values, sSize, dSize, allowVariables)).length > 0) {
+    return { forced: true, note: KEPT_OPEN_FLAG };
+  }
+  const block = sourceBlock(values, sSize, allowVariables);
+  if (block.kind === "block") {
+    if (sSize && !fitsAt(block.rect, block.rect, sSize)) {
+      return { forced: true, note: KEPT_OPEN_FLAG };
+    }
+    const origin = destOrigin(values, dSize, allowVariables);
+    if (dSize && origin.kind === "origin" && !fitsAt(origin.cell, block.rect, dSize)) {
+      return { forced: true, note: KEPT_OPEN_FLAG };
+    }
+  }
+  return { forced: false };
+}
+
+// ---- Composed view model ----
+
 export interface WellPickerView {
   source: GridSide;
   dest: GridSide;
@@ -231,58 +511,66 @@ export interface WellPickerView {
   sourceMetrics?: GridMetrics;
   destMetrics?: GridMetrics;
 }
-type Values = Record<string, unknown>;
-export const classifyWellValue = (
-  _f: WellField,
-  _v: unknown,
-  _s: PlateSize | undefined,
-  _a: boolean,
-): WellValue => todo();
-export const sourceBlock = (
-  _v: Values,
-  _s: PlateSize | undefined,
-  _a: boolean,
-): { kind: "none" } | { kind: "flagged" } | { kind: "block"; rect: Rect } => todo();
-export const destOrigin = (
-  _v: Values,
-  _s: PlateSize | undefined,
-  _a: boolean,
-): { kind: "none" } | { kind: "flagged" } | { kind: "origin"; cell: Cell } => todo();
-export const fieldFlags = (
-  _v: Values,
-  _s: PlateSize | undefined,
-  _d: PlateSize | undefined,
-  _a: boolean,
-): Partial<Record<WellField, string>> => todo();
-export const plateLabel = (_id: number | string, _d: string): string => todo();
-export const plateGridSide = (
-  _side: "source" | "destination",
-  _list: PlateListInput,
-  _plate: unknown,
-  _a: boolean,
-): GridSide => todo();
-export const statusLine = (_i: {
-  source: GridSide;
-  dest: GridSide;
-  values: Values;
-  allowVariables: boolean;
-  hover?: Cell;
-}): { text: string; tone: "muted" | "danger" } => todo();
-export const forceOpen = (_i: {
-  source: GridSide;
-  dest: GridSide;
-  values: Values;
-  allowVariables: boolean;
-}): { forced: boolean; note?: string } => todo();
-export const buildWellPickerView = (_i: {
+
+// Returns a view, never a patch: a plate change, list load or hover writes nothing (D-13).
+export function buildWellPickerView(input: {
   plates: PlateListInput;
   values: Values;
   allowVariables: boolean;
   hover?: Cell;
-}): WellPickerView => todo();
-export const destClickPatch = (
-  _view: WellPickerView,
-  _v: Values,
-  _a: boolean,
-  _cell: Cell,
-): Record<string, string | number> | undefined => todo();
+}): WellPickerView {
+  const { plates, values, allowVariables, hover } = input;
+  const source = plateGridSide("source", plates, values.source_plate_id, allowVariables);
+  const dest = plateGridSide("destination", plates, values.dest_plate_id, allowVariables);
+  const sSize = sizeOfSide(source);
+  const dSize = sizeOfSide(dest);
+
+  const mismatch =
+    sSize && dSize && sizeMismatch(sSize, dSize) ? mismatchText(sSize, dSize) : undefined;
+  const block = sourceBlock(values, sSize, allowVariables);
+  const origin = destOrigin(values, dSize, allowVariables);
+
+  const view: WellPickerView = {
+    source,
+    dest,
+    destClickable: dest.kind === "grid" && block.kind === "block" && !mismatch,
+    status: statusLine({ source, dest, values, allowVariables, hover }),
+    ...forceOpen({ source, dest, values, allowVariables }),
+    flags: fieldFlags(values, sSize, dSize, allowVariables),
+    clearDisabled: WELL_FIELDS.every((f) => isBlankWell(values[f])),
+  };
+  if (mismatch) view.mismatch = mismatch;
+  if (source.kind === "grid") {
+    view.sourceCaption = source.label + DRAG_CAPTION_SUFFIX;
+    view.sourceMetrics = gridMetrics(source.size);
+  }
+  if (dest.kind === "grid") {
+    view.destCaption = mismatch ? dest.label : dest.label + PLACE_CAPTION_SUFFIX;
+    view.destMetrics = gridMetrics(dest.size);
+  }
+  if (sSize && block.kind === "block") {
+    view.sourceRect = { rect: block.rect, bad: !fitsAt(block.rect, block.rect, sSize) };
+  }
+  if (dSize && block.kind === "block" && !mismatch) {
+    const at = hover ?? (origin.kind === "origin" ? origin.cell : undefined);
+    if (at) {
+      const state = !fitsAt(at, block.rect, dSize) ? "bad" : hover ? "ghost" : "put";
+      view.footprint = { rect: { r: at.r, c: at.c, h: block.rect.h, w: block.rect.w }, state };
+    }
+  }
+  return view;
+}
+
+// The only destination-click producer: accepted only where the footprint fits
+// and the plates match.
+export function destClickPatch(
+  view: WellPickerView,
+  values: Values,
+  allowVariables: boolean,
+  cell: Cell,
+): Record<string, string | number> | undefined {
+  if (!view.destClickable || view.dest.kind !== "grid") return undefined;
+  const block = sourceBlock(values, sizeOfSide(view.source), allowVariables);
+  if (block.kind !== "block") return undefined;
+  return fitsAt(cell, block.rect, view.dest.size) ? destPatch(cell) : undefined;
+}
