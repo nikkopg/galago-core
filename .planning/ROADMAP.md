@@ -98,7 +98,26 @@ the chosen plate.
   5. Matching the approved mockup (`research/PLT-08-WELL-PICKER-MOCKUP.html`), dragging on the source grid sets start row/col and block size, and a click on the destination grid places the same-size footprint. Typed fields sit in a collapsed "Edit as fields" section that opens on its own for a hidden grid, a `{{variable}}` or a flagged value, and stay in sync; a block that does not fit is flagged, never clipped.
   6. Source and destination plates of different sizes (96 vs 384) are flagged on the destination grid before the run, since fast-mcp refuses cross-format transfers.
 
-**Plans**: TBD
+**Plans**: 8 plans
+Plans:
+**Wave 1** *(ungated)*
+- [ ] 07-01-PLAN.md — Tracer: deck 1-6 dropdowns on the tool page end to end (static binding, numeric write, wire), then the "Reuse tips" checkbox with the new-step default
+- [ ] 07-02-PLAN.md — React-free well-picker core (row codec, fit, (rows, cols) mismatch, hit-test, patches, flags, status line, force-open, view model) against fixture plates
+
+**Wave 2** *(blocked on Wave 1 completion; 07-05 is the get_plates gate)*
+- [ ] 07-03-PLAN.md — Decks and checkbox in AddToolCommandModal and the edit-mode drawer; unset plate/deck saved as "" (fillMissingParams, D-07); local-field and get_plates scans
+- [ ] 07-04-PLAN.md — WellPicker component (pointer events, two grids, mismatch warning, Edit as fields, Clear selection) over the pure core
+- [ ] 07-05-PLAN.md — GATE: galago-tools freezes get_plates (blocking human checkpoint), ts-proto 1.151.1 legitimacy check, re-pin with exactly GetPlates + oneof 11, regen fast.ts, wire proof
+
+**Wave 3** *(blocked on 07-05 gate)*
+- [ ] 07-06-PLAN.md — fast.plates source and parser on the server (registry, caps, bad ids, duplicates kept), router proof, read path, five-source and get_plates scans
+
+**Wave 4** *(blocked on Wave 3 completion)*
+- [ ] 07-08-PLAN.md — Plate dropdowns in all three hosts ({id} · {description}, numeric write, duplicate flags, numeric typed fallback), todo closed
+
+**Wave 5** *(blocked on Wave 4 completion)*
+- [ ] 07-07-PLAN.md — WellPicker mounted with real plates in the tool page, modal and edit-mode drawer; picker and host scans; full phase gate and UAT
+
 **UI hint**: yes
 **Settle in discuss**: inherits D6, D10, D11 from Phase 6; open items are the frozen `get_plates` shape, the
 grid picker's placement (inline vs modal, 384-well sizing), and whether it reuses
@@ -140,7 +159,7 @@ resolution is recorded.
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 6. STACK Dropdowns | 5/5 | Complete    | 2026-11-06 |
-| 7. F.A.S.T. Plate Dropdowns | 0/TBD | Not started (external gate) | - |
+| 7. F.A.S.T. Plate Dropdowns | 0/7 | Planned (plates gated on get_plates) | - |
 | 8. Concurrency Lanes | 0/TBD | Not started | - |
 | 9. Supervised Live Two-Tool Proof | 0/TBD | Not started | - |
 

@@ -55,6 +55,26 @@ Filled in by the planner/executor per task. Requirement → test map:
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
+Per-task map (planner, 2026-11-12):
+
+| Plan · Task | Requirement | Automated Command | File Exists |
+|-------------|-------------|-------------------|-------------|
+| 07-01 · T1 (tracer) | PLT-06 | `cd controller && npx vitest run test/fastFieldOptions.test.ts test/wire.test.ts test/fieldOptions.test.ts test/toolPageReply.test.ts test/staticScan.test.ts test/commandFields.test.ts` + `npx tsc --noEmit` | ❌ W0 (fastFieldOptions.test.ts created in T1) |
+| 07-01 · T2 | PLT-07 | `cd controller && npx vitest run test/fastFieldOptions.test.ts test/commandFields.test.ts test/toolPageReply.test.ts test/staticScan.test.ts test/fieldOptions.test.ts` | ✅ after T1 |
+| 07-02 · T1, T2 | PLT-08, PLT-09 | `cd controller && npx vitest run test/wellGeometry.test.ts` | ❌ W0 (created RED first) |
+| 07-03 · T1 | PLT-06, PLT-07 | `cd controller && npx vitest run test/staticScan.test.ts test/fastFieldOptions.test.ts test/fieldOptions.test.ts test/commandFields.test.ts` | ✅ |
+| 07-03 · T2 | PLT-04 | `cd controller && npx vitest run test/commandParams.test.ts test/fastFieldOptions.test.ts test/wire.test.ts` | ✅ (extended RED first) |
+| 07-03 · T3 | PLT-05, PLT-06 | `cd controller && npx vitest run test/staticScan.test.ts test/toolPageReply.test.ts test/commandFields.test.ts` | ✅ |
+| 07-04 · T1, T2 | PLT-08, PLT-09 | `cd controller && npx tsc --noEmit && npx vitest run test/wellGeometry.test.ts test/staticScan.test.ts` (+ prettier, next lint) | ✅ |
+| 07-05 · T1 | PLT-01 | gate: `git -C vendor/galago-tools fetch https://github.com/nikkopg/galago-tools.git feat/stack-tool ...` prints GATE_OPEN | n/a (blocking human) |
+| 07-05 · T3 | PLT-01, PLT-02 | GATE_PROTO_OK, REGEN_MATCH, PIN_COMMIT_OK commands + `cd controller && npx vitest run test/wire.test.ts test/commandFields.test.ts test/staticScan.test.ts` | ✅ (wire case added) |
+| 07-06 · T1 | PLT-03, PLT-05 | `cd controller && npx vitest run test/toolOptionsRouter.test.ts test/toolOptions.parse.test.ts test/toolOptions.read.test.ts test/fieldOptions.test.ts test/staticScan.test.ts test/latchStatus.test.ts` + `npx tsc --noEmit` | ✅ |
+| 07-06 · T2 | PLT-04 | `cd controller && npx vitest run test/toolOptions.parse.test.ts test/toolOptions.read.test.ts test/toolOptionsRouter.test.ts` + `npx tsc --noEmit && npx vitest run` (full suite) | ✅ |
+| 07-08 · T1 | PLT-03, PLT-04 | `cd controller && npx vitest run test/fastFieldOptions.test.ts test/fieldOptions.test.ts test/wire.test.ts test/staticScan.test.ts test/commandFields.test.ts` + `npx tsc --noEmit` | ✅ (extended RED first) |
+| 07-08 · T2 | PLT-03 (folded todo closed) | `cd controller && npx tsc --noEmit && npx vitest run`; TODO_CLOSED shell check | ✅ |
+| 07-07 · T1, T2 | PLT-08, PLT-09, PLT-03 | `cd controller && npx vitest run test/fastFieldOptions.test.ts test/wellGeometry.test.ts test/toolPageReply.test.ts test/staticScan.test.ts test/fieldOptions.test.ts` | ✅ |
+| 07-07 · T3 | all (phase gate) | `cd controller && npx tsc --noEmit && npx vitest run && npx prettier . --check`; `npx next lint --no-cache --quiet`; `npm run build`; PIN_HELD | ✅ |
+
 ---
 
 ## Wave 0 Requirements
