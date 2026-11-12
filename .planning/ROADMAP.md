@@ -98,10 +98,10 @@ the chosen plate.
   5. Matching the approved mockup (`research/PLT-08-WELL-PICKER-MOCKUP.html`), dragging on the source grid sets start row/col and block size, and a click on the destination grid places the same-size footprint. Typed fields sit in a collapsed "Edit as fields" section that opens on its own for a hidden grid, a `{{variable}}` or a flagged value, and stay in sync; a block that does not fit is flagged, never clipped.
   6. Source and destination plates of different sizes (96 vs 384) are flagged on the destination grid before the run, since fast-mcp refuses cross-format transfers.
 
-**Plans**: 8 plans
+**Plans**: 1/8 plans executed
 Plans:
 **Wave 1** *(ungated)*
-- [ ] 07-01-PLAN.md — Tracer: deck 1-6 dropdowns on the tool page end to end (static binding, numeric write, wire), then the "Reuse tips" checkbox with the new-step default
+- [x] 07-01-PLAN.md — Tracer: deck 1-6 dropdowns on the tool page end to end (static binding, numeric write, wire), then the "Reuse tips" checkbox with the new-step default
 - [ ] 07-02-PLAN.md — React-free well-picker core (row codec, fit, (rows, cols) mismatch, hit-test, patches, flags, status line, force-open, view model) against fixture plates
 
 **Wave 2** *(blocked on Wave 1 completion; 07-05 is the get_plates gate)*
@@ -159,7 +159,7 @@ resolution is recorded.
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 6. STACK Dropdowns | 5/5 | Complete    | 2026-11-06 |
-| 7. F.A.S.T. Plate Dropdowns | 0/7 | Planned (plates gated on get_plates) | - |
+| 7. F.A.S.T. Plate Dropdowns | 1/8 | In Progress (plates gated on get_plates) | - |
 | 8. Concurrency Lanes | 0/TBD | Not started | - |
 | 9. Supervised Live Two-Tool Proof | 0/TBD | Not started | - |
 

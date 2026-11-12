@@ -3,18 +3,18 @@ gsd_state_version: "1.0"
 milestone: v1.2
 milestone_name: Tool-inferred dropdowns + per-tool concurrency lanes
 current_phase: 07
-current_phase_name: f-a-s-t-plate-dropdowns
+current_phase_name: F.A.S.T. Plate Dropdowns
 status: executing
-stopped_at: Phase 7 UI-SPEC approved
-last_updated: "2026-11-12T02:46:42.387Z"
-last_activity: 2026-11-06
-last_activity_desc: Phase 06 complete, transitioned to Phase 7
-state_head: 8a4834bae33ad6533e3a3681d89fecc3c1571236
+stopped_at: Completed 07-01-PLAN.md
+last_updated: "2026-11-12T04:31:19.296Z"
+last_activity: 2026-11-12
+last_activity_desc: Phase 07 execution started
+state_head: 1ea77bc596db947ae555f41c39e4cb481a038c75
 progress:
   total_phases: 4
   completed_phases: 1
   total_plans: 13
-  completed_plans: 5
+  completed_plans: 6
   percent: 25
 ---
 
@@ -26,15 +26,15 @@ See: .planning/PROJECT.md (updated 2026-11-06)
 
 **Core value:** While an instrument step runs, the operator sees what the instrument is doing and
 decides every recovery action; the web app never acts on its own or pre-selects a physical decision.
-**Current focus:** Phase 7 — F.A.S.T. Plate Dropdowns
+**Current focus:** Phase 07 — F.A.S.T. Plate Dropdowns
 concurrency lanes)
 
 ## Current Position
 
-Phase: 07 (f-a-s-t-plate-dropdowns) — READY TO EXECUTE
-Plan: Not started
+Phase: 07 (F.A.S.T. Plate Dropdowns) — EXECUTING
+Plan: 2 of 8
 Status: Ready to execute
-Last activity: 2026-11-06 — Phase 06 complete, transitioned to Phase 7
+Last activity: 2026-11-12 — Phase 07 execution started
 
 Progress: [███░░░░░░░] 25% (1 of 4 v1.2 phases)
 
@@ -95,6 +95,7 @@ Progress: [███░░░░░░░] 25% (1 of 4 v1.2 phases)
 | Phase 05 P03 | 7 min | 3 tasks | 7 files |
 | Phase 05 P04 | 9 min | 2 tasks | 5 files |
 | Phase 06 P01 | 9 min | 2 tasks | 10 files |
+| Phase 07 P01 | 14 min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -163,6 +164,7 @@ Recent decisions affecting current work:
 - [Phase 06]: 06-01: Tool.readOptions throws on transport/deadline; fetchOptions owns the closed reason mapping
 - [Phase 06]: applyChange is the only cascade patch producer; a typed fallback edit writes only its own field and "No Variable" writes "" through applyChange (faccb5e, review WR-01/WR-02)
 - [Phase 06]: Connect All builds its configure payload with buildConnectConfig (unwraps the type-keyed tools.config); found and fixed during UAT (1c4f875)
+- [Phase 07]: 07-01: numericPatch converts only all-digit strings to numbers; checkboxView matches reuse/fresh by exact case-sensitive equality and never rewrites a saved value; newStepDefaults (tip_reuse reuse) is merged inside the [selectedCommand] effect
 
 ### Pending Todos
 
@@ -226,9 +228,9 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-12T01:58:33.344Z
-Stopped at: Phase 7 UI-SPEC approved
-Resume file: .planning/phases/07-f-a-s-t-plate-dropdowns/07-UI-SPEC.md
+Last session: 2026-11-12T04:31:19.256Z
+Stopped at: Completed 07-01-PLAN.md
+Resume file: None
 
 ## Operator Next Steps
 
