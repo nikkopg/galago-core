@@ -25,6 +25,9 @@ import {
   firstFieldForSource,
   formatStatusLine,
   plateOptions,
+  isWellGroupAnchor,
+  isWellsBinding,
+  plateListInput,
 } from "@/components/tools/fieldOptions";
 import type {
   CheckboxBinding,
@@ -33,6 +36,7 @@ import type {
 } from "@/components/tools/fieldOptions";
 import type { OptionsResult } from "@/server/toolOptions";
 import { commandFields } from "@/components/tools/constants";
+import { WELL_FIELDS } from "@/components/tools/wellGeometry";
 import { FAST_PLATES_GOLDEN } from "./fixtures/fastPlates";
 
 function deck(field: string): StaticBinding {
@@ -506,5 +510,84 @@ describe("applyChange for a plate binding (T-07-24)", () => {
     expect(applyChange(plateBinding(), "abc", "typed")).toStrictEqual({ source_plate_id: "" });
     expect(applyChange(plateBinding(), "", "typed")).toStrictEqual({ source_plate_id: "" });
     expect(applyChange(plateBinding(), "-3.5", "typed")).toStrictEqual({ source_plate_id: 35 });
+  });
+});
+
+describe("wells local group (D-11)", () => {
+  it("binds each of the six well fields as a wells binding and not volume", () => {
+    for (const field of WELL_FIELDS) {
+      const binding = lookupLocalBinding("fast", "transfer", field);
+      expect(binding, field).toBeDefined();
+      expect(binding !== undefined && isWellsBinding(binding), field).toBe(true);
+      expect(lookupFieldBinding("fast", "transfer", field), field).toBeUndefined();
+    }
+    expect(lookupLocalBinding("fast", "transfer", "volume")).toBeUndefined();
+  });
+
+  it("writes typed edits through wellFieldPatch", () => {
+    const num = lookupLocalBinding("fast", "transfer", "num_rows");
+    const row = lookupLocalBinding("fast", "transfer", "source_start_row");
+    if (num === undefined || row === undefined) throw new Error("no wells binding");
+    expect(applyLocalChange(num, "12")).toStrictEqual({ num_rows: 12 });
+    expect(applyLocalChange(row, "b")).toStrictEqual({ source_start_row: "b" });
+  });
+});
+
+describe("isWellGroupAnchor (D-11)", () => {
+  const names = commandFields.fast.transfer.map((f) => f.name);
+
+  it("is true only for the first well field in the host's own order", () => {
+    expect(isWellGroupAnchor(names, "fast", "transfer", "source_start_row")).toBe(true);
+    for (const other of WELL_FIELDS.filter((f) => f !== "source_start_row")) {
+      expect(isWellGroupAnchor(names, "fast", "transfer", other), other).toBe(false);
+    }
+    expect(isWellGroupAnchor(names, "fast", "transfer", "source_deck")).toBe(false);
+  });
+
+  it("follows a drawer-style order", () => {
+    const drawer = ["dest_start_col", "source_start_row", "volume", "num_rows"];
+    expect(isWellGroupAnchor(drawer, "fast", "transfer", "dest_start_col")).toBe(true);
+    expect(isWellGroupAnchor(drawer, "fast", "transfer", "source_start_row")).toBe(false);
+  });
+
+  it("is false for every name with no well field present or no command", () => {
+    expect(isWellGroupAnchor(["volume", "source_deck"], "fast", "transfer", "volume")).toBe(false);
+    expect(isWellGroupAnchor(names, "fast", undefined, "source_start_row")).toBe(false);
+  });
+});
+
+describe("plateListInput (D-16)", () => {
+  it("maps loading and unavailable to no plates", () => {
+    expect(plateListInput("loading", undefined)).toStrictEqual({ mode: "loading", plates: [] });
+    expect(plateListInput("unavailable", undefined)).toStrictEqual({
+      mode: "unavailable",
+      plates: [],
+    });
+  });
+
+  it("maps an ok plates result to its entries", () => {
+    const plates = [{ id: 1, description: "A", rowCount: 8, colCount: 12 }];
+    const data: OptionsResult = {
+      status: "ok",
+      source: "fast.plates",
+      shape: "plates",
+      plates,
+      degraded: false,
+      fetchedAt: 0,
+    };
+    expect(plateListInput("ok", data)).toStrictEqual({ mode: "ok", plates });
+  });
+
+  it("maps an ok result of another shape or no data to unavailable", () => {
+    const list: OptionsResult = {
+      status: "ok",
+      source: "stack.robots",
+      shape: "list",
+      names: ["a"],
+      degraded: false,
+      fetchedAt: 0,
+    };
+    expect(plateListInput("ok", list)).toStrictEqual({ mode: "unavailable", plates: [] });
+    expect(plateListInput("ok", undefined)).toStrictEqual({ mode: "unavailable", plates: [] });
   });
 });
