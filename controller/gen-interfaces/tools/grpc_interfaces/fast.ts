@@ -14,6 +14,7 @@ export interface Command {
   abort?: Command_Abort | undefined;
   resume?: Command_Resume | undefined;
   pause?: Command_Pause | undefined;
+  get_plates?: Command_GetPlates | undefined;
 }
 
 export interface Command_Transfer {
@@ -76,6 +77,16 @@ export interface Command_Resume {
 export interface Command_Pause {
 }
 
+/**
+ * Read-only: lists the plate definitions registered on the instrument. It
+ * never takes the motion lock and is safe to send while a transfer is
+ * running. refresh=true bypasses fast_mcp's knowledge cache and re-reads the
+ * definitions from the instrument.
+ */
+export interface Command_GetPlates {
+  refresh?: boolean | undefined;
+}
+
 export interface Config {
   host: string;
   port: number;
@@ -95,6 +106,7 @@ function createBaseCommand(): Command {
     abort: undefined,
     resume: undefined,
     pause: undefined,
+    get_plates: undefined,
   };
 }
 
@@ -129,6 +141,9 @@ export const Command = {
     }
     if (message.pause !== undefined) {
       Command_Pause.encode(message.pause, writer.uint32(82).fork()).ldelim();
+    }
+    if (message.get_plates !== undefined) {
+      Command_GetPlates.encode(message.get_plates, writer.uint32(90).fork()).ldelim();
     }
     return writer;
   },
@@ -210,6 +225,13 @@ export const Command = {
 
           message.pause = Command_Pause.decode(reader, reader.uint32());
           continue;
+        case 11:
+          if (tag !== 90) {
+            break;
+          }
+
+          message.get_plates = Command_GetPlates.decode(reader, reader.uint32());
+          continue;
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -233,6 +255,7 @@ export const Command = {
       abort: isSet(object.abort) ? Command_Abort.fromJSON(object.abort) : undefined,
       resume: isSet(object.resume) ? Command_Resume.fromJSON(object.resume) : undefined,
       pause: isSet(object.pause) ? Command_Pause.fromJSON(object.pause) : undefined,
+      get_plates: isSet(object.get_plates) ? Command_GetPlates.fromJSON(object.get_plates) : undefined,
     };
   },
 
@@ -256,6 +279,8 @@ export const Command = {
     message.abort !== undefined && (obj.abort = message.abort ? Command_Abort.toJSON(message.abort) : undefined);
     message.resume !== undefined && (obj.resume = message.resume ? Command_Resume.toJSON(message.resume) : undefined);
     message.pause !== undefined && (obj.pause = message.pause ? Command_Pause.toJSON(message.pause) : undefined);
+    message.get_plates !== undefined &&
+      (obj.get_plates = message.get_plates ? Command_GetPlates.toJSON(message.get_plates) : undefined);
     return obj;
   },
 
@@ -294,6 +319,9 @@ export const Command = {
       : undefined;
     message.pause = (object.pause !== undefined && object.pause !== null)
       ? Command_Pause.fromPartial(object.pause)
+      : undefined;
+    message.get_plates = (object.get_plates !== undefined && object.get_plates !== null)
+      ? Command_GetPlates.fromPartial(object.get_plates)
       : undefined;
     return message;
   },
@@ -994,6 +1022,62 @@ export const Command_Pause = {
 
   fromPartial<I extends Exact<DeepPartial<Command_Pause>, I>>(_: I): Command_Pause {
     const message = createBaseCommand_Pause();
+    return message;
+  },
+};
+
+function createBaseCommand_GetPlates(): Command_GetPlates {
+  return { refresh: undefined };
+}
+
+export const Command_GetPlates = {
+  encode(message: Command_GetPlates, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+    if (message.refresh !== undefined) {
+      writer.uint32(8).bool(message.refresh);
+    }
+    return writer;
+  },
+
+  decode(input: _m0.Reader | Uint8Array, length?: number): Command_GetPlates {
+    const reader = input instanceof _m0.Reader ? input : _m0.Reader.create(input);
+    let end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseCommand_GetPlates();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1:
+          if (tag !== 8) {
+            break;
+          }
+
+          message.refresh = reader.bool();
+          continue;
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skipType(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): Command_GetPlates {
+    return { refresh: isSet(object.refresh) ? Boolean(object.refresh) : undefined };
+  },
+
+  toJSON(message: Command_GetPlates): unknown {
+    const obj: any = {};
+    message.refresh !== undefined && (obj.refresh = message.refresh);
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<Command_GetPlates>, I>>(base?: I): Command_GetPlates {
+    return Command_GetPlates.fromPartial(base ?? {});
+  },
+
+  fromPartial<I extends Exact<DeepPartial<Command_GetPlates>, I>>(object: I): Command_GetPlates {
+    const message = createBaseCommand_GetPlates();
+    message.refresh = object.refresh ?? undefined;
     return message;
   },
 };
