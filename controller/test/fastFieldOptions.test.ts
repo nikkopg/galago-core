@@ -7,13 +7,18 @@ import {
   NOT_REPORTED_SUFFIX,
   applyLocalChange,
   buildSelectView,
+  checkboxNextValue,
+  checkboxView,
   buildStaticView,
   isStaticBinding,
   lookupFieldBinding,
   lookupLocalBinding,
+  newStepDefaults,
   numericPatch,
+  isCheckboxBinding,
 } from "@/components/tools/fieldOptions";
-import type { StaticBinding } from "@/components/tools/fieldOptions";
+import type { CheckboxBinding, StaticBinding } from "@/components/tools/fieldOptions";
+import { commandFields } from "@/components/tools/constants";
 
 function deck(field: string): StaticBinding {
   const binding = lookupLocalBinding("fast", "transfer", field);
@@ -146,5 +151,81 @@ describe("numericPatch and applyLocalChange", () => {
   it("writes a deck choice as a number under its own field", () => {
     expect(applyLocalChange(deck("source_deck"), "3")).toStrictEqual({ source_deck: 3 });
     expect(applyLocalChange(deck("dest_deck"), "")).toStrictEqual({ dest_deck: "" });
+  });
+});
+
+function tipReuse(): CheckboxBinding {
+  const binding = lookupLocalBinding("fast", "transfer", "tip_reuse");
+  if (binding === undefined || !isCheckboxBinding(binding)) throw new Error("no checkbox binding");
+  return binding;
+}
+
+describe("tip_reuse checkbox view (D-09, PLT-07)", () => {
+  const view = (value: unknown, allowVariables = false) =>
+    checkboxView({ binding: tipReuse(), value, allowVariables });
+
+  it("maps reuse to checked and fresh to unchecked, with no flag", () => {
+    expect(view("reuse")).toStrictEqual({ state: "checked", disabled: false });
+    expect(view("fresh")).toStrictEqual({ state: "unchecked", disabled: false });
+  });
+
+  it("maps a blank saved value to indeterminate with the blank flag", () => {
+    for (const blank of ["", undefined, null]) {
+      expect(view(blank)).toStrictEqual({
+        state: "indeterminate",
+        disabled: false,
+        flag: "(saved value is blank \u2014 not reuse/fresh)",
+      });
+    }
+  });
+
+  it("matches by exact, case-sensitive equality: other strings are flagged, quoted verbatim", () => {
+    for (const other of ["cold", "Reuse", " reuse", "reuse "]) {
+      expect(view(other)).toStrictEqual({
+        state: "indeterminate",
+        disabled: false,
+        flag: "(saved value '" + other + "' \u2014 not reuse/fresh)",
+      });
+    }
+  });
+
+  it("shows a {{variable}} as a disabled reference only when variables are allowed", () => {
+    expect(view("{{tips}}", true)).toStrictEqual({
+      state: "indeterminate",
+      disabled: true,
+      variable: "{{tips}}",
+    });
+    expect(view("{{tips}}", false).flag).toBe("(saved value '{{tips}}' \u2014 not reuse/fresh)");
+  });
+
+  it("picks the next value on a click: checked -> fresh, otherwise reuse", () => {
+    expect(checkboxNextValue(tipReuse(), "checked")).toBe("fresh");
+    expect(checkboxNextValue(tipReuse(), "unchecked")).toBe("reuse");
+    expect(checkboxNextValue(tipReuse(), "indeterminate")).toBe("reuse");
+  });
+
+  it("writes the string as given, never coerced", () => {
+    expect(applyLocalChange(tipReuse(), "fresh")).toStrictEqual({ tip_reuse: "fresh" });
+    expect(applyLocalChange(tipReuse(), "reuse")).toStrictEqual({ tip_reuse: "reuse" });
+  });
+
+  it("keeps commandFields.fast.transfer tip_reuse a fresh/reuse select", () => {
+    const field = commandFields.fast.transfer.find((f) => f.name === "tip_reuse");
+    expect(field).toStrictEqual({ name: "tip_reuse", type: "select", options: ["fresh", "reuse"] });
+  });
+});
+
+describe("newStepDefaults (PLT-07)", () => {
+  it("starts a new F.A.S.T. transfer form with tip_reuse reuse, as a fresh object each call", () => {
+    expect(newStepDefaults("fast", "transfer")).toStrictEqual({ tip_reuse: "reuse" });
+    expect(newStepDefaults("fast", "transfer")).not.toBe(newStepDefaults("fast", "transfer"));
+  });
+
+  it("defaults nothing for any other tool type, command or prototype key", () => {
+    expect(newStepDefaults("stack", "transfer")).toStrictEqual({});
+    expect(newStepDefaults("fast", "run_protocol")).toStrictEqual({});
+    expect(newStepDefaults("fast", undefined)).toStrictEqual({});
+    expect(newStepDefaults("fast", "constructor")).toStrictEqual({});
+    expect(newStepDefaults("constructor", "transfer")).toStrictEqual({});
   });
 });
