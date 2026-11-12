@@ -178,3 +178,111 @@ export function wellFieldPatch(field: WellField, text: string): Record<string, s
   if (text !== "" && /^[0-9]+$/.test(text)) return { [field]: Number(text) };
   return { [field]: text };
 }
+
+// ---- RED-phase skeleton for Task 2 (every function throws, constants empty) ----
+const todo = (): never => {
+  throw new Error("not implemented");
+};
+export const SOURCE_PLATE_TITLE = "";
+export const DEST_PLATE_TITLE = "";
+export const DRAG_CAPTION_SUFFIX = "";
+export const PLACE_CAPTION_SUFFIX = "";
+export const NOTHING_SELECTED = "";
+export const SOURCE_MISFIT = "";
+export const DEST_MISFIT = "";
+export const UNSHOWABLE_STATUS = "";
+export const GRID_UNAVAILABLE_STATUS = "";
+export const LOADING_PLATES = "";
+export const EDIT_AS_FIELDS_LABEL = "";
+export const CLEAR_SELECTION_LABEL = "";
+export const KEPT_OPEN_GRID = "";
+export const KEPT_OPEN_VARIABLE = "";
+export const KEPT_OPEN_FLAG = "";
+export type WellValue =
+  | { kind: "blank" }
+  | { kind: "variable" }
+  | { kind: "ok"; n: number }
+  | { kind: "flag"; text: string };
+export type HiddenCause =
+  | "no-plate"
+  | "variable"
+  | "unavailable"
+  | "not-reported"
+  | "no-size"
+  | "duplicate-sizes";
+export type GridSide =
+  | { kind: "grid"; size: PlateSize; label: string }
+  | { kind: "loading"; text: string }
+  | { kind: "hidden"; cause: HiddenCause; text: string };
+export interface WellPickerView {
+  source: GridSide;
+  dest: GridSide;
+  sourceCaption?: string;
+  destCaption?: string;
+  sourceRect?: { rect: Rect; bad: boolean };
+  footprint?: { rect: Rect; state: "ghost" | "put" | "bad" };
+  mismatch?: string;
+  destClickable: boolean;
+  status: { text: string; tone: "muted" | "danger" };
+  forced: boolean;
+  note?: string;
+  flags: Partial<Record<WellField, string>>;
+  clearDisabled: boolean;
+  sourceMetrics?: GridMetrics;
+  destMetrics?: GridMetrics;
+}
+type Values = Record<string, unknown>;
+export const classifyWellValue = (
+  _f: WellField,
+  _v: unknown,
+  _s: PlateSize | undefined,
+  _a: boolean,
+): WellValue => todo();
+export const sourceBlock = (
+  _v: Values,
+  _s: PlateSize | undefined,
+  _a: boolean,
+): { kind: "none" } | { kind: "flagged" } | { kind: "block"; rect: Rect } => todo();
+export const destOrigin = (
+  _v: Values,
+  _s: PlateSize | undefined,
+  _a: boolean,
+): { kind: "none" } | { kind: "flagged" } | { kind: "origin"; cell: Cell } => todo();
+export const fieldFlags = (
+  _v: Values,
+  _s: PlateSize | undefined,
+  _d: PlateSize | undefined,
+  _a: boolean,
+): Partial<Record<WellField, string>> => todo();
+export const plateLabel = (_id: number | string, _d: string): string => todo();
+export const plateGridSide = (
+  _side: "source" | "destination",
+  _list: PlateListInput,
+  _plate: unknown,
+  _a: boolean,
+): GridSide => todo();
+export const statusLine = (_i: {
+  source: GridSide;
+  dest: GridSide;
+  values: Values;
+  allowVariables: boolean;
+  hover?: Cell;
+}): { text: string; tone: "muted" | "danger" } => todo();
+export const forceOpen = (_i: {
+  source: GridSide;
+  dest: GridSide;
+  values: Values;
+  allowVariables: boolean;
+}): { forced: boolean; note?: string } => todo();
+export const buildWellPickerView = (_i: {
+  plates: PlateListInput;
+  values: Values;
+  allowVariables: boolean;
+  hover?: Cell;
+}): WellPickerView => todo();
+export const destClickPatch = (
+  _view: WellPickerView,
+  _v: Values,
+  _a: boolean,
+  _cell: Cell,
+): Record<string, string | number> | undefined => todo();
