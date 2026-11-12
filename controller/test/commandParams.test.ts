@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { omitBlankParams, coerceBooleanParams } from "@/components/tools/commandParams";
+import {
+  omitBlankParams,
+  coerceBooleanParams,
+  fillMissingParams,
+} from "@/components/tools/commandParams";
+import { commandFields } from "@/components/tools/constants";
 
 // Unit tests for the pure STACK param strip (D-04 planner decision: omit
 // blanks). Fakes only — no STACK or F.A.S.T. motion (v2 hard constraint).
@@ -111,5 +116,76 @@ describe("coerceBooleanParams (CR-01: boolean-typed strings become real booleans
     expect(result).toStrictEqual({ group: { refresh: false }, untouched: "true" });
     expect(input).toStrictEqual(snapshot);
     expect(result).not.toBe(input);
+  });
+});
+
+// D-07 / PLT-04: the modal's save-time fill-in never turns an unset plate or
+// deck into 0. Every other field keeps the legacy fill-in.
+function legacyFill(
+  fields: ReadonlyArray<{ name: string; type: unknown }>,
+  params: Record<string, unknown>,
+): Record<string, unknown> {
+  const out: Record<string, unknown> = { ...params };
+  for (const field of fields) {
+    if (out[field.name] === undefined) {
+      if (field.type === "number") out[field.name] = 0;
+      else if (field.type === "boolean") out[field.name] = false;
+      else if (field.type === "text_array") out[field.name] = [];
+      else out[field.name] = "";
+    }
+  }
+  return out;
+}
+
+describe("fillMissingParams (D-07: unset plate/deck saved as blank, never 0)", () => {
+  it("fills the four no-zero-fill fields with blank and every other fast transfer field as before", () => {
+    const filled = fillMissingParams(
+      commandFields.fast.transfer,
+      { tip_reuse: "reuse" },
+      "fast",
+      "transfer",
+    );
+    expect(filled).toStrictEqual({
+      source_deck: "",
+      dest_deck: "",
+      source_plate_id: "",
+      dest_plate_id: "",
+      source_start_row: "",
+      source_start_col: 0,
+      dest_start_row: "",
+      dest_start_col: 0,
+      num_rows: 0,
+      num_cols: 0,
+      volume: 0,
+      tip_reuse: "reuse",
+    });
+  });
+
+  it("keeps values the operator set, including a set 0", () => {
+    const filled = fillMissingParams(
+      commandFields.fast.transfer,
+      { source_plate_id: 12, source_deck: 3, dest_plate_id: 0, volume: 0 },
+      "fast",
+      "transfer",
+    );
+    expect(filled.source_plate_id).toBe(12);
+    expect(filled.source_deck).toBe(3);
+    expect(filled.dest_plate_id).toBe(0);
+    expect(filled.dest_deck).toBe("");
+  });
+
+  it("equals the legacy fill-in for every other tool type and command", () => {
+    for (const [tool, commands] of Object.entries(commandFields)) {
+      for (const [command, fields] of Object.entries(commands)) {
+        if (tool === "fast" && command === "transfer") continue;
+        expect(fillMissingParams(fields, {}, tool, command)).toStrictEqual(legacyFill(fields, {}));
+      }
+    }
+  });
+
+  it("does not mutate the input params", () => {
+    const params = { tip_reuse: "reuse" };
+    fillMissingParams(commandFields.fast.transfer, params, "fast", "transfer");
+    expect(params).toStrictEqual({ tip_reuse: "reuse" });
   });
 });

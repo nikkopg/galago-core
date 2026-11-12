@@ -16,6 +16,7 @@ import {
   newStepDefaults,
   numericPatch,
   isCheckboxBinding,
+  isNoZeroFillField,
 } from "@/components/tools/fieldOptions";
 import type { CheckboxBinding, StaticBinding } from "@/components/tools/fieldOptions";
 import { commandFields } from "@/components/tools/constants";
@@ -227,5 +228,23 @@ describe("newStepDefaults (PLT-07)", () => {
     expect(newStepDefaults("fast", undefined)).toStrictEqual({});
     expect(newStepDefaults("fast", "constructor")).toStrictEqual({});
     expect(newStepDefaults("constructor", "transfer")).toStrictEqual({});
+  });
+});
+
+describe("isNoZeroFillField (D-07, PLT-04)", () => {
+  it("is true for the four fast transfer plate and deck fields", () => {
+    for (const f of ["source_deck", "dest_deck", "source_plate_id", "dest_plate_id"]) {
+      expect(isNoZeroFillField("fast", "transfer", f)).toBe(true);
+    }
+  });
+
+  it("is false for other fast transfer fields, other tools and prototype keys", () => {
+    for (const f of ["num_rows", "volume", "source_start_col", "tip_reuse"]) {
+      expect(isNoZeroFillField("fast", "transfer", f)).toBe(false);
+    }
+    expect(isNoZeroFillField("stack", "transfer", "source_deck")).toBe(false);
+    expect(isNoZeroFillField("fast", undefined, "source_deck")).toBe(false);
+    expect(isNoZeroFillField("fast", "transfer", "constructor")).toBe(false);
+    expect(isNoZeroFillField("constructor", "transfer", "source_deck")).toBe(false);
   });
 });
