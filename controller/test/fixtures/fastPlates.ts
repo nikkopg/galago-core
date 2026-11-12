@@ -58,3 +58,44 @@ export function platesWithCount(n: number): { plates: Record<string, unknown>[] 
     })),
   };
 }
+
+// Bad-entry reply builders for the parsePlates cases (07-06). Each returns a
+// get_plates reply meta with ONE entry built from the golden first plate with
+// the named override, so a case reads as "this one field is wrong".
+export function platesWith(override: Record<string, unknown>): { plates: unknown[] } {
+  return { plates: [{ ...FAST_PLATES_GOLDEN.plates[0], ...override }] };
+}
+
+// An entry whose id is absent (not merely undefined).
+export function platesWithoutId(): { plates: unknown[] } {
+  const { id: _id, ...rest } = FAST_PLATES_GOLDEN.plates[0];
+  void _id;
+  return { plates: [rest] };
+}
+
+// Fractional id (12.7 must never be offered as 12).
+export const PLATES_FRACTIONAL_ID = platesWith({ id: 12.7 });
+
+// A description of exactly n UTF-16 code units.
+export function platesWithDescriptionLength(n: number): { plates: unknown[] } {
+  return platesWith({ description: "d".repeat(n) });
+}
+
+// An entry with no geometry keys at all.
+export function platesWithoutGeometry(): { plates: unknown[] } {
+  return {
+    plates: [{ id: 3, description: "No geometry", workingCapacity: 10 }],
+  };
+}
+
+// An entry whose id/description/rowCount/colCount exist ONLY on its prototype:
+// own() must treat every one of them as absent.
+export function platesWithInheritedKeys(): { plates: unknown[] } {
+  const entry = Object.create({
+    id: 9,
+    description: "inherited",
+    rowCount: 8,
+    colCount: 12,
+  }) as Record<string, unknown>;
+  return { plates: [entry] };
+}

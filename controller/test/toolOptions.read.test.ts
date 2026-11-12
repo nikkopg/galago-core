@@ -25,6 +25,7 @@ import {
   robotStatesOf,
   robotStatesWithCount,
 } from "./fixtures/stackOptions";
+import { FAST_PLATES_GOLDEN } from "./fixtures/fastPlates";
 
 const T0 = 1_700_000_000_000;
 
@@ -413,5 +414,165 @@ describe("fetchOptions audit logging (D-01, T-06-06)", () => {
     const details = log().mock.calls[0][0].details;
     expect(details).toContain("stack?-1");
     expect(details).not.toMatch(/[\r\n]/);
+  });
+});
+
+// fast.plates read path (07-06, D-03): the fifth source behaves like the Phase 6
+// sources. Failure replies follow the frozen get_plates mapping (galago-tools
+// d53da53): NOT_READY / ERROR_FROM_TOOL / DRIVER_ERROR carry no plates key.
+describe("fetchOptions fast.plates read path (07-06)", () => {
+  let grpc: FakeGrpc;
+
+  beforeEach(() => {
+    resetToolOptionsStateForTest();
+    vi.useFakeTimers({ toFake: ["Date"] });
+    at(0);
+    grpc = installFakeTool("fast-1", ToolType.fast).grpc;
+    grpc.executeCommand.mockResolvedValue(ok(FAST_PLATES_GOLDEN));
+  });
+
+  afterEach(async () => {
+    vi.useRealTimers();
+    await removeFakeTool("fast-1");
+    resetToolOptionsStateForTest();
+  });
+
+  it("a second plain read within OPTIONS_CACHE_TTL_MS is served from cache with one call", async () => {
+    const first = await fetchOptions("fast-1", "fast.plates", false);
+    at(OPTIONS_CACHE_TTL_MS - 1);
+    const second = await fetchOptions("fast-1", "fast.plates", false);
+    expect(grpc.executeCommand).toHaveBeenCalledTimes(1);
+    expect(second).toStrictEqual(first);
+    expect(first).toMatchObject({ status: "ok", shape: "plates", fetchedAt: T0 });
+
+    at(OPTIONS_CACHE_TTL_MS);
+    await fetchOptions("fast-1", "fast.plates", false);
+    expect(grpc.executeCommand).toHaveBeenCalledTimes(2);
+  });
+
+  it("a refresh sends get_plates with refresh true and bypasses the cache", async () => {
+    await fetchOptions("fast-1", "fast.plates", false);
+    at(100);
+    await fetchOptions("fast-1", "fast.plates", true);
+    expect(grpc.executeCommand).toHaveBeenCalledTimes(2);
+    expect(grpc.executeCommand.mock.calls[0][0]).toStrictEqual({ fast: { get_plates: {} } });
+    expect(grpc.executeCommand.mock.calls[1][0]).toStrictEqual({
+      fast: { get_plates: { refresh: true } },
+    });
+  });
+
+  it("a refresh within REFRESH_MIN_INTERVAL_MS of the last live refresh reuses it", async () => {
+    await fetchOptions("fast-1", "fast.plates", true);
+    at(REFRESH_MIN_INTERVAL_MS - 1);
+    await fetchOptions("fast-1", "fast.plates", true);
+    expect(grpc.executeCommand).toHaveBeenCalledTimes(1);
+  });
+
+  it("NOT_READY and DRIVER_ERROR are tool_refused", async () => {
+    for (const code of [ResponseCode.NOT_READY, ResponseCode.DRIVER_ERROR]) {
+      resetToolOptionsStateForTest();
+      grpc.executeCommand.mockResolvedValueOnce({ response: code, error_message: "no" });
+      expect(await fetchOptions("fast-1", "fast.plates", false)).toStrictEqual({
+        status: "unavailable",
+        source: "fast.plates",
+        reason: "tool_refused",
+      });
+    }
+  });
+
+  it("ERROR_FROM_TOOL without meta (the frozen unreachable mapping) is tool_refused", async () => {
+    grpc.executeCommand.mockResolvedValueOnce({
+      response: ResponseCode.ERROR_FROM_TOOL,
+      error_message: "instrument unreachable: ConnectError: refused",
+    });
+    expect(await fetchOptions("fast-1", "fast.plates", false)).toMatchObject({
+      status: "unavailable",
+      reason: "tool_refused",
+    });
+  });
+
+  it("ERROR_FROM_TOOL with meta kind readFailed is read_failed", async () => {
+    grpc.executeCommand.mockResolvedValueOnce({
+      response: ResponseCode.ERROR_FROM_TOOL,
+      error_message: "x",
+      meta_data: { kind: "readFailed", error: { status: 400 } },
+    });
+    expect(await fetchOptions("fast-1", "fast.plates", false)).toMatchObject({
+      status: "unavailable",
+      reason: "read_failed",
+    });
+  });
+
+  it("SUCCESS without meta_data is no_data and a SUCCESS meta without plates is bad_reply", async () => {
+    grpc.executeCommand.mockResolvedValueOnce({
+      response: ResponseCode.SUCCESS,
+      error_message: "",
+    });
+    expect(await fetchOptions("fast-1", "fast.plates", false)).toMatchObject({
+      status: "unavailable",
+      reason: "no_data",
+    });
+    grpc.executeCommand.mockResolvedValueOnce(ok({}));
+    expect(await fetchOptions("fast-1", "fast.plates", false)).toMatchObject({
+      status: "unavailable",
+      reason: "bad_reply",
+    });
+  });
+
+  it("a gRPC error with code 4 is timeout and code 14 is transport", async () => {
+    grpc.executeCommand.mockRejectedValueOnce(grpcError(4));
+    expect(await fetchOptions("fast-1", "fast.plates", false)).toMatchObject({
+      status: "unavailable",
+      reason: "timeout",
+    });
+    grpc.executeCommand.mockRejectedValueOnce(grpcError(14));
+    expect(await fetchOptions("fast-1", "fast.plates", false)).toMatchObject({
+      status: "unavailable",
+      reason: "transport",
+    });
+  });
+
+  it("a plates list over MAX_PLATES is too_large, never sliced", async () => {
+    grpc.executeCommand.mockResolvedValueOnce(
+      ok({ plates: Array.from({ length: 1001 }, (_, i) => ({ id: i + 1 })) }),
+    );
+    expect(await fetchOptions("fast-1", "fast.plates", false)).toMatchObject({
+      status: "unavailable",
+      reason: "too_large",
+    });
+  });
+
+  it("a failed read never returns the earlier cached list (no stale plates)", async () => {
+    const first = await fetchOptions("fast-1", "fast.plates", false);
+    expect(first).toMatchObject({ status: "ok" });
+
+    // A failed refresh evicts the cached list: the next plain read goes live.
+    at(100);
+    grpc.executeCommand.mockRejectedValueOnce(grpcError(14));
+    expect(await fetchOptions("fast-1", "fast.plates", true)).toMatchObject({
+      status: "unavailable",
+      reason: "transport",
+    });
+
+    at(200);
+    grpc.executeCommand.mockRejectedValueOnce(grpcError(14));
+    const afterFailure = await fetchOptions("fast-1", "fast.plates", false);
+    expect(afterFailure).toStrictEqual({
+      status: "unavailable",
+      source: "fast.plates",
+      reason: "transport",
+    });
+    expect(grpc.executeCommand).toHaveBeenCalledTimes(3);
+  });
+
+  it("a read of a non-fast tool sends nothing and is never queued", async () => {
+    const stack = installFakeTool("stack-1", ToolType.stack).grpc;
+    expect(await fetchOptions("stack-1", "fast.plates", false)).toStrictEqual({
+      status: "unavailable",
+      source: "fast.plates",
+      reason: "wrong_tool_type",
+    });
+    expect(stack.executeCommand).not.toHaveBeenCalled();
+    await removeFakeTool("stack-1");
   });
 });
