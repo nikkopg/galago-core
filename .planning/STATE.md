@@ -5,16 +5,16 @@ milestone_name: Tool-inferred dropdowns + per-tool concurrency lanes
 current_phase: 07
 current_phase_name: F.A.S.T. Plate Dropdowns
 status: executing
-stopped_at: Completed 07-02-PLAN.md
-last_updated: "2026-11-12T04:37:36.405Z"
+stopped_at: Completed 07-03-PLAN.md
+last_updated: "2026-11-12T04:43:54.868Z"
 last_activity: 2026-11-12
 last_activity_desc: Phase 07 execution started
-state_head: 16858027e09c3f1f8c096a96a5763158a6641040
+state_head: 0c7249ba34521c9a8091052d6de0a94f448d035c
 progress:
   total_phases: 4
   completed_phases: 1
   total_plans: 13
-  completed_plans: 7
+  completed_plans: 8
   percent: 25
 ---
 
@@ -32,7 +32,7 @@ concurrency lanes)
 ## Current Position
 
 Phase: 07 (F.A.S.T. Plate Dropdowns) — EXECUTING
-Plan: 3 of 8
+Plan: 4 of 8
 Status: Ready to execute
 Last activity: 2026-11-12 — Phase 07 execution started
 
@@ -97,6 +97,7 @@ Progress: [███░░░░░░░] 25% (1 of 4 v1.2 phases)
 | Phase 06 P01 | 9 min | 2 tasks | 10 files |
 | Phase 07 P01 | 14 min | 2 tasks | 6 files |
 | Phase 07 P02 | 20 min | 2 tasks | 3 files |
+| Phase 07 P03 | 3 min | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -167,6 +168,8 @@ Recent decisions affecting current work:
 - [Phase 06]: Connect All builds its configure payload with buildConnectConfig (unwraps the type-keyed tools.config); found and fixed during UAT (1c4f875)
 - [Phase 07]: 07-01: numericPatch converts only all-digit strings to numbers; checkboxView matches reuse/fresh by exact case-sensitive equality and never rewrites a saved value; newStepDefaults (tip_reuse reuse) is merged inside the [selectedCommand] effect
 - [Phase 07]: 07-02: legacy number 0 in well fields is blank (never flagged); string '0' is flagged; size mismatch compares the (rows, cols) pair
+- [Phase 07]: 07-03: fillMissingParams keeps legacy fill-ins verbatim and applies the no-zero-fill check first; unset plate/deck saved as blank, never 0
+- [Phase 07]: 07-03: drawer renders local controls only while editing and never calls newStepDefaults; modal initialisation effect deps not widened
 
 ### Pending Todos
 
@@ -230,8 +233,8 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-12T04:37:36.365Z
-Stopped at: Completed 07-02-PLAN.md
+Last session: 2026-11-12T04:43:54.828Z
+Stopped at: Completed 07-03-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

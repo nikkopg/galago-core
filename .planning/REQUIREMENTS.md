@@ -65,9 +65,9 @@ on its own, and never preselects a physical decision for the operator.
 - [ ] **PLT-04**: Plate entries whose id is not an integer ≥ 1 are rejected, never truncated.
   Duplicate ids are flagged. An unset plate is never saved as `0`.
 - [ ] **PLT-05**: `get_plates` never appears as a protocol step or a tool-page command.
-- [ ] **PLT-06**: `source_deck` and `dest_deck` are dropdowns of deck slots 1-6 (the tool server's
+- [x] **PLT-06**: `source_deck` and `dest_deck` are dropdowns of deck slots 1-6 (the tool server's
   `_DECK_SLOTS`). They start empty, a saved value is kept verbatim, and this needs no `get_plates`.
-- [ ] **PLT-07**: `tip_reuse` is a "Reuse tips" checkbox: checked sends `reuse`, unchecked sends
+- [x] **PLT-07**: `tip_reuse` is a "Reuse tips" checkbox: checked sends `reuse`, unchecked sends
   `fresh`. A new step starts checked (`reuse`) — a deliberate user decision (2026-11-06), the one
   default allowed on a Transfer field. The wire stays the same string, so saved protocols load
   unchanged: a saved `fresh` shows unchecked, and a saved blank or other value is kept verbatim and
@@ -195,8 +195,8 @@ the protocol surface and run page, as waves inside one phase.
 | PLT-03 | Phase 7 | Pending |
 | PLT-04 | Phase 7 | Pending |
 | PLT-05 | Phase 7 | Pending |
-| PLT-06 | Phase 7 | Pending |
-| PLT-07 | Phase 7 | Pending |
+| PLT-06 | Phase 7 | Complete |
+| PLT-07 | Phase 7 | Complete |
 | PLT-08 | Phase 7 | Pending |
 | PLT-09 | Phase 7 | Pending |
 | LAN-01 | Phase 8 | Pending |
