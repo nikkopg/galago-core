@@ -1047,16 +1047,29 @@ describe("protocol host invariants (D-14, D-15, D-17)", () => {
     expect(src).toContain("handleVariableSelect(field.name");
   });
 
-  it("the modal's handleSubmit keeps its four fill-ins and knows nothing of tool options", () => {
+  it("the modal's handleSubmit fills through fillMissingParams and knows nothing of tool options", () => {
     const region = extractBracedRegion(stripComments(read(modal)), /const handleSubmit = \(\) =>/);
     expect(region).not.toBe("");
-    expect(region).toContain("finalParams[field.name] = 0;");
-    expect(region).toContain("finalParams[field.name] = false;");
-    expect(region).toContain("finalParams[field.name] = [];");
-    expect(region).toContain('finalParams[field.name] = "";');
+    expect(region).toContain("fillMissingParams(");
     for (const pattern of [/OptionsSelect/, /applyChange/, /tool\.options/, /useToolOptions/]) {
       expect(region, String(pattern)).not.toMatch(pattern);
     }
+  });
+
+  it("fillMissingParams keeps the four legacy fill-ins and asks isNoZeroFillField before the number fill-in (D-07)", () => {
+    const region = extractBracedRegion(
+      stripComments(read("components/tools/commandParams.ts")),
+      /export function fillMissingParams/,
+    );
+    expect(region).not.toBe("");
+    const zero = region.indexOf("finalParams[field.name] = 0;");
+    expect(zero).toBeGreaterThanOrEqual(0);
+    expect(region).toContain("finalParams[field.name] = false;");
+    expect(region).toContain("finalParams[field.name] = [];");
+    expect(region).toContain('finalParams[field.name] = "";');
+    const guard = region.indexOf("isNoZeroFillField(");
+    expect(guard).toBeGreaterThanOrEqual(0);
+    expect(guard).toBeLessThan(zero);
   });
 
   it("the drawer's handleSaveInputs still spreads the saved params before editedParams", () => {
@@ -1069,5 +1082,84 @@ describe("protocol host invariants (D-14, D-15, D-17)", () => {
     for (const pattern of [/OptionsSelect/, /applyChange/, /tool\.options/, /useToolOptions/]) {
       expect(region, String(pattern)).not.toMatch(pattern);
     }
+  });
+});
+
+describe("F.A.S.T. local field invariants (D-07, D-08, D-09, D-17)", () => {
+  const modal = "components/protocols/AddToolCommandModal.tsx";
+  const drawer = "components/protocols/CommandDetailsDrawer.tsx";
+  const page = "pages/tools/[id].tsx";
+  const fieldOptions = "components/tools/fieldOptions.ts";
+  const staticSelect = "components/tools/StaticSelect.tsx";
+  const checkbox = "components/tools/TipReuseCheckbox.tsx";
+
+  const clientFiles = () => ["components", "hooks", "pages"].flatMap((dir) => walk(dir)).map(rel);
+  const allFiles = () =>
+    ["server", "components", "hooks", "pages", "utils"].flatMap((dir) => walk(dir)).map(rel);
+
+  it("DECK_SLOTS is assigned exactly once, in fieldOptions.ts", () => {
+    const definers = allFiles().filter((relPath) =>
+      /\bDECK_SLOTS\s*=(?!=)/.test(stripComments(read(relPath))),
+    );
+    expect(definers).toStrictEqual([fieldOptions]);
+  });
+
+  it("the six-number deck list is never written out as a literal", () => {
+    // server/routers/inventory.ts lists the columns of a 24-well plate, which
+    // happen to be 1-6; it is not a deck list.
+    const columnsOf24WellPlate = "server/routers/inventory.ts";
+    const writers = allFiles()
+      .filter((relPath) => relPath !== columnsOf24WellPlate)
+      .filter((relPath) => /\[\s*1,\s*2,\s*3,\s*4,\s*5,\s*6\s*\]/.test(read(relPath)));
+    expect(writers).toStrictEqual([]);
+  });
+
+  it("StaticSelect and TipReuseCheckbox have no effect, instrument read or selection construct", () => {
+    for (const file of [staticSelect, checkbox]) {
+      const src = stripComments(read(file));
+      expect(src, file).not.toMatch(/\buse(Layout)?Effect\b/);
+      expect(src, file).not.toMatch(/useToolOptions/);
+      expect(src, file).not.toMatch(/tool\.options/);
+      for (const pattern of [
+        /options\[0\]/,
+        /selectedIndex/,
+        /defaultValue/,
+        /defaultChecked/,
+        /\bselected=/,
+        /placeholder=/,
+      ]) {
+        expect(src, file + " " + String(pattern)).not.toMatch(pattern);
+      }
+    }
+  });
+
+  it("get_plates is in no client file and is no commandFields key (PLT-05)", () => {
+    const naming = clientFiles().filter((relPath) => read(relPath).includes("get_plates"));
+    expect(naming).toStrictEqual([]);
+    const constants = stripComments(read("components/tools/constants.ts"));
+    expect(constants).not.toContain("get_plates");
+  });
+
+  it("each of the three hosts looks up local bindings and renders both local controls", () => {
+    for (const file of [page, modal, drawer]) {
+      const src = stripComments(read(file));
+      expect(src, file).toContain("lookupLocalBinding(");
+      expect(src, file).toContain("<StaticSelect");
+      expect(src, file).toContain("<TipReuseCheckbox");
+    }
+  });
+
+  it("newStepDefaults is called in exactly the tool page and the modal, never the drawer (D-09)", () => {
+    const callers = clientFiles()
+      .filter((relPath) => stripComments(read(relPath)).includes("newStepDefaults("))
+      .filter((relPath) => relPath !== fieldOptions)
+      .sort();
+    expect(callers).toStrictEqual([modal, page].sort());
+    expect(stripComments(read(drawer))).not.toContain("newStepDefaults");
+  });
+
+  it("the drawer looks up local bindings only while editing", () => {
+    const src = stripComments(read(drawer));
+    expect(src).toMatch(/isEditing\s*\?\s*lookupLocalBinding\(/);
   });
 });
