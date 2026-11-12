@@ -132,6 +132,24 @@ describe("wire contract", () => {
     expect(decoded.fast?.transfer?.tip_reuse).toBe("fresh");
   });
 
+  // PLT-02 (07-05): get_plates is oneof entry 11 of the fast Command. Before the
+  // re-pin it encoded as an empty fast.Command (RESEARCH Pitfall 1); on the
+  // regenerated codec the refresh flag and the bare read both round-trip.
+  it("encodes the get_plates read into the fast Command oneof (07-05)", () => {
+    const withRefresh = tool_base.Command.decode(
+      tool_base.Command.encode({ fast: { get_plates: { refresh: true } } } as tool_base.Command)
+        .finish(),
+    );
+    expect(withRefresh.fast?.get_plates).toBeDefined();
+    expect(withRefresh.fast?.get_plates?.refresh).toBe(true);
+
+    const bare = tool_base.Command.decode(
+      tool_base.Command.encode({ fast: { get_plates: {} } } as tool_base.Command).finish(),
+    );
+    expect(bare.fast?.get_plates).toBeDefined();
+    expect(bare.fast?.get_plates?.refresh).toBeUndefined();
+  });
+
   // GEN-04a (D-07a): the operator acknowledge payload survives the REAL
   // generated encoder with guid and arm_inspected intact — the first
   // real-encoder evidence for the Phase 4 acknowledge work. Fakes only; the
