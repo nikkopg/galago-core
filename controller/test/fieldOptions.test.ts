@@ -33,7 +33,7 @@ import type {
   SelectView,
 } from "@/components/tools/fieldOptions";
 import { commandFields } from "@/components/tools/constants";
-import type { OptionSourceId, OptionsResult } from "@/server/toolOptions";
+import type { OptionSourceId, OptionsResult, PlateEntry } from "@/server/toolOptions";
 import {
   DUPLICATE_DECK_TREE,
   DUPLICATE_DEVICE_TREE,
@@ -47,6 +47,7 @@ import {
   UNCALIBRATED_TREE,
 } from "./fixtures/stackDeviceTrees";
 import type { DeviceTreeFixture } from "./fixtures/stackDeviceTrees";
+import { FIXTURE_PLATES } from "./fixtures/fastPlates";
 
 function deepFreeze<T>(value: T): T {
   if (typeof value === "object" && value !== null && !Object.isFrozen(value)) {
@@ -464,6 +465,17 @@ function treeResult(tree: DeviceTreeFixture, degraded = false): OptionsResult {
   };
 }
 
+function platesResult(plates: PlateEntry[], degraded = false): OptionsResult {
+  return {
+    status: "ok",
+    source: "fast.plates",
+    shape: "plates",
+    plates,
+    degraded,
+    fetchedAt: FETCHED_AT,
+  };
+}
+
 function fieldView(
   field: string,
   value: unknown,
@@ -501,6 +513,7 @@ describe("copy constants", () => {
       "stack.devices": "devices",
       "stack.labwareProfiles": "labware profiles",
       "stack.transferProfiles": "transfer profiles",
+      "fast.plates": "plates",
     });
   });
 });
@@ -535,10 +548,32 @@ describe("formatStatusLine", () => {
     );
   });
 
+  it("counts plates for the plates shape (07-06): 3 items, degraded suffix, 0 items", () => {
+    const three: PlateEntry[] = FIXTURE_PLATES.slice(0, 3);
+    expect(formatStatusLine(platesResult(three))).toBe(
+      "from instrument · 3 items · fetched 09:05:07",
+    );
+    expect(formatStatusLine(platesResult(three, true))).toBe(
+      "from instrument · 3 items · fetched 09:05:07 · some entries skipped",
+    );
+    expect(formatStatusLine(platesResult([]))).toBe("from instrument · 0 items · fetched 09:05:07");
+    expect(formatStatusLine(platesResult(three.slice(0, 1)))).toBe(
+      "from instrument · 1 item · fetched 09:05:07",
+    );
+  });
+
   it("is empty unless the result is ok", () => {
     expect(
       formatStatusLine({ status: "unavailable", source: "stack.robots", reason: "timeout" }),
     ).toBe("");
+  });
+});
+
+describe("buildFieldView: plates shape (07-06)", () => {
+  it("a plates result never reaches a list or cascade builder: the field falls back to typed input", () => {
+    const data = platesResult(FIXTURE_PLATES.slice(0, 3));
+    expect(fieldView("robot", "r1", {}, data).mode).toBe("unavailable");
+    expect(fieldView("source_device", "d1", {}, data).mode).toBe("unavailable");
   });
 });
 
@@ -831,18 +866,21 @@ describe("hydrate + refresh never changes a saved step (DRP-02, DRP-05, D-09)", 
     "stack.labwareProfiles": listResult("stack.labwareProfiles", ["Default"]),
     "stack.transferProfiles": listResult("stack.transferProfiles", ["Default"]),
     "stack.devices": treeResult(GOLDEN_TREE),
+    "fast.plates": platesResult([]),
   };
   const REFRESHED_DATA: Record<OptionSourceId, OptionsResult> = {
     "stack.robots": listResult("stack.robots", ["stack2-7"]),
     "stack.labwareProfiles": listResult("stack.labwareProfiles", ["Other"]),
     "stack.transferProfiles": listResult("stack.transferProfiles", ["Fast"]),
     "stack.devices": treeResult(REFRESHED_TREE),
+    "fast.plates": platesResult([]),
   };
   const EMPTY_DATA: Record<OptionSourceId, OptionsResult> = {
     "stack.robots": listResult("stack.robots", []),
     "stack.labwareProfiles": listResult("stack.labwareProfiles", []),
     "stack.transferProfiles": listResult("stack.transferProfiles", []),
     "stack.devices": treeResult(NO_DEVICES_TREE),
+    "fast.plates": platesResult([]),
   };
 
   const VIEW_KEYS = new Set(["mode", "value", "options", "disabled", "hint", "note"]);

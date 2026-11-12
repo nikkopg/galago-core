@@ -38,6 +38,7 @@ export const SOURCE_LABELS: Record<OptionSourceId, string> = {
   "stack.devices": "devices",
   "stack.labwareProfiles": "labware profiles",
   "stack.transferProfiles": "transfer profiles",
+  "fast.plates": "plates",
 };
 
 export type CascadeSide = "source" | "destination";
@@ -643,6 +644,11 @@ export function buildFieldView(input: {
   if (mode === "ok") {
     if (data === undefined || data.status !== "ok") {
       mode = "unavailable";
+    } else if (data.shape === "plates") {
+      // A plates result never reaches the list or cascade builders; the plate
+      // role branch is 07-08. Until a field is bound to fast.plates this is the
+      // typed-input fallback.
+      mode = "unavailable";
     } else if (binding.role.kind === "list") {
       if (data.shape === "list") offered = listOptions(data);
       else mode = "unavailable";
@@ -695,7 +701,12 @@ function pad2(n: number): string {
 // getHours/getMinutes/getSeconds so the output never depends on the locale.
 export function formatStatusLine(data: OptionsResult): string {
   if (data.status !== "ok") return "";
-  const count = data.shape === "list" ? data.names.length : data.devices.length;
+  const count =
+    data.shape === "list"
+      ? data.names.length
+      : data.shape === "tree"
+        ? data.devices.length
+        : data.plates.length;
   const at = new Date(data.fetchedAt);
   const time = pad2(at.getHours()) + ":" + pad2(at.getMinutes()) + ":" + pad2(at.getSeconds());
   const line =

@@ -39,6 +39,17 @@ export interface StackDevice {
   decks: StackDeck[];
 }
 
+// One registered F.A.S.T. plate (07-06, D-04). id is a validated integer in
+// 1..2147483647 (never truncated or rounded); rowCount / colCount are null when
+// the reply gave no usable geometry (the plate stays selectable). workingCapacity
+// is read by nobody in this phase and is not carried.
+export interface PlateEntry {
+  id: number;
+  description: string;
+  rowCount: number | null;
+  colCount: number | null;
+}
+
 export type OptionsResult =
   | {
       status: "ok";
@@ -57,6 +68,14 @@ export type OptionsResult =
       degraded: boolean;
       fetchedAt: number;
     }
+  | {
+      status: "ok";
+      source: OptionSourceId;
+      shape: "plates";
+      plates: PlateEntry[];
+      degraded: boolean;
+      fetchedAt: number;
+    }
   | { status: "unavailable"; source: OptionSourceId; reason: UnavailableReason };
 
 type ParsedList = { shape: "list"; names: string[]; degraded: boolean };
@@ -66,9 +85,10 @@ type ParsedTree = {
   ambiguous: string[];
   degraded: boolean;
 };
+type ParsedPlates = { shape: "plates"; plates: PlateEntry[]; degraded: boolean };
 // "too_large": the reply is over a cap. It is rejected whole, never truncated
 // (D-03, T-06-05).
-type Parsed = ParsedList | ParsedTree | "bad_reply" | "too_large";
+type Parsed = ParsedList | ParsedTree | ParsedPlates | "bad_reply" | "too_large";
 
 // Reply caps (RESEARCH A1, discretion values). Over a list or tree cap the
 // whole reply is unavailable too_large; a name over the length cap is dropped
@@ -76,6 +96,18 @@ type Parsed = ParsedList | ParsedTree | "bad_reply" | "too_large";
 export const MAX_NAME_LENGTH = 256;
 export const MAX_LIST_ITEMS = 1000;
 export const MAX_TREE_NODES = 10000;
+
+// get_plates caps (07-06, D-04). Over MAX_PLATES the whole reply is too_large,
+// never sliced. A description over the length cap (UTF-16 code units, i.e.
+// JavaScript string length) is replaced by "" and the list marked degraded; a
+// row or column count outside its range becomes null (unknown geometry). The
+// geometry caps match the largest supported plate (32 x 48 = 1536 wells).
+export const MAX_PLATES = 1000;
+export const MAX_PLATE_DESCRIPTION_LENGTH = 256;
+export const MAX_PLATE_ROWS = 32;
+export const MAX_PLATE_COLS = 48;
+// Plate ids travel as int32 on the instrument side.
+const INT32_MAX = 2147483647;
 
 interface OptionSourceEntry {
   toolType: string;
@@ -244,7 +276,64 @@ export function parseDeviceTree(meta: unknown): Parsed {
   return { shape: "tree", devices, ambiguous, degraded };
 }
 
-// Closed to exactly four sources (D-02). No fast.plates entry: Phase 7 adds it.
+function boundedInt(value: unknown, max: number): number | null {
+  return typeof value === "number" && Number.isInteger(value) && value >= 1 && value <= max
+    ? value
+    : null;
+}
+
+// get_plates reply (frozen galago-tools d53da53, recorded in 07-05-SUMMARY):
+// meta_data = { plates: [{ id, description, rowCount, colCount, workingCapacity }] }
+// with NO kind discriminator, so an absent kind is accepted; a kind that is
+// present but is not "plates" is a different reply and is bad_reply. Entries keep
+// the reply order and duplicates are kept (07-08 flags them). An entry whose id
+// is not an integer in 1..INT32_MAX is dropped and the list marked degraded,
+// never repaired (12.7 is never offered as 12, PLT-04). A bad description keeps
+// the plate with "" (degraded); bad geometry keeps it with null (not degraded).
+export function parsePlates(meta: unknown): Parsed {
+  if (!isPlainObject(meta)) return "bad_reply";
+  const kind = own(meta, "kind");
+  if (kind !== undefined && kind !== "plates") return "bad_reply";
+  const items = own(meta, "plates");
+  if (!Array.isArray(items)) return "bad_reply";
+  if (items.length > MAX_PLATES) return "too_large";
+
+  const plates: PlateEntry[] = [];
+  let degraded = false;
+  for (const item of items) {
+    if (!isPlainObject(item)) {
+      degraded = true;
+      continue;
+    }
+    const id = boundedInt(own(item, "id"), INT32_MAX);
+    if (id === null) {
+      degraded = true;
+      continue;
+    }
+    const rawDescription = own(item, "description");
+    let description = "";
+    if (
+      typeof rawDescription === "string" &&
+      rawDescription.length <= MAX_PLATE_DESCRIPTION_LENGTH &&
+      !isVariableLike(rawDescription) &&
+      !isVariableLike(rawDescription.trim())
+    ) {
+      description = rawDescription;
+    } else {
+      degraded = true;
+    }
+    plates.push({
+      id,
+      description,
+      rowCount: boundedInt(own(item, "rowCount"), MAX_PLATE_ROWS),
+      colCount: boundedInt(own(item, "colCount"), MAX_PLATE_COLS),
+    });
+  }
+  return { shape: "plates", plates, degraded };
+}
+
+// Closed to exactly five sources (D-02, D-03): the four STACK
+// sources and fast.plates (Phase 7).
 export const OPTION_SOURCES = {
   "stack.robots": {
     toolType: "stack",
@@ -273,6 +362,13 @@ export const OPTION_SOURCES = {
     kind: "transferProfiles",
     acceptsRefresh: true,
     parse: (meta: unknown) => parseProfiles(meta, "transferProfiles"),
+  },
+  "fast.plates": {
+    toolType: "fast",
+    command: "get_plates",
+    kind: "plates",
+    acceptsRefresh: true,
+    parse: (meta: unknown) => parsePlates(meta),
   },
 } as const satisfies Record<string, OptionSourceEntry>;
 
@@ -424,29 +520,47 @@ async function readLive(
     return { result: unavailable(source, parsed) };
   }
 
-  if (parsed.shape === "list") {
-    return {
-      result: {
-        status: "ok",
-        source,
-        shape: "list",
-        names: parsed.names,
-        degraded: parsed.degraded,
-        fetchedAt: Date.now(),
-      },
-    };
+  switch (parsed.shape) {
+    case "list":
+      return {
+        result: {
+          status: "ok",
+          source,
+          shape: "list",
+          names: parsed.names,
+          degraded: parsed.degraded,
+          fetchedAt: Date.now(),
+        },
+      };
+    case "tree":
+      return {
+        result: {
+          status: "ok",
+          source,
+          shape: "tree",
+          devices: parsed.devices,
+          ambiguous: parsed.ambiguous,
+          degraded: parsed.degraded,
+          fetchedAt: Date.now(),
+        },
+      };
+    case "plates":
+      return {
+        result: {
+          status: "ok",
+          source,
+          shape: "plates",
+          plates: parsed.plates,
+          degraded: parsed.degraded,
+          fetchedAt: Date.now(),
+        },
+      };
+    default: {
+      const exhaustive: never = parsed;
+      void exhaustive;
+      return { result: unavailable(source, "bad_reply") };
+    }
   }
-  return {
-    result: {
-      status: "ok",
-      source,
-      shape: "tree",
-      devices: parsed.devices,
-      ambiguous: parsed.ambiguous,
-      degraded: parsed.degraded,
-      fetchedAt: Date.now(),
-    },
-  };
 }
 
 // Runs one live read and applies its outcome to the shared state: an ok result

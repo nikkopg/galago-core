@@ -40,6 +40,7 @@ import Tool from "@/server/tools";
 import { findMany, findOne, getSelectedWorkcellId } from "@/db/helpers";
 import { resetToolOptionsStateForTest } from "@/server/toolOptions";
 import { installFakeTool, removeFakeTool, FakeGrpc } from "./helpers/fakeTool";
+import { FAST_PLATES_GOLDEN } from "./fixtures/fastPlates";
 
 const ROBOT_STATES = { kind: "robotStates", robots: [{ robotName: "stack2-6", state: "idle" }] };
 const LABWARE_PROFILES = {
@@ -303,8 +304,91 @@ describe("tool.options query (06-01 tracer)", () => {
     await expect(
       c.options({ toolId: "stack-1", source: "stack.robots", params: { x: 1 } }),
     ).rejects.toThrow();
-    await expect(c.options({ toolId: "stack-1", source: "fast.plates" })).rejects.toThrow();
+    await expect(c.options({ toolId: "stack-1", source: "fast.nothing" })).rejects.toThrow();
     expect(stackGrpc.executeCommand).not.toHaveBeenCalled();
+  });
+});
+
+// fast.plates (07-06, D-03): the fifth registry source, served with no router
+// edit. Reply literals follow the frozen get_plates shape (galago-tools
+// d53da53): { plates: [...] } with no kind key.
+describe("tool.options fast.plates (07-06)", () => {
+  const TWO_PLATES = {
+    plates: [FAST_PLATES_GOLDEN.plates[0], FAST_PLATES_GOLDEN.plates[1]],
+  };
+  let fastGrpc: FakeGrpc;
+
+  beforeEach(() => {
+    resetToolOptionsStateForTest();
+    fastGrpc = installFakeTool("fast-1", ToolType.fast).grpc;
+    fastGrpc.executeCommand.mockResolvedValue(ok(TWO_PLATES));
+  });
+
+  afterEach(async () => {
+    await removeFakeTool("fast-1");
+    await removeFakeTool("stack-1");
+    vi.restoreAllMocks();
+  });
+
+  it("returns the plates in reply order and sends exactly get_plates {} with Metadata and a 5 s deadline", async () => {
+    const before = Date.now();
+    const result = await caller().options({ toolId: "fast-1", source: "fast.plates" });
+
+    expect(result).toMatchObject({
+      status: "ok",
+      source: "fast.plates",
+      shape: "plates",
+      degraded: false,
+      plates: [
+        { id: 1, description: "Default 96-Well Conical", rowCount: 8, colCount: 12 },
+        { id: 12, description: "Greiner 96 flat", rowCount: 8, colCount: 12 },
+      ],
+    });
+    // workingCapacity is not carried to the browser.
+    const plates = (result as unknown as { plates: Record<string, unknown>[] }).plates;
+    expect(Object.keys(plates[0]).sort()).toStrictEqual([
+      "colCount",
+      "description",
+      "id",
+      "rowCount",
+    ]);
+
+    expect(fastGrpc.executeCommand).toHaveBeenCalledTimes(1);
+    const [payload, metadata, options] = fastGrpc.executeCommand.mock.calls[0];
+    expect(payload).toStrictEqual({ fast: { get_plates: {} } });
+    expect(metadata).toBeInstanceOf(grpc.Metadata);
+    const deadline = (options as { deadline: number }).deadline;
+    expect(Math.abs(deadline - (before + 5000))).toBeLessThan(1000);
+  });
+
+  it("an operator Refresh sends get_plates { refresh: true }", async () => {
+    await caller().options({ toolId: "fast-1", source: "fast.plates", refresh: true });
+    expect(fastGrpc.executeCommand.mock.calls[0][0]).toStrictEqual({
+      fast: { get_plates: { refresh: true } },
+    });
+  });
+
+  it("a stack tool asked for fast.plates is wrong_tool_type with nothing sent", async () => {
+    const stack = installFakeTool("stack-1", ToolType.stack).grpc;
+    const result = await caller().options({ toolId: "stack-1", source: "fast.plates" });
+    expect(result).toStrictEqual({
+      status: "unavailable",
+      source: "fast.plates",
+      reason: "wrong_tool_type",
+    });
+    expect(stack.executeCommand).not.toHaveBeenCalled();
+    expect(fastGrpc.executeCommand).not.toHaveBeenCalled();
+  });
+
+  it("the input accepts fast.plates yet stays strict: an extra command or params key is rejected", async () => {
+    const c = caller() as unknown as { options: (input: unknown) => Promise<unknown> };
+    await expect(
+      c.options({ toolId: "fast-1", source: "fast.plates", command: "transfer" }),
+    ).rejects.toThrow();
+    await expect(
+      c.options({ toolId: "fast-1", source: "fast.plates", params: { refresh: true } }),
+    ).rejects.toThrow();
+    expect(fastGrpc.executeCommand).not.toHaveBeenCalled();
   });
 });
 

@@ -901,7 +901,7 @@ describe("tool options read path (D-17)", () => {
     expect(src).not.toContain("CommandQueue");
   });
 
-  it("OPTION_SOURCES declares exactly the four D-02 sources", () => {
+  it("OPTION_SOURCES declares exactly the five D-02/D-03 sources", () => {
     const src = stripComments(read("server/toolOptions.ts"));
     const region = extractBracedRegion(src, /export const OPTION_SOURCES/);
     expect(region.length).toBeGreaterThan(0);
@@ -925,6 +925,7 @@ describe("tool options read path (D-17)", () => {
       "stack.devices",
       "stack.labwareProfiles",
       "stack.transferProfiles",
+      "fast.plates",
     ]);
 
     // Nothing else at the first nesting level: no unquoted or non-object key.
@@ -933,6 +934,14 @@ describe("tool options read path (D-17)", () => {
       if (depthAt(match.index ?? 0) === 1) firstLevelKeys.push(match[1] ?? match[2]);
     }
     expect(firstLevelKeys).toStrictEqual(quotedEntryKeys);
+  });
+
+  it("get_plates is named by no non-generated server source except server/toolOptions.ts (PLT-05, D-17)", () => {
+    const named = walk("server")
+      .map(rel)
+      .filter((relPath) => !relPath.startsWith("gen-interfaces/"))
+      .filter((relPath) => stripComments(read(relPath)).includes("get_plates"));
+    expect(named).toStrictEqual(["server/toolOptions.ts"]);
   });
 
   it("the tool.options input is strict, closed to OPTION_SOURCE_IDS, with no command or params", () => {
