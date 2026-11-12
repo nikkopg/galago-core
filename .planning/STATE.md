@@ -4,17 +4,17 @@ milestone: v1.2
 milestone_name: Tool-inferred dropdowns + per-tool concurrency lanes
 current_phase: 07
 current_phase_name: F.A.S.T. Plate Dropdowns
-status: executing
-stopped_at: Completed 07-08-PLAN.md
-last_updated: "2026-11-12T09:39:48.478Z"
+status: verifying
+stopped_at: Completed 07-07-PLAN.md
+last_updated: "2026-11-12T09:46:45.153Z"
 last_activity: 2026-11-12
 last_activity_desc: Phase 07 execution started
-state_head: 6bd28326aad4f8f3e35d1eb59807a3e80bf79086
+state_head: 5fff90ac27fba12ec0a16afd0fbccbb7bfe88b94
 progress:
   total_phases: 4
   completed_phases: 1
   total_plans: 13
-  completed_plans: 12
+  completed_plans: 13
   percent: 25
 ---
 
@@ -33,7 +33,7 @@ concurrency lanes)
 
 Phase: 07 (F.A.S.T. Plate Dropdowns) — EXECUTING
 Plan: 8 of 8
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-11-12 — Phase 07 execution started
 
 Progress: [███░░░░░░░] 25% (1 of 4 v1.2 phases)
@@ -102,6 +102,7 @@ Progress: [███░░░░░░░] 25% (1 of 4 v1.2 phases)
 | Phase 07 P05 | 40 min | 3 tasks | 3 files |
 | Phase 07 P06 | 10 min | 2 tasks | 8 files |
 | Phase 07 P08 | 14 min | 2 tasks | 6 files |
+| Phase 07 P07 | 5 min | 3 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -178,6 +179,7 @@ Recent decisions affecting current work:
 - [Phase 07]: 07-05: vendor/galago-tools pinned to frozen get_plates SHA d53da53; frozen reply shape wins over the proposed contract (ERROR_FROM_TOOL/NOT_READY/DRIVER_ERROR failure mapping, no kind discriminator, last_error untouched)
 - [Phase 07]: 07-06: fast.plates parser follows the frozen d53da53 reply (no kind key; non-SUCCESS maps to tool_refused); bad plate ids are dropped, never truncated; duplicates kept in reply order
 - [Phase 07]: Plate fields bind through FIELD_BINDINGS (instrument-fed); plate select writes Number(id), typed fallback keeps digits only and writes '' when blank; duplicate ids are labelled and kept, never collapsed
+- [Phase 07]: Phase 7 plan 07: six F.A.S.T. well fields are a wells local-binding group; each host renders FastTransferWellPicker once at the first well field; No Variable on a well field writes a blank (modal and drawer).
 
 ### Pending Todos
 
@@ -241,8 +243,8 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-12T09:39:48.435Z
-Stopped at: Completed 07-08-PLAN.md
+Last session: 2026-11-12T09:46:41.735Z
+Stopped at: Completed 07-07-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
