@@ -55,10 +55,10 @@ on its own, and never preselects a physical decision for the operator.
 
 ### F.A.S.T. plates (PLT)
 
-- [ ] **PLT-01**: galago-tools ships a frozen `get_plates` read that answers while a Transfer is
+- [x] **PLT-01**: galago-tools ships a frozen `get_plates` read that answers while a Transfer is
   running. A test calls it through `ExecuteCommand` during a transfer. This is a cross-repo
   precondition (contract: `research/FAST-GET-PLATES-CONTRACT.md`).
-- [ ] **PLT-02**: `vendor/galago-tools` is re-pinned to that frozen commit. The interface diff is
+- [x] **PLT-02**: `vendor/galago-tools` is re-pinned to that frozen commit. The interface diff is
   exactly `GetPlates` plus oneof entry 11, and `Transfer.expected_tray_id = 13` is unchanged.
 - [ ] **PLT-03**: The operator picks `source_plate_id` and `dest_plate_id` from the registered
   plates. The label shows the id and description, and the value is the numeric id.
@@ -190,8 +190,8 @@ the protocol surface and run page, as waves inside one phase.
 | STK-06 | Phase 6 | Complete |
 | STK-07 | Phase 6 | Complete |
 | STK-08 | Phase 6 | Complete |
-| PLT-01 | Phase 7 | Pending |
-| PLT-02 | Phase 7 | Pending |
+| PLT-01 | Phase 7 | Complete |
+| PLT-02 | Phase 7 | Complete |
 | PLT-03 | Phase 7 | Pending |
 | PLT-04 | Phase 7 | Pending |
 | PLT-05 | Phase 7 | Pending |

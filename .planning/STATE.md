@@ -5,16 +5,16 @@ milestone_name: Tool-inferred dropdowns + per-tool concurrency lanes
 current_phase: 07
 current_phase_name: F.A.S.T. Plate Dropdowns
 status: executing
-stopped_at: Completed 07-04-PLAN.md
-last_updated: "2026-11-12T04:46:27.088Z"
+stopped_at: Completed 07-05-PLAN.md
+last_updated: "2026-11-12T09:28:10.794Z"
 last_activity: 2026-11-12
 last_activity_desc: Phase 07 execution started
-state_head: 78a72b58021d01688eed4d328dd9ad2d57f2840f
+state_head: 60677c4e4ee7046e2794cef7b49b277e066d50c8
 progress:
   total_phases: 4
   completed_phases: 1
   total_plans: 13
-  completed_plans: 9
+  completed_plans: 10
   percent: 25
 ---
 
@@ -32,7 +32,7 @@ concurrency lanes)
 ## Current Position
 
 Phase: 07 (F.A.S.T. Plate Dropdowns) — EXECUTING
-Plan: 5 of 8
+Plan: 6 of 8
 Status: Ready to execute
 Last activity: 2026-11-12 — Phase 07 execution started
 
@@ -99,6 +99,7 @@ Progress: [███░░░░░░░] 25% (1 of 4 v1.2 phases)
 | Phase 07 P02 | 20 min | 2 tasks | 3 files |
 | Phase 07 P03 | 3 min | 3 tasks | 7 files |
 | Phase 07 P04 | 12 min | 2 tasks | 1 files |
+| Phase 07 P05 | 40 min | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -172,6 +173,7 @@ Recent decisions affecting current work:
 - [Phase 07]: 07-03: fillMissingParams keeps legacy fill-ins verbatim and applies the no-zero-fill check first; unset plate/deck saved as blank, never 0
 - [Phase 07]: 07-03: drawer renders local controls only while editing and never calls newStepDefaults; modal initialisation effect deps not widened
 - [Phase 07]: 07-04: WellPicker internal grid named WellGrid (D-10 not-reused grep stays literal); hover state updates only when the cell changes
+- [Phase 07]: 07-05: vendor/galago-tools pinned to frozen get_plates SHA d53da53; frozen reply shape wins over the proposed contract (ERROR_FROM_TOOL/NOT_READY/DRIVER_ERROR failure mapping, no kind discriminator, last_error untouched)
 
 ### Pending Todos
 
@@ -235,8 +237,8 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-12T04:46:27.047Z
-Stopped at: Completed 07-04-PLAN.md
+Last session: 2026-11-12T09:28:10.752Z
+Stopped at: Completed 07-05-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
