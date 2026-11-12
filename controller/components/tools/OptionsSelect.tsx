@@ -73,7 +73,7 @@ export function OptionsSelect({
   const ariaDescribedBy = describedBy === "" ? undefined : describedBy;
 
   function optionColor(option: SelectOption): string | undefined {
-    if (option.flag === "ambiguous") return warningCss;
+    if (option.flag === "ambiguous" || option.flag === "duplicate") return warningCss;
     if (option.flag === "not-reported") return mutedCss;
     return undefined;
   }
@@ -85,6 +85,7 @@ export function OptionsSelect({
       {typed ? (
         <Input
           type="text"
+          inputMode={binding.role.kind === "plate" ? "numeric" : undefined}
           value={view.value}
           onChange={(e) => onSelect(e.target.value, "typed")}
           aria-label={binding.field}

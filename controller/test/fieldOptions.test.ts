@@ -960,9 +960,23 @@ describe("binding coverage (STK-07, D-10)", () => {
   const BOUND_COMMANDS = ["get_labware_presence", "get_transfer_estimate", "transfer"];
 
   it("binds only transfer, get_transfer_estimate and get_labware_presence", () => {
-    expect(Object.keys(FIELD_BINDINGS)).toStrictEqual(["stack"]);
+    expect(Object.keys(FIELD_BINDINGS)).toStrictEqual(["stack", "fast"]);
     expect(Object.keys(FIELD_BINDINGS.stack).sort()).toStrictEqual(BOUND_COMMANDS);
     expect(Object.keys(FIELD_BINDINGS.stack.get_labware_presence)).toStrictEqual(["robot"]);
+  });
+
+  it("binds fast only for transfer, with exactly the two plate fields as number fields", () => {
+    expect(Object.keys(FIELD_BINDINGS.fast)).toStrictEqual(["transfer"]);
+    expect(Object.keys(FIELD_BINDINGS.fast.transfer).sort()).toStrictEqual([
+      "dest_plate_id",
+      "source_plate_id",
+    ]);
+    for (const [name, b] of Object.entries(FIELD_BINDINGS.fast.transfer)) {
+      expect(b.field).toBe(name);
+      expect(b.source).toBe("fast.plates");
+      const field = commandFields.fast.transfer.find((candidate) => candidate.name === name);
+      expect(field?.type).toBe("number");
+    }
   });
 
   it("every bound field exists in commandFields.stack for its command as a text field", () => {

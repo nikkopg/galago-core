@@ -5,6 +5,7 @@
 // commandFields stays untouched (STK-07): a bound field is still a typed
 // "text" field there, which is exactly what the unavailable mode falls back to.
 import type { OptionSourceId, OptionsResult, StackDevice } from "@/server/toolOptions";
+import { plateLabel } from "@/components/tools/wellGeometry";
 import { isVariableLike } from "@/utils/variableRef";
 
 export const OPTIONS_STALE_MS = 15000;
@@ -12,6 +13,7 @@ export const UNAVAILABLE_HINT = "Instrument list unavailable — type the value"
 export const NOT_REPORTED_SUFFIX = " (not reported by instrument)";
 export const LOADING_LABEL = "Loading…";
 export const AMBIGUOUS_SUFFIX = " (ambiguous — adapter will refuse)";
+export const DUPLICATE_SUFFIX = " (duplicate id — check instrument)";
 export const NO_CALIBRATED_DECKS = "No calibrated decks on this device";
 export const NO_CALIBRATED_NESTS = "No calibrated nests on this deck";
 export const VARIABLE_PARENT_HINT = "child list unavailable while the parent is a variable";
@@ -46,7 +48,8 @@ export type CascadeLevel = "device" | "deck" | "nest";
 
 export type FieldRole =
   | { kind: "list" }
-  | { kind: "cascade"; side: CascadeSide; level: CascadeLevel };
+  | { kind: "cascade"; side: CascadeSide; level: CascadeLevel }
+  | { kind: "plate"; side: CascadeSide };
 
 export interface FieldBinding {
   field: string;
@@ -60,6 +63,10 @@ function list(field: string, source: OptionSourceId): FieldBinding {
 
 function cascade(field: string, side: CascadeSide, level: CascadeLevel): FieldBinding {
   return { field, source: "stack.devices", role: { kind: "cascade", side, level } };
+}
+
+function plate(field: string, side: CascadeSide): FieldBinding {
+  return { field, source: "fast.plates", role: { kind: "plate", side } };
 }
 
 function byField(bindings: FieldBinding[]): Record<string, FieldBinding> {
@@ -93,6 +100,10 @@ export const FIELD_BINDINGS: Record<string, Record<string, Record<string, FieldB
     transfer: byField(transferBindings()),
     get_transfer_estimate: byField(transferBindings()),
     get_labware_presence: byField([list("robot", "stack.robots")]),
+  },
+  // Decks, tip_reuse and the well fields are local bindings, not instrument-fed.
+  fast: {
+    transfer: byField([plate("source_plate_id", "source"), plate("dest_plate_id", "destination")]),
   },
 };
 
@@ -213,7 +224,7 @@ export interface SelectOption {
   key: string;
   value: string;
   label: string;
-  flag?: "ambiguous" | "not-reported";
+  flag?: "ambiguous" | "not-reported" | "duplicate";
   // Cascade options only: the adapter's "/"-joined path (what ambiguous lists)
   // and the plain names it was built from.
   pathKey?: string;
@@ -236,6 +247,26 @@ export function listOptions(data: OptionsResult | undefined): SelectOption[] {
     value: name,
     label: name,
   }));
+}
+
+// One option per plate entry in reply order, labelled like the grid caption
+// (plateLabel). Every entry sharing an id is flagged and kept: nothing is
+// collapsed or deduplicated, so the operator sees the clash and chooses (D-05,
+// PLT-04). The value is String(id) of a server-validated integer id.
+export function plateOptions(data: OptionsResult | undefined): SelectOption[] {
+  if (data === undefined || data.status !== "ok" || data.shape !== "plates") return [];
+  const counts = new Map<number, number>();
+  for (const entry of data.plates) counts.set(entry.id, (counts.get(entry.id) ?? 0) + 1);
+  return data.plates.map((entry, index) => {
+    const duplicate = (counts.get(entry.id) ?? 0) > 1;
+    const option: SelectOption = {
+      key: String(index),
+      value: String(entry.id),
+      label: plateLabel(entry.id, entry.description) + (duplicate ? DUPLICATE_SUFFIX : ""),
+    };
+    if (duplicate) option.flag = "duplicate";
+    return option;
+  });
 }
 
 function isBlankValue(value: unknown): boolean {
@@ -595,9 +626,17 @@ export function applyChange(
   binding: FieldBinding,
   newValue: string,
   kind: ChangeKind = "select",
-): Record<string, string> {
-  if (kind === "typed") return { [binding.field]: newValue };
+): Record<string, string | number> {
   const role = binding.role;
+  // A plate id is written as the number the operator would have typed. The
+  // typed fallback keeps ASCII digits only, so a non-numeric string never
+  // reaches the wire (RESEARCH Pitfall 2, T-07-24).
+  if (role.kind === "plate") {
+    if (kind === "select") return numericPatch(binding.field, newValue);
+    const digits = newValue.replace(/[^0-9]/g, "");
+    return { [binding.field]: digits === "" ? "" : Number(digits) };
+  }
+  if (kind === "typed") return { [binding.field]: newValue };
   if (role.kind === "cascade" && role.level === "device") {
     return {
       [binding.field]: newValue,
@@ -644,10 +683,11 @@ export function buildFieldView(input: {
   if (mode === "ok") {
     if (data === undefined || data.status !== "ok") {
       mode = "unavailable";
+    } else if (binding.role.kind === "plate") {
+      if (data.shape === "plates") offered = plateOptions(data);
+      else mode = "unavailable";
     } else if (data.shape === "plates") {
-      // A plates result never reaches the list or cascade builders; the plate
-      // role branch is 07-08. Until a field is bound to fast.plates this is the
-      // typed-input fallback.
+      // A plates result never reaches the list or cascade builders.
       mode = "unavailable";
     } else if (binding.role.kind === "list") {
       if (data.shape === "list") offered = listOptions(data);

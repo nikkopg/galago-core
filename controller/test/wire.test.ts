@@ -322,7 +322,7 @@ describe("wire contract", () => {
       return found;
     };
     // The operator's choices, each through applyChange like a host onChange.
-    let chosen: Record<string, string> = {};
+    let chosen: Record<string, string | number> = {};
     const choose = (field: string, options: { value: string }[]) => {
       expect(options.length).toBe(1);
       chosen = { ...chosen, ...applyChange(bound(field), options[0].value) };
