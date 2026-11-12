@@ -17,9 +17,23 @@ import {
   numericPatch,
   isCheckboxBinding,
   isNoZeroFillField,
+  DUPLICATE_SUFFIX,
+  LOADING_LABEL,
+  UNAVAILABLE_HINT,
+  applyChange,
+  buildFieldView,
+  firstFieldForSource,
+  formatStatusLine,
+  plateOptions,
 } from "@/components/tools/fieldOptions";
-import type { CheckboxBinding, StaticBinding } from "@/components/tools/fieldOptions";
+import type {
+  CheckboxBinding,
+  FieldBinding,
+  StaticBinding,
+} from "@/components/tools/fieldOptions";
+import type { OptionsResult } from "@/server/toolOptions";
 import { commandFields } from "@/components/tools/constants";
+import { FAST_PLATES_GOLDEN } from "./fixtures/fastPlates";
 
 function deck(field: string): StaticBinding {
   const binding = lookupLocalBinding("fast", "transfer", field);
@@ -65,7 +79,7 @@ describe("lookupLocalBinding", () => {
       }
     }
     expect(lookupFieldBinding("fast", "transfer", "source_deck")).toBeUndefined();
-    expect(Object.keys(FIELD_BINDINGS)).toStrictEqual(["stack"]);
+    expect(Object.keys(FIELD_BINDINGS)).toStrictEqual(["stack", "fast"]);
   });
 });
 
@@ -246,5 +260,251 @@ describe("isNoZeroFillField (D-07, PLT-04)", () => {
     expect(isNoZeroFillField("fast", undefined, "source_deck")).toBe(false);
     expect(isNoZeroFillField("fast", "transfer", "constructor")).toBe(false);
     expect(isNoZeroFillField("constructor", "transfer", "source_deck")).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Plate dropdowns (07-08: D-05, D-06, PLT-03, PLT-04)
+
+type PlateRow = { id: number; description: string };
+
+function platesResult(rows: PlateRow[], degraded = false): OptionsResult {
+  return {
+    status: "ok",
+    source: "fast.plates",
+    shape: "plates",
+    plates: rows.map((r) => ({ ...r, rowCount: 8, colCount: 12 })),
+    degraded,
+    fetchedAt: 0,
+  };
+}
+
+const GOLDEN_ROWS: PlateRow[] = FAST_PLATES_GOLDEN.plates.map(({ id, description }) => ({
+  id,
+  description,
+}));
+
+function plateBinding(field = "source_plate_id"): FieldBinding {
+  const found = lookupFieldBinding("fast", "transfer", field);
+  if (found === undefined) throw new Error(field);
+  return found;
+}
+
+function plateView(
+  value: unknown,
+  mode: "loading" | "ok" | "unavailable",
+  data: OptionsResult | undefined,
+  allowVariables = false,
+) {
+  return buildFieldView({
+    binding: plateBinding(),
+    value,
+    values: {},
+    mode,
+    data,
+    allowVariables,
+  });
+}
+
+const EMPTY_OPTION = { key: "empty", value: "", label: "" };
+
+describe("plate bindings (D-06, D-16)", () => {
+  it("binds exactly source_plate_id and dest_plate_id of fast transfer to fast.plates", () => {
+    const source = lookupFieldBinding("fast", "transfer", "source_plate_id");
+    const dest = lookupFieldBinding("fast", "transfer", "dest_plate_id");
+    expect(source?.source).toBe("fast.plates");
+    expect(source?.role).toStrictEqual({ kind: "plate", side: "source" });
+    expect(dest?.source).toBe("fast.plates");
+    expect(dest?.role).toStrictEqual({ kind: "plate", side: "destination" });
+    expect(Object.keys(FIELD_BINDINGS.fast)).toStrictEqual(["transfer"]);
+    expect(Object.keys(FIELD_BINDINGS.fast.transfer)).toStrictEqual([
+      "source_plate_id",
+      "dest_plate_id",
+    ]);
+    for (const field of commandFields.fast.transfer) {
+      if (field.name === "source_plate_id" || field.name === "dest_plate_id") continue;
+      expect(lookupFieldBinding("fast", "transfer", field.name), field.name).toBeUndefined();
+    }
+  });
+
+  it("puts the one Refresh row under source_plate_id", () => {
+    const names = commandFields.fast.transfer.map((f) => f.name);
+    expect(firstFieldForSource(names, "fast", "transfer", "fast.plates")).toBe("source_plate_id");
+  });
+});
+
+describe("plateOptions (D-05, D-06)", () => {
+  it("lists every plate in reply order as '{id} · {description}' with value String(id)", () => {
+    const options = plateOptions(platesResult(GOLDEN_ROWS));
+    expect(options.map((o) => o.value)).toStrictEqual(["1", "12", "7", "20", "50"]);
+    expect(options[0]).toStrictEqual({
+      key: "0",
+      value: "1",
+      label: "1 · Default 96-Well Conical",
+    });
+    expect(options.every((o) => o.flag === undefined)).toBe(true);
+  });
+
+  it("labels an empty description with the id alone", () => {
+    const options = plateOptions(platesResult([{ id: 5, description: "" }]));
+    expect(options).toStrictEqual([{ key: "0", value: "5", label: "5" }]);
+  });
+
+  it("flags every entry sharing an id, keeps them all and leaves unique ids unflagged", () => {
+    const options = plateOptions(
+      platesResult([
+        { id: 40, description: "Twin A" },
+        { id: 41, description: "Solo" },
+        { id: 40, description: "Twin B" },
+      ]),
+    );
+    expect(options.length).toBe(3);
+    expect(options[0].label).toBe("40 · Twin A" + DUPLICATE_SUFFIX);
+    expect(options[0].flag).toBe("duplicate");
+    expect(options[2].label).toBe("40 · Twin B" + DUPLICATE_SUFFIX);
+    expect(options[2].flag).toBe("duplicate");
+    expect(options[1].label).toBe("41 · Solo");
+    expect(options[1].flag).toBeUndefined();
+    expect(DUPLICATE_SUFFIX).toBe(" (duplicate id — check instrument)");
+  });
+
+  it("gives [] for undefined, an unavailable result and a list-shape result", () => {
+    expect(plateOptions(undefined)).toStrictEqual([]);
+    expect(
+      plateOptions({ status: "unavailable", source: "fast.plates", reason: "offline" } as never),
+    ).toStrictEqual([]);
+    expect(
+      plateOptions({
+        status: "ok",
+        source: "stack.robots",
+        shape: "list",
+        names: ["a"],
+        degraded: false,
+        fetchedAt: 0,
+      }),
+    ).toStrictEqual([]);
+  });
+});
+
+describe("buildFieldView for a plate binding (PLT-03, PLT-04)", () => {
+  it("is born on the blank option with every plate offered after it, nothing preselected", () => {
+    const view = plateView(undefined, "ok", platesResult(GOLDEN_ROWS));
+    expect(view.mode).toBe("ok");
+    expect(view.value).toBe("");
+    expect(view.options[0]).toStrictEqual(EMPTY_OPTION);
+    expect(view.options.slice(1).map((o) => o.value)).toStrictEqual(["1", "12", "7", "20", "50"]);
+    expect(view.disabled).toBe(false);
+  });
+
+  it("starts a single registered plate on the blank option too", () => {
+    const view = plateView(undefined, "ok", platesResult([{ id: 3, description: "Only" }]));
+    expect(view.value).toBe("");
+    expect(view.options.map((o) => o.value)).toStrictEqual(["", "3"]);
+  });
+
+  it("renders an ok result with zero plates as ok mode with only the blank option", () => {
+    const data = platesResult([]);
+    const view = plateView(undefined, "ok", data);
+    expect(view.mode).toBe("ok");
+    expect(view.options).toStrictEqual([EMPTY_OPTION]);
+    expect(formatStatusLine(data)).toContain("· 0 items ·");
+  });
+
+  it("appends ' · some entries skipped' to the status line when entries were dropped", () => {
+    const line = formatStatusLine(platesResult(GOLDEN_ROWS, true));
+    expect(line).toContain("5 items");
+    expect(line.endsWith(" · some entries skipped")).toBe(true);
+  });
+
+  it("selects a saved plate by String equality: 12 and '12' match, ' 12' does not", () => {
+    const data = platesResult(GOLDEN_ROWS);
+    expect(plateView(12, "ok", data).value).toBe("12");
+    expect(plateView("12", "ok", data).value).toBe("12");
+    const padded = plateView(" 12", "ok", data);
+    expect(padded.options[padded.options.length - 1]).toStrictEqual({
+      key: "not-reported",
+      value: " 12",
+      label: " 12 (not reported by instrument)",
+      flag: "not-reported",
+    });
+  });
+
+  it("keeps a saved plate the instrument does not report as a flagged extra option", () => {
+    const view = plateView(99, "ok", platesResult(GOLDEN_ROWS));
+    expect(view.value).toBe("99");
+    const last = view.options[view.options.length - 1];
+    expect(last.label).toBe("99 (not reported by instrument)");
+    expect(last.flag).toBe("not-reported");
+  });
+
+  it("never shows a not-reported flag for a blank value", () => {
+    for (const blank of [undefined, null, ""]) {
+      const view = plateView(blank, "ok", platesResult(GOLDEN_ROWS));
+      expect(view.options.some((o) => o.flag === "not-reported")).toBe(false);
+    }
+  });
+
+  it("is disabled with a Loading option while loading and never flags the saved value", () => {
+    const view = plateView(99, "loading", undefined);
+    expect(view.mode).toBe("loading");
+    expect(view.disabled).toBe(true);
+    expect(view.options[0].label).toBe(LOADING_LABEL);
+    expect(view.options.some((o) => o.flag === "not-reported")).toBe(false);
+  });
+
+  it("is the typed input with the unavailable hint when the list is unavailable", () => {
+    const view = plateView(7, "unavailable", undefined);
+    expect(view.mode).toBe("unavailable");
+    expect(view.value).toBe("7");
+    expect(view.hint).toBe(UNAVAILABLE_HINT);
+    expect(view.options).toStrictEqual([]);
+  });
+
+  it("treats a {{variable}} as variable-bound when variables are allowed", () => {
+    const view = plateView("{{plate}}", "ok", platesResult(GOLDEN_ROWS), true);
+    expect(view.mode).toBe("variable-bound");
+    expect(view.disabled).toBe(true);
+  });
+
+  it("falls back to unavailable for a tree or list result", () => {
+    const list: OptionsResult = {
+      status: "ok",
+      source: "stack.robots",
+      shape: "list",
+      names: ["a"],
+      degraded: false,
+      fetchedAt: 0,
+    };
+    const tree: OptionsResult = {
+      status: "ok",
+      source: "stack.devices",
+      shape: "tree",
+      devices: [],
+      ambiguous: [],
+      degraded: false,
+      fetchedAt: 0,
+    };
+    expect(plateView(undefined, "ok", list).mode).toBe("unavailable");
+    expect(plateView(undefined, "ok", tree).mode).toBe("unavailable");
+  });
+});
+
+describe("applyChange for a plate binding (T-07-24)", () => {
+  it("writes the NUMBER id for a select choice", () => {
+    expect(applyChange(plateBinding(), "12")).toStrictEqual({ source_plate_id: 12 });
+    expect(applyChange(plateBinding("dest_plate_id"), "7", "select")).toStrictEqual({
+      dest_plate_id: 7,
+    });
+  });
+
+  it("writes '' for a blank select choice", () => {
+    expect(applyChange(plateBinding(), "")).toStrictEqual({ source_plate_id: "" });
+  });
+
+  it("keeps only ASCII digits of typed text and writes '' when none remain", () => {
+    expect(applyChange(plateBinding(), "12a", "typed")).toStrictEqual({ source_plate_id: 12 });
+    expect(applyChange(plateBinding(), "abc", "typed")).toStrictEqual({ source_plate_id: "" });
+    expect(applyChange(plateBinding(), "", "typed")).toStrictEqual({ source_plate_id: "" });
+    expect(applyChange(plateBinding(), "-3.5", "typed")).toStrictEqual({ source_plate_id: 35 });
   });
 });
