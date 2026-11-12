@@ -29,6 +29,8 @@ export const DECK_SLOT_OPTIONS: readonly number[] = Array.from(
   (_, index) => index + 1,
 );
 export const NOT_A_DECK_SLOT_SUFFIX = " (not a deck slot 1-6)";
+export const REUSE_TIPS_LABEL = "Reuse tips";
+export const TIP_REUSE_HELPER = "Checked sends reuse, unchecked sends fresh.";
 
 // The {source} word in the Refresh button's aria-label ("Refresh {source} list").
 export const SOURCE_LABELS: Record<OptionSourceId, string> = {
@@ -129,10 +131,21 @@ export interface StaticBinding {
   role: StaticRole;
 }
 
-export type LocalBinding = StaticBinding;
+export type CheckboxRole = { kind: "checkbox"; checked: string; unchecked: string };
+
+export interface CheckboxBinding {
+  field: string;
+  role: CheckboxRole;
+}
+
+export type LocalBinding = StaticBinding | CheckboxBinding;
 
 export function isStaticBinding(b: LocalBinding): b is StaticBinding {
   return b.role.kind === "static";
+}
+
+export function isCheckboxBinding(b: LocalBinding): b is CheckboxBinding {
+  return b.role.kind === "checkbox";
 }
 
 function deckBinding(field: string): StaticBinding {
@@ -152,7 +165,14 @@ function byLocalField(bindings: LocalBinding[]): Record<string, LocalBinding> {
 
 export const LOCAL_BINDINGS: Record<string, Record<string, Record<string, LocalBinding>>> = {
   fast: {
-    transfer: byLocalField([deckBinding("source_deck"), deckBinding("dest_deck")]),
+    transfer: byLocalField([
+      deckBinding("source_deck"),
+      deckBinding("dest_deck"),
+      {
+        field: "tip_reuse",
+        role: { kind: "checkbox", checked: "reuse", unchecked: "fresh" },
+      },
+    ]),
   },
 };
 
@@ -330,12 +350,71 @@ export function numericPatch(field: string, value: string): Record<string, strin
 }
 
 // The only producer of patches for a local binding. Nothing calls it except an
-// operator event; opening or rendering a form never does.
+// operator event; opening or rendering a form never does. A static binding
+// writes a number for an all-digit choice; a checkbox binding writes the string
+// it is given.
 export function applyLocalChange(
   binding: LocalBinding,
   value: string,
 ): Record<string, string | number> {
+  if (isCheckboxBinding(binding)) return { [binding.field]: value };
   return numericPatch(binding.field, value);
+}
+
+export type CheckboxState = "checked" | "unchecked" | "indeterminate";
+
+export interface CheckboxView {
+  state: CheckboxState;
+  disabled: boolean;
+  flag?: string;
+  variable?: string;
+}
+
+// The flag for a saved value that is neither of the two the checkbox writes.
+export function checkboxFlag(binding: CheckboxBinding, value: unknown): string {
+  const { checked, unchecked } = binding.role;
+  const pair = " \u2014 not " + checked + "/" + unchecked + ")";
+  if (isBlankValue(value)) return "(saved value is blank" + pair;
+  return "(saved value '" + String(value) + "'" + pair;
+}
+
+// Exact, case-sensitive strict equality: no trim, no case folding. A view never
+// carries a patch; opening a saved value never writes.
+export function checkboxView(input: {
+  binding: CheckboxBinding;
+  value: unknown;
+  allowVariables: boolean;
+}): CheckboxView {
+  const { binding, value } = input;
+  if (input.allowVariables && isVariableLike(value)) {
+    return { state: "indeterminate", disabled: true, variable: String(value) };
+  }
+  if (value === binding.role.checked) return { state: "checked", disabled: false };
+  if (value === binding.role.unchecked) return { state: "unchecked", disabled: false };
+  return { state: "indeterminate", disabled: false, flag: checkboxFlag(binding, value) };
+}
+
+// What a click writes: checked flips to unchecked, anything else becomes checked.
+export function checkboxNextValue(binding: CheckboxBinding, state: CheckboxState): string {
+  return state === "checked" ? binding.role.unchecked : binding.role.checked;
+}
+
+// The one allowed default on a Transfer field (PLT-07, user decision
+// 2026-11-06): a new F.A.S.T. transfer form starts with tip_reuse "reuse". It is
+// written only when a new form initialises, never when a saved step opens.
+const NEW_STEP_DEFAULTS: Record<string, Record<string, Record<string, string>>> = {
+  fast: { transfer: { tip_reuse: "reuse" } },
+};
+
+export function newStepDefaults(
+  toolType: string,
+  command: string | undefined,
+): Record<string, string> {
+  if (command === undefined) return {};
+  const commands = own(NEW_STEP_DEFAULTS, toolType);
+  if (commands === undefined) return {};
+  const defaults = own(commands, command);
+  return defaults === undefined ? {} : { ...defaults };
 }
 
 // ---------------------------------------------------------------------------

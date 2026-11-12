@@ -35,13 +35,16 @@ import {
   applyChange,
   applyLocalChange,
   firstFieldForSource,
+  isCheckboxBinding,
   isStaticBinding,
   lookupFieldBinding,
   lookupLocalBinding,
+  newStepDefaults,
 } from "@/components/tools/fieldOptions";
 import type { ChangeKind, FieldBinding, LocalBinding } from "@/components/tools/fieldOptions";
 import { OptionsSelect } from "@/components/tools/OptionsSelect";
 import { StaticSelect } from "@/components/tools/StaticSelect";
+import { TipReuseCheckbox } from "@/components/tools/TipReuseCheckbox";
 import { loadingToast } from "@/components/ui/Toast";
 import { Tool } from "@/types";
 
@@ -118,6 +121,10 @@ export default function Page() {
             newValues[field.name] = field.defaultValue !== undefined ? field.defaultValue : "";
           }
         });
+        // The one allowed default on a Transfer field (PLT-07): a new form
+        // starts with tip_reuse "reuse". Written only here, when the form
+        // initialises, never when a saved step opens.
+        Object.assign(newValues, newStepDefaults(String(config?.type), selectedCommand));
         return newValues;
       });
     }
@@ -288,6 +295,19 @@ export default function Page() {
           <FormControl key={field.name} my={2}>
             <FormLabel>{field.name}</FormLabel>
             <StaticSelect
+              binding={localBinding}
+              value={formValues[field.name]}
+              allowVariables={false}
+              onSelect={(v) => handleLocalSelect(localBinding, v)}
+            />
+          </FormControl>
+        );
+      }
+      if (localBinding !== undefined && isCheckboxBinding(localBinding)) {
+        return (
+          <FormControl key={field.name} my={2}>
+            <FormLabel>{field.name}</FormLabel>
+            <TipReuseCheckbox
               binding={localBinding}
               value={formValues[field.name]}
               allowVariables={false}
