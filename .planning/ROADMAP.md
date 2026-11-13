@@ -98,7 +98,7 @@ the chosen plate.
   5. Matching the approved mockup (`research/PLT-08-WELL-PICKER-MOCKUP.html`), dragging on the source grid sets start row/col and block size, and a click on the destination grid places the same-size footprint. Typed fields sit in a collapsed "Edit as fields" section that opens on its own for a hidden grid, a `{{variable}}` or a flagged value, and stay in sync; a block that does not fit is flagged, never clipped.
   6. Source and destination plates of different sizes (96 vs 384) are flagged on the destination grid before the run, since fast-mcp refuses cross-format transfers.
 
-**Plans**: 8/8 plans executed
+**Plans**: 8/10 plans executed
 Plans:
 **Wave 1** *(ungated)*
 - [x] 07-01-PLAN.md — Tracer: deck 1-6 dropdowns on the tool page end to end (static binding, numeric write, wire), then the "Reuse tips" checkbox with the new-step default
@@ -117,6 +117,10 @@ Plans:
 
 **Wave 5** *(blocked on Wave 4 completion)*
 - [x] 07-07-PLAN.md — WellPicker mounted with real plates in the tool page, modal and edit-mode drawer; picker and host scans; full phase gate and UAT
+
+**Wave 6** *(gap closure, from 07-VERIFICATION.md; 07-09 and 07-10 run in parallel)*
+- [ ] 07-09-PLAN.md — CR-01: int32-exact typed plate/deck/well values (kept verbatim and flagged when out of range), send-time guard in Tool#executeCommand, boundary tests on the real encoder
+- [ ] 07-10-PLAN.md — WR-01: pure source-grid drag reducer (wellPointer.ts) that WellPicker delegates to; node sequence tests close the SC5 drag behaviour gap
 
 **UI hint**: yes
 **Settle in discuss**: inherits D6, D10, D11 from Phase 6; open items are the frozen `get_plates` shape, the
