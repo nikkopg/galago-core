@@ -5,16 +5,16 @@ milestone_name: Tool-inferred dropdowns + per-tool concurrency lanes
 current_phase: 07
 current_phase_name: F.A.S.T. Plate Dropdowns
 status: executing
-stopped_at: Completed 07-09-PLAN.md
-last_updated: "2026-11-13T07:26:31.597Z"
+stopped_at: Completed 07-10-PLAN.md
+last_updated: "2026-11-13T07:30:57.742Z"
 last_activity: 2026-11-13
 last_activity_desc: Phase 07 execution started
-state_head: f6e85a2493c6dc05e9a367a0eb66450cfcadc02a
+state_head: ddd5ed59aec9b61c99a2333060241e454593fa47
 progress:
   total_phases: 4
   completed_phases: 1
   total_plans: 15
-  completed_plans: 14
+  completed_plans: 15
   percent: 25
 ---
 
@@ -32,7 +32,7 @@ concurrency lanes)
 ## Current Position
 
 Phase: 07 (F.A.S.T. Plate Dropdowns) — EXECUTING
-Plan: 2 of 10
+Plan: 3 of 10
 Status: Ready to execute
 Last activity: 2026-11-13 — Phase 07 execution started
 
@@ -104,6 +104,7 @@ Progress: [███░░░░░░░] 25% (1 of 4 v1.2 phases)
 | Phase 07 P08 | 14 min | 2 tasks | 6 files |
 | Phase 07 P07 | 5 min | 3 tasks | 8 files |
 | Phase 07 P09 | 8 min | 3 tasks | 9 files |
+| Phase 07 P10 | 6 min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -183,6 +184,7 @@ Recent decisions affecting current work:
 - [Phase 07]: Phase 7 plan 07: six F.A.S.T. well fields are a wells local-binding group; each host renders FastTransferWellPicker once at the first well field; No Variable on a well field writes a blank (modal and drawer).
 - [Phase 07]: 07-09: Out-of-range plate/deck/well digit strings (> 2147483647) are kept as the operator's text, flagged, and refused at send time; never converted to a rounded or wrapped Number (CR-01)
 - [Phase 07]: 07-09: Int32 guard lives in Tool#executeCommand after {{variable}} substitution; audit names fields only, never values; estimateDuration and Config stay unguarded (T-07-35)
+- [Phase 07]: 07-10: source-grid drag is a pure sourcePointerStep in wellPointer.ts; a move with no button held, an uncaptured leave, up, cancel and lost capture end the drag (WR-01)
 
 ### Pending Todos
 
@@ -246,8 +248,8 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-13T07:26:31.542Z
-Stopped at: Completed 07-09-PLAN.md
+Last session: 2026-11-13T07:30:57.697Z
+Stopped at: Completed 07-10-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

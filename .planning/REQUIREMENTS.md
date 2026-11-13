@@ -72,7 +72,7 @@ on its own, and never preselects a physical decision for the operator.
   default allowed on a Transfer field. The wire stays the same string, so saved protocols load
   unchanged: a saved `fresh` shows unchecked, and a saved blank or other value is kept verbatim and
   flagged, never rewritten by the checkbox.
-- [ ] **PLT-08**: The well block is picked on two plate grids, source and destination, each sized
+- [x] **PLT-08**: The well block is picked on two plate grids, source and destination, each sized
   from its chosen plate's `rowCount` x `colCount`. The approved reference is
   `research/PLT-08-WELL-PICKER-MOCKUP.html` (user, 2026-11-06):
   - **Source grid:** the operator drags a rectangle. It sets `source_start_row`, `source_start_col`,
@@ -197,7 +197,7 @@ the protocol surface and run page, as waves inside one phase.
 | PLT-05 | Phase 7 | Gaps Found |
 | PLT-06 | Phase 7 | Gaps Found |
 | PLT-07 | Phase 7 | Gaps Found |
-| PLT-08 | Phase 7 | Gaps Found |
+| PLT-08 | Phase 7 | Complete |
 | PLT-09 | Phase 7 | Gaps Found |
 | LAN-01 | Phase 8 | Pending |
 | LAN-02 | Phase 8 | Pending |
