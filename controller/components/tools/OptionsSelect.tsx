@@ -54,6 +54,7 @@ export function OptionsSelect({
   // Native <option> elements take CSS values, not theme tokens.
   const [mutedCss, warningCss] = useToken("colors", [mutedToken, warningToken]);
   const hintId = useId();
+  const flagId = useId();
   const statusId = useId();
 
   const { mode, data, refresh, isRefreshing } = useToolOptions(toolId, binding.source, enabled);
@@ -66,6 +67,7 @@ export function OptionsSelect({
 
   const describedBy = [
     hintText !== undefined ? hintId : undefined,
+    view.flag !== undefined ? flagId : undefined,
     showStatus ? statusId : undefined,
   ]
     .filter((id): id is string => id !== undefined)
@@ -133,6 +135,11 @@ export function OptionsSelect({
             </Text>
           )}
         </HStack>
+      )}
+      {view.flag !== undefined && (
+        <Text id={flagId} fontSize="sm" color={warningToken}>
+          {view.flag}
+        </Text>
       )}
       {hintText !== undefined && (
         <Text id={hintId} fontSize="sm" color={mutedToken}>

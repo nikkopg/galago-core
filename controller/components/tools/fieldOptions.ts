@@ -8,7 +8,7 @@ import type { OptionSourceId, OptionsResult, StackDevice } from "@/server/toolOp
 import { WELL_FIELDS, plateLabel, wellFieldPatch } from "@/components/tools/wellGeometry";
 import type { PlateListInput, WellField } from "@/components/tools/wellGeometry";
 import { isVariableLike } from "@/utils/variableRef";
-import { int32FromDigits } from "@/utils/int32";
+import { int32FromDigits, isExactInt32 } from "@/utils/int32";
 
 export const OPTIONS_STALE_MS = 15000;
 export const UNAVAILABLE_HINT = "Instrument list unavailable — type the value";
@@ -257,9 +257,10 @@ export interface SelectView {
   flag?: string;
 }
 
-// RED stub (07-09 Task 3): wrong on purpose until the GREEN commit.
-export function plateIdFlag(_value: string): string {
-  return "";
+// The warning shown under a plate field whose value the instrument cannot
+// receive as typed (CR-01, D-06): the saved text is kept, never repaired.
+export function plateIdFlag(value: string): string {
+  return `Plate id '${value}' is larger than 2147483647 or not a whole number — kept as saved, it will not be sent`;
 }
 
 export function listOptions(data: OptionsResult | undefined): SelectOption[] {
@@ -758,7 +759,7 @@ export function buildFieldView(input: {
     }
   }
 
-  return buildSelectView({
+  const view = buildSelectView({
     mode,
     value,
     offered,
@@ -767,6 +768,17 @@ export function buildFieldView(input: {
     parentBlank,
     emptyNote,
   });
+  // A plate id the int32 encoder would change is flagged, in every mode but
+  // variable-bound; the value itself is never touched (CR-01, D-04).
+  if (
+    binding.role.kind === "plate" &&
+    view.mode !== "variable-bound" &&
+    !isBlankValue(value) &&
+    !isExactInt32(value)
+  ) {
+    view.flag = plateIdFlag(String(value));
+  }
+  return view;
 }
 
 // The first field, in form order, bound to the given source: where that
