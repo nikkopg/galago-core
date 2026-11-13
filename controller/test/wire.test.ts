@@ -93,6 +93,33 @@ describe("wire contract", () => {
     expect(decoded.fast?.transfer?.volume).toBe(50);
   });
 
+  // CR-01 (07-09): the real int32 writer wraps, so 4294967297 would decode as
+  // plate 1. That is the hazard Tool#executeCommand's guard closes before any
+  // send; a typed 2147483647 (the largest exact id) survives the encoder.
+  it("pins the int32 wrap hazard and a typed 2147483647 surviving the real encoder (CR-01)", () => {
+    const { tool } = installFakeTool("wire-fast", ToolType.fast);
+    const plate = lookupFieldBinding("fast", "transfer", "source_plate_id");
+    if (plate === undefined) throw new Error("no plate binding");
+    const send = (source_plate_id: unknown) => {
+      const payload = tool._payloadForCommand({
+        toolId: "wire-fast",
+        toolType: ToolType.fast,
+        command: "transfer",
+        params: { source_plate_id },
+      });
+      return tool_base.Command.decode(tool_base.Command.encode(payload).finish());
+    };
+
+    expect(send(4294967297).fast?.transfer?.source_plate_id).toBe(1);
+    expect(
+      send(applyChange(plate, "2147483647", "typed").source_plate_id).fast?.transfer
+        ?.source_plate_id,
+    ).toBe(2147483647);
+    expect(applyChange(plate, "4294967297", "typed")).toStrictEqual({
+      source_plate_id: "4294967297",
+    });
+  });
+
   // PLT-06 (DRP-09 carried): a deck chosen from the static select is written by
   // applyLocalChange as a number and reaches the REAL generated encoder as an
   // int32; tip_reuse keeps the string it was given.
