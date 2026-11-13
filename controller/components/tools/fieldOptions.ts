@@ -8,6 +8,7 @@ import type { OptionSourceId, OptionsResult, StackDevice } from "@/server/toolOp
 import { WELL_FIELDS, plateLabel, wellFieldPatch } from "@/components/tools/wellGeometry";
 import type { PlateListInput, WellField } from "@/components/tools/wellGeometry";
 import { isVariableLike } from "@/utils/variableRef";
+import { int32FromDigits } from "@/utils/int32";
 
 export const OPTIONS_STALE_MS = 15000;
 export const UNAVAILABLE_HINT = "Instrument list unavailable — type the value";
@@ -670,11 +671,13 @@ export function applyChange(
   const role = binding.role;
   // A plate id is written as the number the operator would have typed. The
   // typed fallback keeps ASCII digits only, so a non-numeric string never
-  // reaches the wire (RESEARCH Pitfall 2, T-07-24).
+  // reaches the wire (RESEARCH Pitfall 2, T-07-24). An id above 2147483647
+  // stays as the typed digit text, is flagged, and is refused at send time
+  // (CR-01, D-04): it is never truncated into a different plate.
   if (role.kind === "plate") {
     if (kind === "select") return numericPatch(binding.field, newValue);
     const digits = newValue.replace(/[^0-9]/g, "");
-    return { [binding.field]: digits === "" ? "" : Number(digits) };
+    return { [binding.field]: digits === "" ? "" : int32FromDigits(digits) };
   }
   if (kind === "typed") return { [binding.field]: newValue };
   if (role.kind === "cascade" && role.level === "device") {

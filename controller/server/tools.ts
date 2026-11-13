@@ -10,6 +10,7 @@ import { logAction } from "./logger";
 import { normalizeToolKey } from "./toolKey";
 import { describeToolReply } from "./toolReply";
 import { isOperatorOnlyCommand, OperatorOnlyCommandError } from "./operatorOnlyCommands";
+import { int32ParamProblems, int32RefusalMessage } from "@/utils/int32";
 import { JavaScriptExecutor } from "@/server/scripting/javascript/javascript-executor";
 import { CSharpExecutor } from "@/server/scripting/csharp/csharp-executor";
 import { db } from "@/db/client";
@@ -484,6 +485,24 @@ export default class Tool {
           throw new Error(`Variable ${paramValue.slice(2, -2)} not found`);
         }
       }
+    }
+
+    // Int32 guard (CR-01, T-07-31/32): the protobuf int32 writer wraps or
+    // truncates, so 4294967297 would reach the instrument as plate 1. Runs on
+    // the SUBSTITUTED params, before any gRPC. Keyed on the instance's real
+    // type, like the operator-only guard. Audit lists field names, never
+    // values (T-07-34). Blank and exact int32 values pass untouched.
+    const int32Problems = int32ParamProblems(String(this.toolType), command.command, params);
+    if (int32Problems.length > 0) {
+      await logAction({
+        level: "warning",
+        action: "Int32 Param Refused",
+        details: `toolId=${this.toolId} toolType=${this.toolType} command=${command.command} fields=${int32Problems.map((p) => p.field).join(",")}`,
+      });
+      throw new ToolCommandExecutionError(
+        int32RefusalMessage(this.toolId, command.command, int32Problems),
+        tool_base.ResponseCode.INVALID_ARGUMENTS,
+      );
     }
 
     // For pf400 run_sequence commands, ensure labware parameter is never empty
