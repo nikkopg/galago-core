@@ -6,6 +6,9 @@
 // or on scroll: a patch exists only for an operator drag, a fitting destination
 // click or "Clear selection" (D-13). The typed fields come from the host through
 // renderField, so number, text and variable-picker behaviour is inherited.
+// The source-grid drag state machine lives in wellPointer.ts (sourcePointerStep);
+// a drag ends on up, cancel, lost capture, an uncaptured leave, or a move with
+// no button held (WR-01).
 // Hit-testing is arithmetic over the inner grid's bounding box (D-10).
 
 import { useId, useRef, useState } from "react";
@@ -35,10 +38,10 @@ import {
   buildWellPickerView,
   cellFromPoint,
   destClickPatch,
-  dragRect,
   rowLabel,
-  sourcePatch,
 } from "@/components/tools/wellGeometry";
+import { sourcePointerStep } from "@/components/tools/wellPointer";
+import type { SourceDragState, SourcePointerInput } from "@/components/tools/wellPointer";
 import type {
   Cell,
   GridMetrics,
@@ -62,9 +65,6 @@ type WellState = "empty" | "sel" | "ghost" | "put" | "bad";
 
 const inRect = (r: number, c: number, rect: Rect | undefined): boolean =>
   rect !== undefined && r >= rect.r && r < rect.r + rect.h && c >= rect.c && c < rect.c + rect.w;
-
-const sameRect = (a: Rect | undefined, b: Rect): boolean =>
-  a !== undefined && a.r === b.r && a.c === b.c && a.h === b.h && a.w === b.w;
 
 interface WellGridProps {
   label: string;
@@ -231,10 +231,9 @@ export function WellPicker({
 }: WellPickerProps) {
   const [hover, setHover] = useState<Cell | undefined>(undefined);
   const [open, setOpen] = useState(false);
-  // The drag anchor and the last rectangle emitted live in refs: neither is
-  // form state and neither may trigger a render on its own.
-  const anchor = useRef<Cell | undefined>(undefined);
-  const lastRect = useRef<Rect | undefined>(undefined);
+  // The drag state lives in a ref: it is not form state and may not trigger a
+  // render on its own. Every transition is decided by sourcePointerStep.
+  const drag = useRef<SourceDragState>(undefined);
 
   const statusId = useId();
   const collapseId = useId();
@@ -248,9 +247,10 @@ export function WellPicker({
   const view = buildWellPickerView({ plates, values, allowVariables, hover });
   const expanded = open || view.forced;
 
-  const endDrag = () => {
-    anchor.current = undefined;
-    lastRect.current = undefined;
+  const stepSource = (input: SourcePointerInput) => {
+    const result = sourcePointerStep(drag.current, input);
+    drag.current = result.state;
+    if (result.patch) onPatch(result.patch);
   };
 
   const sourceStateAt = (r: number, c: number): WellState => {
@@ -302,35 +302,29 @@ export function WellPicker({
         notAllowed={false}
         clamp
         onPointerDown={(e, cell) => {
-          if (!cell) return;
-          const rect = dragRect(cell, cell);
-          anchor.current = cell;
-          lastRect.current = rect;
-          onPatch(sourcePatch(rect));
-          try {
-            e.currentTarget.setPointerCapture(e.pointerId);
-          } catch {
-            // Capture can be refused (synthetic or already-ended pointer); the drag still works.
+          let captured = false;
+          if (cell) {
+            try {
+              e.currentTarget.setPointerCapture(e.pointerId);
+              captured = true;
+            } catch {
+              // Capture can be refused (synthetic or already-ended pointer).
+            }
           }
+          stepSource({ type: "down", button: e.button, cell, captured });
         }}
-        onPointerMove={(_e, cell) => {
-          const a = anchor.current;
-          if (!a || !cell) return;
-          const rect = dragRect(a, cell);
-          if (sameRect(lastRect.current, rect)) return;
-          lastRect.current = rect;
-          onPatch(sourcePatch(rect));
-        }}
+        onPointerMove={(e, cell) => stepSource({ type: "move", buttons: e.buttons, cell })}
         onPointerUp={(e) => {
-          endDrag();
+          stepSource({ type: "up" });
           try {
             e.currentTarget.releasePointerCapture(e.pointerId);
           } catch {
             // Already released.
           }
         }}
-        onPointerCancel={endDrag}
-        onLostPointerCapture={endDrag}
+        onPointerCancel={() => stepSource({ type: "cancel" })}
+        onLostPointerCapture={() => stepSource({ type: "lost-capture" })}
+        onPointerLeave={() => stepSource({ type: "leave" })}
       />
     ) : null;
 
