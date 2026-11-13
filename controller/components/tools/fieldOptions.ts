@@ -253,6 +253,13 @@ export interface SelectView {
   disabled: boolean;
   hint?: string;
   note?: string;
+  // Plate id only: shown under the control when the saved value cannot be sent (CR-01).
+  flag?: string;
+}
+
+// RED stub (07-09 Task 3): wrong on purpose until the GREEN commit.
+export function plateIdFlag(_value: string): string {
+  return "";
 }
 
 export function listOptions(data: OptionsResult | undefined): SelectOption[] {

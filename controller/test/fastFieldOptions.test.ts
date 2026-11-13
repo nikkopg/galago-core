@@ -28,6 +28,7 @@ import {
   isWellGroupAnchor,
   isWellsBinding,
   plateListInput,
+  plateIdFlag,
 } from "@/components/tools/fieldOptions";
 import type { CheckboxBinding, FieldBinding, StaticBinding } from "@/components/tools/fieldOptions";
 import type { OptionsResult } from "@/server/toolOptions";
@@ -501,6 +502,58 @@ describe("buildFieldView for a plate binding (PLT-03, PLT-04)", () => {
     };
     expect(plateView(undefined, "ok", list).mode).toBe("unavailable");
     expect(plateView(undefined, "ok", tree).mode).toBe("unavailable");
+  });
+});
+
+describe("plate id flag (CR-01, D-06)", () => {
+  const FLAG =
+    "Plate id '4294967297' is larger than 2147483647 or not a whole number — kept as saved, it will not be sent";
+
+  it("plateIdFlag is exactly the pinned text", () => {
+    expect(plateIdFlag("4294967297")).toBe(FLAG);
+  });
+
+  it("flags a non-exact plate value in ok mode and still offers it as not reported", () => {
+    const view = plateView("4294967297", "ok", platesResult(GOLDEN_ROWS));
+    expect(view.flag).toBe(FLAG);
+    expect(view.value).toBe("4294967297");
+    const last = view.options[view.options.length - 1];
+    expect(last.label).toBe("4294967297 (not reported by instrument)");
+  });
+
+  it("flags in unavailable and loading modes too, for strings, numbers and fractions", () => {
+    const unavailable = plateView("4294967297", "unavailable", undefined);
+    expect(unavailable.mode).toBe("unavailable");
+    expect(unavailable.hint).toBe(UNAVAILABLE_HINT);
+    expect(unavailable.flag).toBe(FLAG);
+    expect(plateView(4294967297, "loading", undefined).flag).toBe(FLAG);
+    expect(plateView(12.7, "ok", platesResult(GOLDEN_ROWS)).flag).toBe(
+      "Plate id '12.7' is larger than 2147483647 or not a whole number — kept as saved, it will not be sent",
+    );
+  });
+
+  it("carries no flag key for a valid id, a blank or a {{variable}}", () => {
+    const data = platesResult(GOLDEN_ROWS);
+    for (const ok of [2147483647, 12, "12", "", undefined, 0]) {
+      expect("flag" in plateView(ok, "ok", data), String(ok)).toBe(false);
+    }
+    const bound = plateView("{{plate}}", "ok", data, true);
+    expect(bound.mode).toBe("variable-bound");
+    expect("flag" in bound).toBe(false);
+  });
+
+  it("never flags a list or cascade binding", () => {
+    const stack = lookupFieldBinding("stack", "transfer", "source_device");
+    if (stack === undefined) throw new Error("no stack binding");
+    const view = buildFieldView({
+      binding: stack,
+      value: "4294967297",
+      values: {},
+      mode: "unavailable",
+      data: undefined,
+      allowVariables: false,
+    });
+    expect("flag" in view).toBe(false);
   });
 });
 
