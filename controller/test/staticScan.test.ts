@@ -1176,6 +1176,7 @@ describe("F.A.S.T. local field invariants (D-07, D-08, D-09, D-17)", () => {
 describe("F.A.S.T. well picker invariants (D-10, D-13, D-16, D-17)", () => {
   const picker = "components/tools/WellPicker.tsx";
   const geometry = "components/tools/wellGeometry.ts";
+  const pointer = "components/tools/wellPointer.ts";
   const modal = "components/protocols/AddToolCommandModal.tsx";
   const drawer = "components/protocols/CommandDetailsDrawer.tsx";
   const page = "pages/tools/[id].tsx";
@@ -1227,6 +1228,35 @@ describe("F.A.S.T. well picker invariants (D-10, D-13, D-16, D-17)", () => {
     const src = stripComments(read(geometry));
     expect(src).not.toMatch(/from\s+["']react["']/);
     expect(src).not.toMatch(/from\s+["']@chakra-ui\//);
+  });
+
+  it("every source-grid pointer event goes through sourcePointerStep (WR-01)", () => {
+    const src = stripComments(read(picker));
+    expect(src).toContain("sourcePointerStep(");
+    expect(src).toMatch(/buttons:\s*e\.buttons/);
+    for (const type of ["down", "move", "up", "cancel", "lost-capture", "leave"]) {
+      expect(src, type).toContain(`type: "${type}"`);
+    }
+    expect(src).not.toMatch(/\banchor\.current\b/);
+    expect(src).not.toMatch(/\blastRect\b/);
+  });
+
+  it("only wellGeometry.ts and wellPointer.ts call the source-patch and drag-rect producers", () => {
+    const files = clientFiles();
+    for (const producer of ["sourcePatch", "dragRect"]) {
+      const callers = files
+        .filter((relPath) => new RegExp(`\\b${producer}\\(`).test(stripComments(read(relPath))))
+        .sort();
+      expect(callers, producer).toStrictEqual([geometry, pointer].sort());
+    }
+  });
+
+  it("wellPointer.ts imports neither React nor Chakra UI and only wellGeometry", () => {
+    const src = stripComments(read(pointer));
+    expect(src).not.toMatch(/from\s+["']react["']/);
+    expect(src).not.toMatch(/from\s+["']@chakra-ui\//);
+    const specs = [...src.matchAll(/from\s+["']([^"']+)["']/g)].map((m) => m[1]);
+    expect(new Set(specs)).toStrictEqual(new Set(["@/components/tools/wellGeometry"]));
   });
 
   it("StaticSelect, TipReuseCheckbox and WellPicker inject no raw HTML", () => {
