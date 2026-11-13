@@ -29,13 +29,13 @@ findings:
     title: "`int32FromDigits(\"\")` returns 0, a silent blank-to-zero conversion guarded only by a comment"
   - id: CR-01
     severity: critical
-    disposition: open
+    disposition: fixed
     title: "Typed plate id / well count is not range-bounded and wraps to a different value on the wire"
   - id: WR-01
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "Source-grid drag can get stuck and keep rewriting the selection when pointer capture is refused"
-open: 8
+open: 6
 total: 8
 recorded: 2026-11-13T07:35:16.439Z
 ---
@@ -50,8 +50,8 @@ recorded: 2026-11-13T07:35:16.439Z
 | IN-01 | info | open | - |
 | IN-02 | info | open | - |
 | IN-03 | info | open | - |
-| CR-01 | critical | open | - (not in the current review) |
-| WR-01 | warning | open | - (not in the current review) |
+| CR-01 | critical | fixed | 07-09 (2d603bc, bab42b3, 206107e); confirmed resolved in re-review b37b46d |
+| WR-01 | warning | fixed | 07-10 (55b0494); confirmed resolved in re-review b37b46d |
 
 Dispositions: `open` (recorded, not yet triaged), `fixed`, `skipped`, `deferred`.
 Set `deferred` by hand and put the reason in the Source cell; both are preserved. A `|` in the reason is kept as prose and escaped on the next run.
