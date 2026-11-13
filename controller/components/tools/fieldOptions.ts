@@ -388,11 +388,13 @@ export function buildStaticView(input: {
   });
 }
 
-// An all-ASCII-digit string becomes a number (the wire field is an int32);
-// anything else, including "", "3.5" and " 3", is returned verbatim so
-// re-selecting a saved odd option never turns it into NaN.
+// An all-ASCII-digit string becomes a number (the wire field is an int32)
+// when it is at most 2147483647; a longer-valued digit string stays as text
+// and is refused at send time (CR-01). Anything else, including "", "3.5" and
+// " 3", is returned verbatim so re-selecting a saved odd option never turns it
+// into NaN.
 export function numericPatch(field: string, value: string): Record<string, string | number> {
-  if (/^[0-9]+$/.test(value)) return { [field]: Number(value) };
+  if (/^[0-9]+$/.test(value)) return { [field]: int32FromDigits(value) };
   return { [field]: value };
 }
 

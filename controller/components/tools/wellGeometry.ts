@@ -4,9 +4,11 @@
 // here reads an instrument, mutates an input or rewrites a saved value. A block
 // that does not fit is reported, never clipped, shifted or cleared; only an
 // operator drag, click, typed edit or "Clear selection" produces a patch, and
-// a plate change never does (D-12, D-13, PLT-09). The only import allowed is
-// isVariableLike from @/utils/variableRef (used by the value classification).
+// a plate change never does (D-12, D-13, PLT-09). The only imports allowed are
+// isVariableLike from @/utils/variableRef (used by the value classification)
+// and the int32 helpers from @/utils/int32 (CR-01).
 
+import { INT32_MAX, int32FromDigits } from "@/utils/int32";
 import { isVariableLike } from "@/utils/variableRef";
 
 // The six well fields in the mockup's order (D-12).
@@ -173,11 +175,12 @@ export function wellFieldText(value: unknown): string {
 }
 
 // A typed row is kept verbatim (never rewritten, D-12). For the four numeric
-// fields: "" stays "", an all-digit string becomes a number, anything else is
-// kept verbatim (it will be flagged, never coerced).
+// fields: "" stays "", an all-digit string up to 2147483647 becomes a number
+// (a larger one stays as text and is flagged, CR-01), anything else is kept
+// verbatim (it will be flagged, never coerced).
 export function wellFieldPatch(field: WellField, text: string): Record<string, string | number> {
   if (field === "source_start_row" || field === "dest_start_row") return { [field]: text };
-  if (text !== "" && /^[0-9]+$/.test(text)) return { [field]: Number(text) };
+  if (text !== "" && /^[0-9]+$/.test(text)) return { [field]: int32FromDigits(text) };
   return { [field]: text };
 }
 
@@ -212,16 +215,22 @@ export type WellValue =
 
 const KEPT = "— kept as saved";
 
-// A whole number from 1: an integer number >= 1 or an all-digit string whose
-// number is >= 1. The string "0" is NOT blank and is flagged; only the number 0
-// is the legacy blank.
-function wholeFromOne(value: unknown): number | undefined {
-  if (typeof value === "number") return Number.isInteger(value) && value >= 1 ? value : undefined;
-  if (typeof value === "string" && /^[0-9]+$/.test(value)) {
-    const n = Number(value);
-    return n >= 1 ? n : undefined;
+// A whole number from 1 up to INT32_MAX: an integer number or an all-digit
+// string. "too-large" is a whole number above INT32_MAX (including numbers that
+// are not safe integers), which the encoder would wrap (CR-01); "not-whole" is
+// everything else. The string "0" is NOT blank and is not-whole; only the
+// number 0 is the legacy blank.
+type Whole = { kind: "ok"; n: number } | { kind: "too-large" } | { kind: "not-whole" };
+
+function wholeFromOne(value: unknown): Whole {
+  let n: number | undefined;
+  if (typeof value === "number") {
+    if (Number.isInteger(value)) n = value;
+  } else if (typeof value === "string" && /^[0-9]+$/.test(value)) {
+    n = Number(value);
   }
-  return undefined;
+  if (n === undefined || n < 1) return { kind: "not-whole" };
+  return n > INT32_MAX ? { kind: "too-large" } : { kind: "ok", n };
 }
 
 export function classifyWellValue(
@@ -246,20 +255,29 @@ export function classifyWellValue(
     }
     return { kind: "ok", n: idx };
   }
-  const n = wholeFromOne(value);
+  const whole = wholeFromOne(value);
   if (field === "source_start_col" || field === "dest_start_col") {
-    if (n === undefined) {
+    if (whole.kind === "too-large") {
+      return { kind: "flag", text: `Column '${v}' is too large (max ${INT32_MAX}) ${KEPT}` };
+    }
+    if (whole.kind === "not-whole") {
       return { kind: "flag", text: `Column '${v}' is not a whole number from 1 ${KEPT}` };
     }
-    if (size && n > size.cols) {
-      return { kind: "flag", text: `Column ${n} is past the last column (${size.cols}) ${KEPT}` };
+    if (size && whole.n > size.cols) {
+      return {
+        kind: "flag",
+        text: `Column ${whole.n} is past the last column (${size.cols}) ${KEPT}`,
+      };
     }
-    return { kind: "ok", n };
+    return { kind: "ok", n: whole.n };
   }
-  if (n === undefined) {
+  if (whole.kind === "too-large") {
+    return { kind: "flag", text: `${field} '${v}' is too large (max ${INT32_MAX}) ${KEPT}` };
+  }
+  if (whole.kind === "not-whole") {
     return { kind: "flag", text: `${field} must be a whole number from 1 ${KEPT}` };
   }
-  return { kind: "ok", n };
+  return { kind: "ok", n: whole.n };
 }
 
 type Classified = Partial<Record<WellField, WellValue>>;
