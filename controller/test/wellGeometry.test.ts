@@ -282,6 +282,25 @@ describe("wellFieldPatch", () => {
   });
 });
 
+describe("wellFieldPatch is bounded to int32 (CR-01)", () => {
+  it("keeps a digit string above 2147483647 as text", () => {
+    expect(wellFieldPatch("num_rows", "2147483647")).toEqual({ num_rows: 2147483647 });
+    expect(wellFieldPatch("num_rows", "2147483648")).toEqual({ num_rows: "2147483648" });
+    expect(wellFieldPatch("source_start_col", "4294967297")).toEqual({
+      source_start_col: "4294967297",
+    });
+    expect(wellFieldPatch("dest_start_col", "9007199254740993")).toEqual({
+      dest_start_col: "9007199254740993",
+    });
+  });
+
+  it("leaves rows verbatim", () => {
+    expect(wellFieldPatch("source_start_row", "4294967297")).toEqual({
+      source_start_row: "4294967297",
+    });
+  });
+});
+
 // ---------------------------------------------------------------------------
 // Task 2: value flags, per-side plate grid, status line, force-open, view model
 // ---------------------------------------------------------------------------
@@ -397,6 +416,62 @@ describe("classifyWellValue", () => {
       kind: "flag",
       text: "num_rows must be a whole number from 1 — kept as saved",
     });
+  });
+});
+
+describe("classifyWellValue too-large flags (CR-01, D-14)", () => {
+  it("flags a column above 2147483647 before the past-the-last-column rule", () => {
+    const text = "Column '4294967297' is too large (max 2147483647) — kept as saved";
+    expect(classifyWellValue("source_start_col", "4294967297", PLATE_96, true)).toEqual({
+      kind: "flag",
+      text,
+    });
+    expect(classifyWellValue("source_start_col", 4294967297, PLATE_96, true)).toEqual({
+      kind: "flag",
+      text,
+    });
+  });
+
+  it("flags a count above 2147483647 even with no plate size", () => {
+    expect(classifyWellValue("num_rows", 2147483648, undefined, true)).toEqual({
+      kind: "flag",
+      text: "num_rows '2147483648' is too large (max 2147483647) — kept as saved",
+    });
+    expect(classifyWellValue("num_cols", "2147483647", undefined, true)).toEqual({
+      kind: "ok",
+      n: 2147483647,
+    });
+  });
+
+  it("keeps the existing must-be-whole texts for '0' and 12.7", () => {
+    expect(classifyWellValue("num_rows", "0", PLATE_96, true)).toEqual({
+      kind: "flag",
+      text: "num_rows must be a whole number from 1 — kept as saved",
+    });
+    expect(classifyWellValue("num_cols", 12.7, PLATE_96, true)).toEqual({
+      kind: "flag",
+      text: "num_cols must be a whole number from 1 — kept as saved",
+    });
+  });
+
+  it("flags the block, the field, forces Edit as fields open and shows the can't-be-shown status", () => {
+    const values = {
+      source_start_row: "A",
+      source_start_col: 1,
+      num_rows: "4294967298",
+      num_cols: 2,
+      dest_start_row: "A",
+      dest_start_col: 1,
+    };
+    const source = plateGridSide("source", OK_LIST, 12, true);
+    const dest = plateGridSide("destination", OK_LIST, 7, true);
+    expect(sourceBlock(values, PLATE_96, true)).toEqual({ kind: "flagged" });
+    expect(fieldFlags(values, PLATE_96, PLATE_96, true)).toHaveProperty("num_rows");
+    expect(forceOpen({ source, dest, values, allowVariables: true })).toEqual({
+      forced: true,
+      note: KEPT_OPEN_FLAG,
+    });
+    expect(statusLine({ source, dest, values, allowVariables: true }).text).toBe(UNSHOWABLE_STATUS);
   });
 });
 

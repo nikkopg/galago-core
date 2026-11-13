@@ -9,6 +9,8 @@
 // true becomes 1; "abc", "" and null become 0. The pure rules, the send-time
 // guard in Tool#executeCommand and the encoder facts are pinned here.
 import { describe, it, expect, afterEach, vi } from "vitest";
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { ToolType } from "gen-interfaces/controller";
 import * as tool_base from "gen-interfaces/tools/grpc_interfaces/tool_base";
 import { ResponseCode } from "gen-interfaces/tools/grpc_interfaces/tool_base";
@@ -25,6 +27,25 @@ import {
 } from "@/utils/int32";
 import { applyChange, lookupFieldBinding } from "@/components/tools/fieldOptions";
 import { installFakeTool, removeFakeTool } from "./helpers/fakeTool";
+
+// Variable-substitution harness (the operatorOnly vi.hoisted pattern): select,
+// from and where return the fake, limit resolves the variable under test.
+const { dbMock, variable } = vi.hoisted(() => {
+  const variable = { value: "" };
+  const dbMock: Record<string, ReturnType<typeof vi.fn>> = {
+    select: vi.fn(),
+    from: vi.fn(),
+    where: vi.fn(),
+    limit: vi.fn(),
+  };
+  dbMock.select.mockImplementation(() => dbMock);
+  dbMock.from.mockImplementation(() => dbMock);
+  dbMock.where.mockImplementation(() => dbMock);
+  dbMock.limit.mockImplementation(async () => [{ value: variable.value }]);
+  return { dbMock, variable };
+});
+
+vi.mock("@/db/client", () => ({ db: dbMock, sqlite: {} }));
 
 describe("int32 constants", () => {
   it("are the signed 32-bit bounds", () => {
@@ -274,5 +295,108 @@ describe("Tool#executeCommand int32 guard (CR-01, T-07-31)", () => {
 
     expect(grpc.executeCommand).toHaveBeenCalledTimes(1);
     expect(grpc.executeCommand).toHaveBeenCalledWith({ fast: { transfer: {} } });
+  });
+});
+
+// Soundness against the REAL generated encoder: every value the guard accepts
+// decodes as Number(value); every characterized refusal would have changed.
+function roundTrip(value: unknown): unknown {
+  const payload = {
+    fast: { transfer: { source_plate_id: value } },
+  } as unknown as tool_base.Command;
+  return tool_base.Command.decode(tool_base.Command.encode(payload).finish()).fast?.transfer
+    ?.source_plate_id;
+}
+
+describe("encoder soundness (T-07-33)", () => {
+  it.each([0, 1, 7, -1, -2147483648, 2147483647, "1", "007", "2147483647"])(
+    "accepted value %j decodes as Number(value)",
+    (value) => {
+      expect(isExactInt32(value)).toBe(true);
+      expect(roundTrip(value)).toBe(Number(value));
+    },
+  );
+
+  it.each([
+    [2147483648, -2147483648],
+    [4294967297, 1],
+    [-2147483649, 2147483647],
+    [12.7, 12],
+    ["3.5", 3],
+    [true, 1],
+  ])("refused value %j would decode as %j", (value, wrapped) => {
+    expect(isExactInt32(value)).toBe(false);
+    expect(roundTrip(value)).toBe(wrapped);
+  });
+});
+
+describe("INT32_PARAM_FIELDS pin to the generated encoder (T-07-36)", () => {
+  const generated = readFileSync(
+    path.join(process.cwd(), "gen-interfaces/tools/grpc_interfaces/fast.ts"),
+    "utf8",
+  );
+  const blocks = generated
+    .split(/^(?=export const )/m)
+    .filter((block) => /^export const Command_\w+ = /.test(block));
+  const int32Writes = (block: string) =>
+    [...block.matchAll(/\.int32\(message\.(\w+)\)/g)].map((m) => m[1]);
+
+  it("equals the int32 writes of Command_Transfer", () => {
+    const transfer = blocks.find((block) => block.startsWith("export const Command_Transfer = "));
+    expect(transfer).toBeDefined();
+    expect(INT32_PARAM_FIELDS.fast.transfer).toHaveLength(9);
+    expect([...int32Writes(transfer as string)].sort()).toStrictEqual(
+      [...INT32_PARAM_FIELDS.fast.transfer].sort(),
+    );
+  });
+
+  it("no other Command_ message writes an int32", () => {
+    const others = blocks.filter((block) => !block.startsWith("export const Command_Transfer = "));
+    expect(others.length).toBeGreaterThan(0);
+    for (const block of others) {
+      expect(int32Writes(block), block.slice(0, 40)).toStrictEqual([]);
+    }
+  });
+
+  it("is deep-frozen", () => {
+    expect(Object.isFrozen(INT32_PARAM_FIELDS)).toBe(true);
+    expect(Object.isFrozen(INT32_PARAM_FIELDS.fast)).toBe(true);
+    expect(Object.isFrozen(INT32_PARAM_FIELDS.fast.transfer)).toBe(true);
+  });
+});
+
+describe("guard runs after {{variable}} substitution (T-07-32)", () => {
+  afterEach(async () => {
+    await removeFakeTool("fast-1");
+  });
+
+  const run = (tool: ReturnType<typeof installFakeTool>["tool"]) =>
+    tool.executeCommand({
+      toolId: "fast-1",
+      toolType: ToolType.fast,
+      command: "transfer",
+      params: { source_deck: 1, source_plate_id: "{{plate}}", num_rows: 1 },
+    });
+
+  it("refuses a variable that resolves to 4294967297 with zero gRPC sends", async () => {
+    const { tool, grpc } = installFakeTool("fast-1", ToolType.fast);
+    grpc.executeCommand.mockResolvedValue({ response: ResponseCode.SUCCESS, return_reply: true });
+    variable.value = "4294967297";
+
+    await expect(run(tool)).rejects.toBeInstanceOf(ToolCommandExecutionError);
+    expect(grpc.executeCommand).toHaveBeenCalledTimes(0);
+  });
+
+  it("sends a variable that resolves to 12 once and it decodes as 12", async () => {
+    const { tool, grpc } = installFakeTool("fast-1", ToolType.fast);
+    grpc.executeCommand.mockResolvedValue({ response: ResponseCode.SUCCESS, return_reply: true });
+    variable.value = "12";
+
+    await run(tool);
+
+    expect(grpc.executeCommand).toHaveBeenCalledTimes(1);
+    const payload = grpc.executeCommand.mock.calls[0][0] as tool_base.Command;
+    const decoded = tool_base.Command.decode(tool_base.Command.encode(payload).finish());
+    expect(decoded.fast?.transfer?.source_plate_id).toBe(12);
   });
 });

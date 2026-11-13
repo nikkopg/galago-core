@@ -169,6 +169,21 @@ describe("numericPatch and applyLocalChange", () => {
   });
 });
 
+describe("numericPatch and applyLocalChange are bounded to int32 (CR-01)", () => {
+  it("keeps a digit string above 2147483647 as text", () => {
+    expect(numericPatch("f", "2147483647")).toStrictEqual({ f: 2147483647 });
+    expect(numericPatch("f", "2147483648")).toStrictEqual({ f: "2147483648" });
+    expect(numericPatch("f", "4294967297")).toStrictEqual({ f: "4294967297" });
+  });
+
+  it("keeps a too-large deck choice as text and a small one as a number", () => {
+    expect(applyLocalChange(deck("source_deck"), "4294967297")).toStrictEqual({
+      source_deck: "4294967297",
+    });
+    expect(applyLocalChange(deck("source_deck"), "3")).toStrictEqual({ source_deck: 3 });
+  });
+});
+
 function tipReuse(): CheckboxBinding {
   const binding = lookupLocalBinding("fast", "transfer", "tip_reuse");
   if (binding === undefined || !isCheckboxBinding(binding)) throw new Error("no checkbox binding");
