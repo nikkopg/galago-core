@@ -7,6 +7,10 @@ import { ResponseCode, ToolStatus } from "gen-interfaces/tools/grpc_interfaces/t
 import Tool from "@/server/tools";
 import { logAction } from "@/server/logger";
 import { recoveryControl } from "@/server/recoveryControl";
+import {
+  shouldInterceptQueueStop,
+  shouldInterceptRunDelete,
+} from "@/components/runs/stopInterception";
 import { deferred } from "./helpers/fakeTool";
 import { createLaneHarness, stackStep, fastStep, type LaneHarness } from "./helpers/laneHarness";
 
@@ -321,5 +325,186 @@ describe("runningStepFor and the STACK acknowledge (T-08-20, D-11)", () => {
     expect(commandsOf(h)).toEqual(["A"]);
     expect(h.queue.runningStepFor("STACK-1")).toBe(h.queue.runningStep);
     expect(h.queue.runningStepFor("fast-1")).toBeUndefined();
+  });
+});
+
+// A run_state the F.A.S.T. reports while it works.
+function runningStatus() {
+  return {
+    uptime: 1,
+    status: ToolStatus.BUSY,
+    run_state: { state: "running", percent: 40 },
+  } as any;
+}
+
+describe("the run-state envelope under lanes (LAN-08, Pitfall 13, T-08-21)", () => {
+  it("F.A.S.T. on the side lane, STACK starting and ending on primary: the envelope never drops", async () => {
+    h = createLaneHarness();
+    h.grpcOf("fast-1").getStatus.mockResolvedValue(runningStatus());
+    await h.push("r1", [
+      fastStep("transfer", { lane: "fast", params: { tag: "FAST" } }),
+      stackStep("G1"),
+      stackStep("G2"),
+    ]);
+    h.start();
+    await h.tick(4);
+    const fastId = h.calls()[indexOfCall(h, "transfer")].queueId!;
+
+    // G1 is in flight on the primary lane beside FAST.
+    expect(commandsOf(h)).toContain("G1");
+    expect(h.queue.runState).toMatchObject({ running: true, queueId: fastId, toolId: "fast-1" });
+    expect(shouldInterceptQueueStop(h.queue.runState)).toBe(true);
+    expect(shouldInterceptRunDelete(h.queue.runState, "r1")).toBe(true);
+    expect(shouldInterceptRunDelete(h.queue.runState, "r2")).toBe(false);
+
+    // G1 ends, G2 starts and ends: the STACK brackets never touch FAST's poller.
+    h.finish(indexOfCall(h, "G1"));
+    await h.tick(4);
+    expect(commandsOf(h)).toContain("G2");
+    expect(h.queue.runState).toMatchObject({ running: true, queueId: fastId });
+    h.finish(indexOfCall(h, "G2"));
+    await h.tick(4);
+    expect(h.queue.runState).toMatchObject({ running: true, queueId: fastId });
+    expect(shouldInterceptQueueStop(h.queue.runState)).toBe(true);
+    expect(h.grpcOf("fast-1").getStatus).toHaveBeenCalled();
+
+    h.finish(indexOfCall(h, "transfer"));
+    await h.tick(4);
+    expect(h.queue.runState).toEqual({ running: false });
+    expect(shouldInterceptQueueStop(h.queue.runState)).toBe(false);
+  });
+
+  it("swapped: F.A.S.T. on primary, STACK on a side lane: the same envelope holds", async () => {
+    h = createLaneHarness();
+    h.grpcOf("fast-1").getStatus.mockResolvedValue(runningStatus());
+    await h.push("r1", [
+      fastStep("transfer"),
+      stackStep("sA", { lane: "s", params: { tag: "SA" } }),
+      stackStep("sB", { lane: "s", params: { tag: "SB" } }),
+    ]);
+    h.start();
+    await h.tick(4);
+    const fastId = h.calls()[indexOfCall(h, "transfer")].queueId!;
+    expect(commandsOf(h)).toContain("sA");
+    expect(h.queue.runState).toMatchObject({ running: true, queueId: fastId });
+
+    h.finish(indexOfCall(h, "sA"));
+    await h.tick(4);
+    expect(commandsOf(h)).toContain("sB");
+    expect(h.queue.runState).toMatchObject({ running: true, queueId: fastId });
+    h.finish(indexOfCall(h, "sB"));
+    await h.tick(4);
+    expect(h.queue.runState).toMatchObject({ running: true, queueId: fastId });
+    expect(shouldInterceptRunDelete(h.queue.runState, "r1")).toBe(true);
+
+    h.finish(indexOfCall(h, "transfer"));
+    await h.tick(4);
+    expect(h.queue.runState).toEqual({ running: false });
+  });
+
+  it("a STACK step alone on a side lane leaves the envelope empty and Stop is not intercepted", async () => {
+    h = createLaneHarness();
+    await h.push("r1", [stackStep("sA", { lane: "s", params: { tag: "SA" } })]);
+    h.start();
+    await h.tick(4);
+    expect(commandsOf(h)).toEqual(["sA"]);
+    expect(h.queue.runState).toEqual({ running: false });
+    expect(shouldInterceptQueueStop(h.queue.runState)).toBe(false);
+    expect(shouldInterceptRunDelete(h.queue.runState, "r1")).toBe(false);
+    expect(h.grpcOf("fast-1").getStatus).not.toHaveBeenCalled();
+  });
+
+  it("a side-lane F.A.S.T. starts its own poller; it ends with the step", async () => {
+    h = createLaneHarness();
+    h.grpcOf("fast-1").getStatus.mockResolvedValue(runningStatus());
+    await h.push("r1", [
+      fastStep("transfer", { lane: "fast", params: { tag: "FAST" } }),
+      stackStep("A"),
+    ]);
+    h.start();
+    await h.tick(4);
+    const fastId = h.calls()[indexOfCall(h, "transfer")].queueId!;
+    expect(h.queue.runState).toMatchObject({ running: true, queueId: fastId });
+
+    h.fail(indexOfCall(h, "transfer"), new Error("tip crash"));
+    await h.tick(4);
+    expect(h.queue.runState).toEqual({ running: false });
+  });
+});
+
+describe("abort on the side lane while STACK runs on primary (D-27, LAN-08/concurrency)", () => {
+  it("dequeues the F.A.S.T. run's remainder, leaves the STACK step alone and holds run 2's STACK row back", async () => {
+    h = createLaneHarness();
+    h.replyControl("fast-1");
+    await h.push("r1", [
+      fastStep("transfer", { lane: "fast", params: { tag: "FAST" } }),
+      stackStep("A"),
+      stackStep("out1", { barrier: true }),
+    ]);
+    await h.push("r2", [stackStep("B")]);
+    h.start();
+    await h.tick(4);
+    expect(commandsOf(h).sort()).toEqual(["A", "transfer"]);
+
+    await h.queue.toolControl("abort", { return_liquid: "no" });
+    h.fail(indexOfCall(h, "transfer"), new Error("aborted at 40%"));
+    await h.tick(6);
+
+    expect(await statusByCommand(h, "transfer")).toBe("FAILED");
+    expect(await statusByCommand(h, "out1")).toBe("SKIPPED");
+    // The STACK step is still running: nothing aborted it, and run 2's STACK row waits.
+    expect(h.calls()[indexOfCall(h, "A")].gate.isSettled()).toBe(false);
+    expect(h.grpcOf("stack-1").executeCommand).not.toHaveBeenCalled();
+    expect(commandsOf(h)).not.toContain("B");
+
+    h.finish(indexOfCall(h, "A"));
+    await h.tick(6);
+    expect(await statusByCommand(h, "A")).toBe("COMPLETED");
+    // The run is halted by the failure: B is dispatched only after an operator Start.
+    expect(commandsOf(h)).not.toContain("B");
+  });
+});
+
+describe("goto refusal while a side-lane step runs (D-23, T-08-19)", () => {
+  it("gotoCommand and gotoCommandByRunIndex refuse and leave every row unchanged", async () => {
+    h = createLaneHarness();
+    await h.push("r1", [
+      fastStep("transfer", { lane: "fast", params: { tag: "FAST" } }),
+      stackStep("A"),
+      stackStep("out1", { barrier: true }),
+    ]);
+    h.start();
+    await h.tick(4);
+    expect(commandsOf(h).sort()).toEqual(["A", "transfer"]);
+    const before = (await h.queue.commands.all()).map((r) => [r.queueId, r.status]);
+    const fastRowId = h.calls()[indexOfCall(h, "transfer")].queueId!;
+    const message =
+      "Go to is refused while a lane step is running: it would send that step again. Wait for the lane step to end.";
+
+    await expect(h.queue.gotoCommand(fastRowId)).rejects.toThrow(message);
+    await expect(h.queue.gotoCommandByRunIndex("r1", 0)).rejects.toThrow(message);
+    expect(logs("Queue Goto Refused")).toHaveLength(2);
+    expect(logs("Queue Goto Refused")[0].level).toBe("warning");
+    expect((await h.queue.commands.all()).map((r) => [r.queueId, r.status])).toEqual(before);
+    // Nothing was sent again.
+    await h.tick(4);
+    expect(h.calls()).toHaveLength(2);
+  });
+
+  it("with no side-lane step running a goto behaves as today", async () => {
+    h = createLaneHarness();
+    await h.push("r1", [stackStep("A"), stackStep("B")]);
+    const rows = await h.queue.commands.all();
+    await expect(h.queue.gotoCommand(rows[1].queueId)).resolves.toBe(true);
+    await expect(h.queue.gotoCommandByRunIndex("r1", 0)).resolves.toBe(true);
+    expect(logs("Queue Goto Refused")).toHaveLength(0);
+  });
+
+  it("flag off: a goto is never refused", async () => {
+    h = createLaneHarness({ parallelLanes: false });
+    await h.push("r1", [stackStep("A"), stackStep("B")]);
+    const rows = await h.queue.commands.all();
+    await expect(h.queue.gotoCommand(rows[1].queueId)).resolves.toBe(true);
+    expect(logs("Queue Goto Refused")).toHaveLength(0);
   });
 });
