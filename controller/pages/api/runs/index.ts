@@ -22,6 +22,9 @@ async function postHandler(req: NextApiRequest, res: NextApiResponse<RunSubmissi
       case "OperatorOnlyCommandError":
         res.status(400).end(e.message);
         break;
+      case "LaneValidationError":
+        res.status(400).end(e.message);
+        break;
       default:
         // Internal/unclassified errors keep their details server-side: the
         // client gets a generic message, never raw DB/DRZ/gRPC internals.

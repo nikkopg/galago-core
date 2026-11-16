@@ -3,7 +3,7 @@ import snowflakeIdGenerator from "@/utils/snowflake";
 import { ZodError } from "zod";
 import CommandQueue from "./command_queue";
 import Tool from "./tools";
-import { logAction } from "./logger";
+import { logAction, sanitizeLogText } from "./logger";
 import { db } from "@/db/client";
 import { tools, workcells, appSettings, protocols, variables } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
@@ -15,6 +15,13 @@ import {
   isOperatorOnlyCommandError,
   OperatorOnlyCommandError,
 } from "./operatorOnlyCommands";
+import {
+  hasLaneTags,
+  isLaneValidationError,
+  LANE_TAGS_IGNORED_WARNING,
+  LaneValidationError,
+  validateLanes,
+} from "./laneScheduling";
 
 // Helper function to get tool from database
 async function getToolFromDB(toolId: string) {
@@ -238,6 +245,29 @@ export default class RunStore {
         }
       }
 
+      // Lane validation (D-17). The flag is read from the queue the dispatcher uses
+      // (D-06: read once at construction). On, an invalid setup is refused before
+      // anything is stored or enqueued; off, lane tags are inert (D-08).
+      if (CommandQueue.global.laneMode === true) {
+        const laneErrors = validateLanes(commands);
+        if (laneErrors.length > 0) {
+          await logAction({
+            level: "warning",
+            action: "Lane Setup Refused",
+            details: sanitizeLogText(
+              `protocolId=${protocolId} stage=create reason=${laneErrors.join(" ")}`,
+            ),
+          });
+          throw new LaneValidationError(laneErrors);
+        }
+      } else if (hasLaneTags(commands)) {
+        await logAction({
+          level: "info",
+          action: "Lane Tags Ignored",
+          details: `protocolId=${protocolId} note=${LANE_TAGS_IGNORED_WARNING}`,
+        });
+      }
+
       // Create run ID
       const runId = snowflakeIdGenerator.nextId();
 
@@ -272,6 +302,7 @@ export default class RunStore {
         isProtocolNotFoundError(error) ||
         isProtocolGenerationFailedError(error) ||
         isOperatorOnlyCommandError(error) ||
+        isLaneValidationError(error) ||
         isProtocolParamsInvalidError(error)
       ) {
         throw error;

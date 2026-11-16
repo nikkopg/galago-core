@@ -8,6 +8,7 @@ import RunStore, {
   upsertParameterVariables,
 } from "../runs";
 import { isOperatorOnlyCommandError } from "../operatorOnlyCommands";
+import { isLaneValidationError } from "../laneScheduling";
 import { procedure, router } from "@/server/trpc";
 import { getSelectedWorkcellId } from "@/db/helpers";
 import { db } from "@/db/client";
@@ -92,6 +93,12 @@ export const runRouter = router({
           });
         }
         if (isOperatorOnlyCommandError(e)) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: e.message,
+          });
+        }
+        if (isLaneValidationError(e)) {
           throw new TRPCError({
             code: "BAD_REQUEST",
             message: e.message,
