@@ -5,11 +5,11 @@ milestone_name: Tool-inferred dropdowns + per-tool concurrency lanes
 current_phase: 8
 current_phase_name: Concurrency Lanes
 status: planning
-stopped_at: Phase 8 context gathered
-last_updated: "2026-11-16T09:10:16.269Z"
+stopped_at: Phase 8 UI-SPEC approved
+last_updated: "2026-11-16T09:32:18.887Z"
 last_activity: 2026-11-16
 last_activity_desc: Phase 07 complete, transitioned to Phase 8
-state_head: bb8f9f3f947bfc6e4a385a42cadb2a092b09e3a7
+state_head: 5cf4ae28d2995ea7a9cb1322f035525a302d167b
 progress:
   total_phases: 4
   completed_phases: 2
@@ -252,9 +252,9 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-16T09:10:16.216Z
-Stopped at: Phase 8 context gathered
-Resume file: .planning/phases/08-concurrency-lanes/08-CONTEXT.md
+Last session: 2026-11-16T09:32:18.834Z
+Stopped at: Phase 8 UI-SPEC approved
+Resume file: .planning/phases/08-concurrency-lanes/08-UI-SPEC.md
 
 ## Operator Next Steps
 
