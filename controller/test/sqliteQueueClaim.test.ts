@@ -112,10 +112,7 @@ describe("SqliteQueue.claimEligible", () => {
   });
 
   it("is declared without the async keyword in the source", () => {
-    const source = readFileSync(
-      path.resolve(__dirname, "../server/utils/SqliteQueue.ts"),
-      "utf8",
-    );
+    const source = readFileSync(path.resolve(__dirname, "../server/utils/SqliteQueue.ts"), "utf8");
     const match = source.match(/^[ \t]*(async[ \t]+)?claimEligible\(queueId: number\)/m);
 
     expect(match).not.toBeNull();

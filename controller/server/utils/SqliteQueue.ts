@@ -153,8 +153,27 @@ export default class SqliteQueue {
   // excludes STARTED rows, the F5 guarantee per lane. startNext stays the flag-off
   // path and is not changed.
   claimEligible(queueId: number): StoredRunCommand | false {
-    void queueId;
-    return false;
+    let claimed: StoredRunCommand | false = false;
+
+    this.db.transaction(() => {
+      // Gone from the queue since the pick (Clear All, run delete, complete, skip).
+      const queued = this.db
+        .prepare(`SELECT queue_id FROM ${this.queueName}_queue WHERE queue_id = ?`)
+        .get(queueId) as { queue_id: number } | undefined;
+      if (!queued) {
+        return;
+      }
+
+      const item = this.find(queueId);
+      if (!item || (item.status !== "CREATED" && item.status !== "FAILED")) {
+        return;
+      }
+
+      this._updateItem(queueId, { status: "STARTED" });
+      claimed = this.find(queueId);
+    })();
+
+    return claimed;
   }
 
   async gotoCommandByIndex(runId: string, targetIndex: number): Promise<boolean> {
