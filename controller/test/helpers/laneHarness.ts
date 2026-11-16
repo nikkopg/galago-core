@@ -3,9 +3,10 @@
 // each step ends. No gRPC endpoint is ever contacted, so no test can move an instrument.
 import { vi } from "vitest";
 import { ToolType } from "gen-interfaces/controller";
+import { ResponseCode } from "gen-interfaces/tools/grpc_interfaces/tool_base";
 import { CommandQueue } from "@/server/command_queue";
 import Tool from "@/server/tools";
-import { installFakeTool, removeFakeTool, deferred } from "./fakeTool";
+import { installFakeTool, removeFakeTool, deferred, type FakeGrpc } from "./fakeTool";
 
 const GLOBAL_KEY = "__global_command_queue_key";
 
@@ -52,8 +53,9 @@ export function createLaneHarness(opts?: LaneHarnessOptions) {
   queue.slackNotificationsEnabled = false;
   (globalThis as any)[GLOBAL_KEY] = queue;
 
-  installFakeTool("stack-1", ToolType.stack);
-  installFakeTool("fast-1", ToolType.fast);
+  const fakeGrpc = new Map<string, FakeGrpc>();
+  fakeGrpc.set("stack-1", installFakeTool("stack-1", ToolType.stack).grpc);
+  fakeGrpc.set("fast-1", installFakeTool("fast-1", ToolType.fast).grpc);
 
   const callList: LaneCall[] = [];
   const queueIdByTag = new Map<string, number>();
@@ -131,6 +133,22 @@ export function createLaneHarness(opts?: LaneHarnessOptions) {
     return id;
   }
 
+  // The fake gRPC endpoint of an installed tool: the only place an operator control call
+  // (pause, resume, abort) or a run-state poll lands. Nothing here can move an instrument.
+  function grpcOf(toolId: string): FakeGrpc {
+    const grpc = fakeGrpc.get(toolId);
+    if (!grpc) throw new Error(`no fake tool ${toolId}`);
+    return grpc;
+  }
+
+  // Makes a tool's control endpoint answer every control call with SUCCESS.
+  function replyControl(toolId: string) {
+    grpcOf(toolId).executeCommand.mockResolvedValue({
+      response: ResponseCode.SUCCESS,
+      return_reply: true,
+    });
+  }
+
   async function teardown() {
     const stopped = queue.stop();
     // Release every open deferred, including any a still-waking loop opens late, while
@@ -152,7 +170,19 @@ export function createLaneHarness(opts?: LaneHarnessOptions) {
     vi.restoreAllMocks();
   }
 
-  return { queue, push, start, tick, calls, finish, fail, queueIdOf, teardown };
+  return {
+    queue,
+    push,
+    start,
+    tick,
+    calls,
+    finish,
+    fail,
+    queueIdOf,
+    grpcOf,
+    replyControl,
+    teardown,
+  };
 }
 
 export type LaneHarness = ReturnType<typeof createLaneHarness>;
