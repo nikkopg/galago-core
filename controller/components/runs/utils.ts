@@ -46,6 +46,19 @@ export function getRunAttributes(runInfo: any, commandInfo: any) {
   };
 }
 
+export interface LaneRowGroup<T> {
+  lane: string;
+  rows: T[];
+}
+
+// RED stub: replaced in the GREEN commit.
+export function groupRowsByLane<T extends { commandInfo?: unknown }>(
+  rows: T[],
+): LaneRowGroup<T>[] | null {
+  void rows;
+  return null;
+}
+
 export function groupCommandsByRun(commands: RunCommand[]): GroupedCommand[] {
   const groupedCommands: GroupedCommand[] = [];
   const runIds: string[] = [];
