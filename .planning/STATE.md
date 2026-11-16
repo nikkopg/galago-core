@@ -5,16 +5,16 @@ milestone_name: Tool-inferred dropdowns + per-tool concurrency lanes
 current_phase: 8
 current_phase_name: Concurrency Lanes
 status: executing
-stopped_at: Completed 08-02-PLAN.md
-last_updated: "2026-11-16T13:26:57.706Z"
+stopped_at: Completed 08-03-PLAN.md
+last_updated: "2026-11-16T13:30:37.988Z"
 last_activity: 2026-11-16
 last_activity_desc: Phase 8 execution started
-state_head: e9e44346f01198886340f771ca335814b0575bbf
+state_head: 7e425dcc470b044fc03ea123096bf42374cb5b1d
 progress:
   total_phases: 4
   completed_phases: 2
   total_plans: 25
-  completed_plans: 17
+  completed_plans: 18
   percent: 50
 ---
 
@@ -31,7 +31,7 @@ decides every recovery action; the web app never acts on its own or pre-selects 
 ## Current Position
 
 Phase: 8 (Concurrency Lanes) — EXECUTING
-Plan: 3 of 10
+Plan: 4 of 10
 Status: Ready to execute
 Last activity: 2026-11-16 — Phase 8 execution started
 
@@ -107,6 +107,7 @@ Progress: [█████░░░░░] 50% (2 of 4 v1.2 phases)
 | Phase 07 P10 | 6 min | 2 tasks | 4 files |
 | Phase 08 P01 | 25 min | 2 tasks | 2 files |
 | Phase 08 P02 | 20min | 2 tasks | 3 files |
+| Phase 8 P03 | 8 min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -190,6 +191,8 @@ Recent decisions affecting current work:
 - [Phase 08]: 08-01: golden fixture GOLDEN_CAPTURE_SHA kept at 0c1e06e (production-identical); fixture adding commit 98b50d6 is the baseline later plans must not change
 - [Phase 08]: 08-02: isEligible blocks a row on earlier same-run rows on its own lane or before its last barrier; a barrier waits for everything earlier
 - [Phase 08]: 08-02: laneOf forces Tool Box steps and invalid lane names to primary; STARTED Tool Box row closes the gate on every lane
+- [Phase 8]: 08-03: claimEligible re-checks queue membership and CREATED/FAILED status in one synchronous transaction; STARTED/removed/unknown rows return false (D-10)
+- [Phase 8]: 08-03: RunStateMonitor.stopIf(queueId) stops only the exact running queueId so another lane never stops the F.A.S.T. poller (D-11)
 
 ### Pending Todos
 
@@ -257,8 +260,8 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-16T13:26:57.649Z
-Stopped at: Completed 08-02-PLAN.md
+Last session: 2026-11-16T13:30:37.929Z
+Stopped at: Completed 08-03-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
