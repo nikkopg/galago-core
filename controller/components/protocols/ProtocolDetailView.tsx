@@ -44,6 +44,8 @@ import { ConfirmationModal } from "../ui/ConfirmationModal";
 import { SaveIcon } from "@/components/ui/Icons";
 import { CommandDetailsDrawer } from "./CommandDetailsDrawer";
 import CommandImage from "@/components/tools/CommandImage";
+import { buildLaneSummary, laneWarningText } from "./laneFields";
+import type { LaneSummary } from "./laneFields";
 import { successToast, errorToast, warningToast } from "../ui/Toast";
 import ProtocolParametersEditor from "./ProtocolParametersEditor";
 import type { ProtocolParameter } from "@/protocols/params";
@@ -139,6 +141,44 @@ const ProtocolSwimLaneCommandComponent: React.FC<{
   );
 };
 
+// Per-lane groups (D-20, UI-SPEC S2): a header bar per lane, then mono step lines.
+// React text only; lines already carry global positions and the barrier suffix.
+const LaneGroups: React.FC<{ summary: LaneSummary; spacing: number }> = ({ summary, spacing }) => {
+  const headerBg = useColorModeValue("gray.50", "surface.panel");
+  return (
+    <VStack align="stretch" spacing={spacing}>
+      {summary.groups.map((group) => (
+        <Box key={group.lane}>
+          <Text fontSize="sm" fontWeight="bold" bg={headerBg} px={2} py={2}>
+            {group.header}
+          </Text>
+          {group.lines.map((line, i) => (
+            <Text key={i} fontFamily="mono" fontSize="xs">
+              {line}
+            </Text>
+          ))}
+        </Box>
+      ))}
+    </VStack>
+  );
+};
+
+const LaneWarningsAlert: React.FC<{ warnings: ReadonlyArray<string> }> = ({ warnings }) => {
+  if (warnings.length === 0) return null;
+  return (
+    <Alert status="warning" variant="left-accent">
+      <AlertIcon />
+      <VStack align="stretch" spacing={1}>
+        {warnings.map((line, i) => (
+          <Text key={i} fontSize="sm">
+            {laneWarningText(line)}
+          </Text>
+        ))}
+      </VStack>
+    </Alert>
+  );
+};
+
 export const ProtocolDetailView: React.FC<{ id: number }> = ({ id }) => {
   const [commands, setCommands] = useState<any[]>([]);
   const [parameters, setParameters] = useState<ProtocolParameter[]>([]);
@@ -152,6 +192,7 @@ export const ProtocolDetailView: React.FC<{ id: number }> = ({ id }) => {
   const [selectedCommand, setSelectedCommand] = useState<any | null>(null);
   const [scriptContent, setScriptContent] = useState<string>("");
   const [previewCommands, setPreviewCommands] = useState<any[] | null>(null);
+  const [previewLaneWarnings, setPreviewLaneWarnings] = useState<string[]>([]);
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
   const { isOpen: isDrawerOpen, onOpen: onDrawerOpen, onClose: onDrawerClose } = useDisclosure();
   const execMutation = trpc.tool.runCommand.useMutation();
@@ -190,9 +231,11 @@ export const ProtocolDetailView: React.FC<{ id: number }> = ({ id }) => {
       });
       if (result.success) {
         setPreviewCommands(result.commands);
+        setPreviewLaneWarnings(result.laneWarnings ?? []);
         successToast("Preview generated", `${result.commandCount} commands generated`);
       } else {
         setPreviewCommands(null);
+        setPreviewLaneWarnings([]);
         errorToast("Script error", result.error || "Unknown error");
       }
       if (result.logs.length > 0) {
@@ -552,6 +595,13 @@ export const ProtocolDetailView: React.FC<{ id: number }> = ({ id }) => {
     );
   };
 
+  // Lane previews (D-20, LUI-04): null for an untagged protocol, so the editor and
+  // the Generated Commands box render exactly as before.
+  const scriptSummary = previewCommands
+    ? buildLaneSummary(previewCommands, { style: "script" })
+    : null;
+  const visualSummary = buildLaneSummary(commands.map((c) => c.commandInfo));
+
   return (
     <Box
       bg={bgColor}
@@ -672,16 +722,21 @@ export const ProtocolDetailView: React.FC<{ id: number }> = ({ id }) => {
                 <Text fontWeight="bold" mb={2}>
                   Generated Commands ({previewCommands.length}):
                 </Text>
-                {previewCommands.map((cmd: any, i: number) => (
-                  <Text key={i} fontFamily="mono" fontSize="xs">
-                    {i + 1}. [{cmd.toolId}] {cmd.command}
-                    {Object.keys(cmd.params || {}).length > 0
-                      ? ` — ${JSON.stringify(cmd.params)}`
-                      : ""}
-                  </Text>
-                ))}
+                {scriptSummary && scriptSummary.groups.length > 0 ? (
+                  <LaneGroups summary={scriptSummary} spacing={3} />
+                ) : (
+                  previewCommands.map((cmd: any, i: number) => (
+                    <Text key={i} fontFamily="mono" fontSize="xs">
+                      {i + 1}. [{cmd.toolId}] {cmd.command}
+                      {Object.keys(cmd.params || {}).length > 0
+                        ? ` — ${JSON.stringify(cmd.params)}`
+                        : ""}
+                    </Text>
+                  ))
+                )}
               </Box>
             )}
+            <LaneWarningsAlert warnings={previewLaneWarnings} />
           </VStack>
         ) : (
           <Box
@@ -707,6 +762,15 @@ export const ProtocolDetailView: React.FC<{ id: number }> = ({ id }) => {
               </Droppable>
             </DragDropContext>
           </Box>
+        )}
+        {protocol.mode !== "script" && visualSummary && (
+          <VStack align="stretch" spacing={4}>
+            <Text fontSize="sm" fontWeight="bold">
+              Lane summary
+            </Text>
+            <LaneGroups summary={visualSummary} spacing={6} />
+            <LaneWarningsAlert warnings={visualSummary.warnings} />
+          </VStack>
         )}
       </VStack>
 

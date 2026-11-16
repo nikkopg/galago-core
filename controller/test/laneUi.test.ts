@@ -846,3 +846,60 @@ describe("laneFields stays pure and preselects nothing", () => {
     expect(suggestLanes([step()])).toEqual(["primary"]);
   });
 });
+
+describe("editor lane wiring pins (D-18, D-20)", () => {
+  const drawer = source("components/protocols/CommandDetailsDrawer.tsx");
+  const view = source("components/protocols/ProtocolDetailView.tsx");
+
+  it("the drawer wires the lane controls through the pure helpers", () => {
+    for (const needle of [
+      "isToolStep(",
+      "setLane(",
+      "setBarrier(",
+      'id="lane-suggestions"',
+      'placeholder="primary"',
+      "Wait for all earlier steps",
+      "LANE_INERT_NOTE",
+      "isChecked={advancedParams.runAsynchronously || false}",
+    ]) {
+      expect(drawer, needle).toContain(needle);
+    }
+  });
+
+  it("the Lane block sits between Value to Match and Run Asynchronously", () => {
+    const lane = drawer.indexOf('id="lane-suggestions"');
+    expect(lane).toBeGreaterThan(drawer.indexOf("Value to Match"));
+    expect(lane).toBeLessThan(drawer.indexOf("Run Asynchronously"));
+  });
+
+  it("the drawer never writes an empty lane, a false barrier or a preselected lane", () => {
+    const src = stripComments(drawer);
+    expect(src).not.toMatch(/lane:\s*(?:""|'')/);
+    expect(src).not.toMatch(/laneBarrier:\s*(?:false|true)/);
+    expect(src).not.toMatch(/defaultValue/);
+    expect(src).toContain("handleRunAsyncChange");
+  });
+
+  it("the protocol view builds the lane summary and the warnings Alert", () => {
+    for (const needle of [
+      "buildLaneSummary(",
+      "laneWarnings",
+      'variant="left-accent"',
+      "Generated Commands (",
+      "protocolCommands={commands}",
+    ]) {
+      expect(view, needle).toContain(needle);
+    }
+    expect(view.split("runAsynchronously: false").length - 1).toBe(2);
+  });
+
+  it("neither component injects raw HTML", () => {
+    expect(drawer).not.toMatch(/dangerouslySetInnerHTML/);
+    expect(view).not.toMatch(/dangerouslySetInnerHTML/);
+  });
+
+  it("the run-page drawer host passes no protocolCommands, so it stays read-only", () => {
+    const runs = source("components/runs/list/SwimLaneComponent.tsx");
+    expect(runs).not.toContain("protocolCommands");
+  });
+});
