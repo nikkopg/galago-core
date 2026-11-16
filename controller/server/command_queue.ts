@@ -16,12 +16,16 @@ import { TRPCError } from "@trpc/server";
 import { getRunControl, runControl, validateControlRequest } from "./runControl";
 import {
   PRIMARY_LANE,
+  LaneValidationError,
   lanesWithWork,
   laneOf,
   pickEligible,
   toolKeyOf,
+  validateLanes,
   type LaneFailureEntry,
   type LaneGate,
+  type LaneStatusSnapshot,
+  type RunningLaneEntry,
 } from "./laneScheduling";
 import { RunStateMonitor, type RunStateEnvelope } from "./runState";
 import {
@@ -1213,6 +1217,95 @@ export class CommandQueue {
     }
   }
 
+  // The operator's Freeze lanes control (D-15, LAN-09). It only closes dispatch: the same latch a
+  // failure sets, with reason "freeze". Steps already running finish and are recorded normally;
+  // nothing is aborted, paused or sent, and no instrument state is read. The state turns OFFLINE
+  // (unless FAILED, whose banner must stay) with no error set, so the existing Start button
+  // shows. Only an accepted operator Start clears it (D-13).
+  freezeLanes(): { frozen: boolean } {
+    if (!this._laneMode) {
+      throw new TRPCError({
+        code: "PRECONDITION_FAILED",
+        message: "Parallel lanes are disabled on the server, so there are no lanes to freeze.",
+      });
+    }
+    if (this._laneHalt) {
+      logAction({
+        level: "info",
+        action: "Lanes Freeze Ignored",
+        details: sanitizeLogText(
+          `The freeze was ignored because the lanes are already halted. reason=${this._laneHalt.reason}`,
+        ),
+      });
+      return { frozen: false };
+    }
+    this._laneHalt = { reason: "freeze", at: Date.now() };
+    if (this._state !== ToolStatus.FAILED) this._setState(ToolStatus.OFFLINE);
+    const running = this._runningLaneEntries().map((e) => `${e.lane}:${e.queueId}`);
+    logAction({
+      level: "info",
+      action: "Lanes Frozen",
+      details: sanitizeLogText(
+        `Lanes frozen by the operator; steps already running finish and nothing was aborted. running=${running.length ? running.join(",") : "none"}`,
+      ),
+    });
+    return { frozen: true };
+  }
+
+  // The lane status read model for the run page (D-24, D-16). Messages only, never a stack.
+  laneStatus(): LaneStatusSnapshot {
+    let hasLaneRows = false;
+    try {
+      const rows = this.commands.queuedRowsSync();
+      if (rows.length > 0) {
+        const active = rows[0].runId;
+        hasLaneRows = rows.some(
+          (r) => r.runId === active && laneOf(r.commandInfo) !== PRIMARY_LANE,
+        );
+      }
+    } catch {
+      hasLaneRows = false;
+    }
+    if (!this._laneMode) {
+      return {
+        laneMode: false,
+        hasLaneRows,
+        halted: false,
+        haltReason: null,
+        queueBusy: false,
+        runningLanes: [],
+        failures: [],
+        overflow: 0,
+      };
+    }
+    return {
+      laneMode: true,
+      hasLaneRows,
+      halted: this._laneHalt !== undefined || this._isWaitingForInput,
+      haltReason: this._laneHalt?.reason ?? (this._isWaitingForInput ? "modal" : null),
+      queueBusy: this._state === ToolStatus.BUSY,
+      runningLanes: this._runningLaneEntries(),
+      failures: this._laneFailures.map((f) => ({ ...f })),
+      overflow: this._laneFailureOverflow,
+    };
+  }
+
+  // The primary lane's running step plus every side lane's, as plain entries.
+  private _runningLaneEntries(): RunningLaneEntry[] {
+    const entries: RunningLaneEntry[] = [];
+    const add = (lane: string, step: Readonly<RunningStep>) =>
+      entries.push({
+        lane,
+        queueId: step.queueId,
+        toolId: step.toolId,
+        toolType: String(step.toolType),
+        command: step.command,
+      });
+    if (this._runningStep) add(PRIMARY_LANE, this._runningStep);
+    for (const [lane, step] of this._sideRunning) add(lane, step);
+    return entries;
+  }
+
   // The single place the dispatch gate and the claim meet. With lanes off it is the
   // legacy call, byte for byte. In lane mode there is no await between reading the
   // rows and claiming the chosen one, so the check and the claim are one atomic step.
@@ -1948,6 +2041,19 @@ export class CommandQueue {
   }
 
   async enqueueRun(run: Run) {
+    // Defence in depth behind run creation (D-14, D-17): an invalid lane setup is refused
+    // before any row is pushed, so a half-queued run can never hang the queue.
+    if (this._laneMode) {
+      const errors = validateLanes(run.commands.map((c) => c.commandInfo));
+      if (errors.length > 0) {
+        await logAction({
+          level: "warning",
+          action: "Lane Setup Refused",
+          details: sanitizeLogText(`runId=${run.id} stage=enqueue reason=${errors.join(" ")}`),
+        });
+        throw new LaneValidationError(errors);
+      }
+    }
     try {
       const runQueue: RunQueue = {
         id: run.id,

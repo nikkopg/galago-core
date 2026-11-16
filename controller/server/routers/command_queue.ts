@@ -43,6 +43,11 @@ export const commandQueueRouter = router({
   stop: procedure.mutation(() => {
     CommandQueue.global.stop();
   }),
+  // Stops new dispatch on every lane without aborting anything (D-15). It can only close the
+  // dispatch gate; only an operator Start (restart) can reopen it. Refused when lanes are off.
+  freezeLanes: procedure.mutation(() => CommandQueue.global.freezeLanes()),
+  // The lane read model for the run page: messages only, never a stack (D-24, D-16).
+  laneStatus: procedure.query(() => CommandQueue.global.laneStatus()),
   getError: procedure.query(async () => {
     const queue = CommandQueue.global;
     const error = queue.getError();
