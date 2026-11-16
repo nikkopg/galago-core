@@ -2,9 +2,9 @@
 phase: "08"
 slug: "concurrency-lanes"
 # status lifecycle: draft (seeded by plan-phase) → validated (set by validate-phase §6)
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: validated
+nyquist_compliant: true
+wave_0_complete: true
 created: "2026-11-16"
 ---
 
@@ -43,22 +43,22 @@ Filled in per plan by the planner (task IDs `08-PP-TT`). Requirement → test fi
 
 | Requirement | Behavior | Test Type | Automated Command | File Exists | Status |
 |-------------|----------|-----------|-------------------|-------------|--------|
-| LAN-01 | Golden transcript identical (env unset / option false / option true + untagged) | integration (fake tools, fake timers) | `npx vitest run test/lanesFlagOff.test.ts` | ❌ W0 (capture first) | ⬜ pending |
-| LAN-01 | Existing suite passes unedited | regression | `npx vitest run` | ✅ | ⬜ pending |
-| LAN-02 | Headline cycle overlaps; one step per tool; run N+1 waits | unit + integration | `npx vitest run test/laneScheduling.test.ts test/lanes.test.ts` | ❌ W0 | ⬜ pending |
-| LAN-03 | Barrier table | unit | `npx vitest run test/laneScheduling.test.ts` | ❌ W0 | ⬜ pending |
-| LAN-04 | `claimEligible` excludes STARTED; per-lane Start guard; one send per queueId | unit + integration | `npx vitest run test/sqliteQueueClaim.test.ts test/lanes.test.ts` | ❌ W0 | ⬜ pending |
-| LAN-05 | Halt on any failure; only operator Start clears | integration | `npx vitest run test/laneHalt.test.ts` | ❌ W0 | ⬜ pending |
-| LAN-06 | Primary modal / STARTED Tool Box row gates side dispatch | integration | `npx vitest run test/laneHalt.test.ts` | ❌ W0 | ⬜ pending |
-| LAN-07 | Control reaches side-lane F.A.S.T.; `stopIf`; per-queueId abort markers | integration + unit | `npx vitest run test/laneControl.test.ts test/runStateStopIf.test.ts` | ❌ W0 | ⬜ pending |
-| LAN-08 | Abort-first Stop/Clear All/delete on any lane | integration + pure | `npx vitest run test/laneControl.test.ts test/stopInterception.test.ts` | ❌ W0 / ✅ | ⬜ pending |
-| LAN-09 | `freezeLanes` latch + OFFLINE, nothing aborted, Start releases | integration | `npx vitest run test/laneHalt.test.ts` | ❌ W0 | ⬜ pending |
-| LUI-01 | Lane field helpers, Tool Box no control, static pins | unit + static | `npx vitest run test/laneUi.test.ts test/staticScan.test.ts` | ❌ W0 / ✅ | ⬜ pending |
-| LUI-02 | `galago.lane`, per-call `{lane, barrier}` | unit | `npx vitest run test/laneScript.test.ts` | ❌ W0 | ⬜ pending |
-| LUI-03 | Refusals, `LaneValidationError` mapping (router, API route) | unit + integration | `npx vitest run test/laneValidation.test.ts test/runCreateReload.test.ts` | ❌ W0 / ✅ | ⬜ pending |
-| LUI-04 | Per-lane preview / Start listing; untagged strings unchanged | unit | `npx vitest run test/laneUi.test.ts test/queueStartGuard.test.ts test/queuedStartSummary.test.ts` | ❌ W0 / ✅ | ⬜ pending |
-| LUI-05 | `groupRowsByLane`, lane-aware outcome | unit | `npx vitest run test/laneUi.test.ts test/runOutcome.test.ts` | ❌ W0 / ✅ | ⬜ pending |
-| LUI-06 | Bounded failure list, first kept | integration + unit | `npx vitest run test/laneHalt.test.ts test/laneUi.test.ts test/errorPath.test.ts` | ❌ W0 / ✅ | ⬜ pending |
+| LAN-01 | Golden transcript identical (env unset / option false / option true + untagged) | integration (fake tools, fake timers) | `npx vitest run test/lanesFlagOff.test.ts` | ✅ | ✅ green |
+| LAN-01 | Existing suite passes unedited | regression | `npx vitest run` | ✅ | ✅ green |
+| LAN-02 | Headline cycle overlaps; one step per tool; run N+1 waits | unit + integration | `npx vitest run test/laneScheduling.test.ts test/lanes.test.ts` | ✅ | ✅ green |
+| LAN-03 | Barrier table | unit | `npx vitest run test/laneScheduling.test.ts` | ✅ | ✅ green |
+| LAN-04 | `claimEligible` excludes STARTED; per-lane Start guard; one send per queueId | unit + integration | `npx vitest run test/sqliteQueueClaim.test.ts test/lanes.test.ts` | ✅ | ✅ green |
+| LAN-05 | Halt on any failure; only operator Start clears | integration | `npx vitest run test/laneHalt.test.ts` | ✅ | ✅ green |
+| LAN-06 | Primary modal / STARTED Tool Box row gates side dispatch | integration | `npx vitest run test/laneHalt.test.ts` | ✅ | ✅ green |
+| LAN-07 | Control reaches side-lane F.A.S.T.; `stopIf`; per-queueId abort markers | integration + unit | `npx vitest run test/laneControl.test.ts test/runStateStopIf.test.ts` | ✅ | ✅ green |
+| LAN-08 | Abort-first Stop/Clear All/delete on any lane | integration + pure | `npx vitest run test/laneControl.test.ts test/stopInterception.test.ts` | ✅ | ✅ green |
+| LAN-09 | `freezeLanes` latch + OFFLINE, nothing aborted, Start releases | integration | `npx vitest run test/laneHalt.test.ts` | ✅ | ✅ green |
+| LUI-01 | Lane field helpers, Tool Box no control, static pins | unit + static | `npx vitest run test/laneUi.test.ts test/staticScan.test.ts` | ✅ | ✅ green |
+| LUI-02 | `galago.lane`, per-call `{lane, barrier}` | unit | `npx vitest run test/laneScript.test.ts` | ✅ | ✅ green |
+| LUI-03 | Refusals, `LaneValidationError` mapping (router, API route) | unit + integration | `npx vitest run test/laneValidation.test.ts test/runCreateReload.test.ts` | ✅ | ✅ green |
+| LUI-04 | Per-lane preview / Start listing; untagged strings unchanged | unit | `npx vitest run test/laneUi.test.ts test/queueStartGuard.test.ts test/queuedStartSummary.test.ts` | ✅ | ✅ green |
+| LUI-05 | `groupRowsByLane`, lane-aware outcome | unit | `npx vitest run test/laneUi.test.ts test/runOutcome.test.ts` | ✅ | ✅ green |
+| LUI-06 | Bounded failure list, first kept | integration + unit | `npx vitest run test/laneHalt.test.ts test/laneUi.test.ts test/errorPath.test.ts` | ✅ | ✅ green |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -66,11 +66,11 @@ Filled in per plan by the planner (task IDs `08-PP-TT`). Requirement → test fi
 
 ## Wave 0 Requirements
 
-- [ ] `controller/test/fixtures/lanesFlagOff.golden.ts` + `controller/test/lanesFlagOff.test.ts` — captured at the unmodified commit (LAN-01), before any production edit
-- [ ] `controller/test/laneScheduling.test.ts`, `controller/test/sqliteQueueClaim.test.ts`, `controller/test/runStateStopIf.test.ts`
-- [ ] `controller/test/helpers/laneHarness.ts` shared by `lanes`, `laneHalt`, `laneControl` tests (injectable `{ parallelLanes, loopDelayMs: 0 }`, deferred gates, full teardown)
-- [ ] `controller/test/laneValidation.test.ts`, `controller/test/laneScript.test.ts`, `controller/test/laneUi.test.ts`
-- [ ] Appended `describe` blocks in `controller/test/staticScan.test.ts` (additive only)
+- [x] `controller/test/fixtures/lanesFlagOff.golden.ts` + `controller/test/lanesFlagOff.test.ts` — captured at the unmodified commit (LAN-01), before any production edit
+- [x] `controller/test/laneScheduling.test.ts`, `controller/test/sqliteQueueClaim.test.ts`, `controller/test/runStateStopIf.test.ts`
+- [x] `controller/test/helpers/laneHarness.ts` shared by `lanes`, `laneHalt`, `laneControl` tests (injectable `{ parallelLanes, loopDelayMs: 0 }`, deferred gates, full teardown)
+- [x] `controller/test/laneValidation.test.ts`, `controller/test/laneScript.test.ts`, `controller/test/laneUi.test.ts`
+- [x] Appended `describe` blocks in `controller/test/staticScan.test.ts` (additive only)
 
 ---
 
@@ -86,11 +86,19 @@ Filled in per plan by the planner (task IDs `08-PP-TT`). Requirement → test fi
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 60s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references
+- [x] No watch-mode flags
+- [x] Feedback latency < 60s
+- [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** approved 2026-11-16 (validate-phase: 15/15 requirements COVERED, full suite 1361 green, 20x lane loop green)
+
+## Validation Audit 2026-11-16
+
+| Metric | Count |
+|---|---|
+| Gaps found | 0 |
+| Resolved | 0 |
+| Escalated | 0 |
