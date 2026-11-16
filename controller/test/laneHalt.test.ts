@@ -5,6 +5,9 @@ import { describe, it, expect, afterEach, vi } from "vitest";
 import { ToolType } from "gen-interfaces/controller";
 import { ToolStatus } from "gen-interfaces/tools/grpc_interfaces/tool_base";
 import { logAction } from "@/server/logger";
+import Tool from "@/server/tools";
+import { isLaneValidationError } from "@/server/laneScheduling";
+import { commandQueueRouter } from "@/server/routers/command_queue";
 import { deferred } from "./helpers/fakeTool";
 import { createLaneHarness, stackStep, fastStep, type LaneHarness } from "./helpers/laneHarness";
 
@@ -495,5 +498,260 @@ describe("the primary modal gate (D-14, LAN-06)", () => {
     expect(h.calls()).toHaveLength(0);
     expect((await h.queue.commands.all()).map((r) => r.status)).toEqual(["COMPLETED"]);
     expect(logs("Lane Start Ignored")).toHaveLength(0);
+  });
+});
+
+const router = () => commandQueueRouter.createCaller({});
+
+// F1 on lane fast (first row, in flight) and a primary barrier step queued behind it.
+function freezeRows() {
+  return [
+    fastStep("t1", { lane: "fast", params: { tag: "F1" } }),
+    stackStep("S1", { barrier: true }),
+  ];
+}
+
+describe("freezeLanes (D-15, LAN-09)", () => {
+  it("with the flag off it is refused with PRECONDITION_FAILED and changes nothing", async () => {
+    h = createLaneHarness({ parallelLanes: false });
+    const stateBefore = h.queue.state;
+    await expect(router().freezeLanes()).rejects.toMatchObject({
+      code: "PRECONDITION_FAILED",
+      message: "Parallel lanes are disabled on the server, so there are no lanes to freeze.",
+    });
+    expect(h.queue.state).toBe(stateBefore);
+    expect(h.queue.error).toBeUndefined();
+    expect(logs("Lanes Frozen")).toHaveLength(0);
+    const status = await router().laneStatus();
+    expect(status.halted).toBe(false);
+    expect(status.haltReason).toBeNull();
+  });
+
+  it("Edge LAN-09/adjacency: a mid-flight step finishes and is recorded, nothing new is dispatched", async () => {
+    h = createLaneHarness();
+    await h.push("r1", freezeRows());
+    h.start();
+    await h.tick(3);
+    expect(commandsOf(h)).toEqual(["t1"]);
+    const executeCalls = h.calls().length;
+    const controlSpy = vi.spyOn(Tool.prototype, "controlCommand");
+
+    await expect(router().freezeLanes()).resolves.toEqual({ frozen: true });
+    expect(h.queue.state).toBe(ToolStatus.OFFLINE);
+    expect(h.queue.getError()).toBeNull();
+    expect(logs("Lanes Frozen")).toHaveLength(1);
+    expect(await router().laneStatus()).toMatchObject({
+      halted: true,
+      haltReason: "freeze",
+      queueBusy: false,
+    });
+
+    h.finish(0);
+    await h.tick(10);
+    expect(h.calls()).toHaveLength(executeCalls);
+    expect(controlSpy).not.toHaveBeenCalled();
+    const t1 = (await h.queue.commands.all()).find((r) => r.queueId === h!.calls()[0].queueId);
+    expect(t1?.status).toBe("COMPLETED");
+    expect(h.queue.error).toBeUndefined();
+
+    // Only an operator Start resumes dispatch.
+    h.start();
+    await h.tick(4);
+    expect(commandsOf(h)).toEqual(["t1", "S1"]);
+    expect((await router().laneStatus()).halted).toBe(false);
+  });
+
+  it("Edge LAN-09/empty: with lanes on and nothing running it still sets the latch", async () => {
+    h = createLaneHarness();
+    await expect(h.queue.freezeLanes()).toEqual({ frozen: true });
+    expect(latchOf(h)?.reason).toBe("freeze");
+    expect((await router().laneStatus()).halted).toBe(true);
+    h.start();
+    await h.tick(3);
+    expect(latchOf(h)).toBeUndefined();
+    expect((await router().laneStatus()).halted).toBe(false);
+  });
+
+  it("Edge LAN-09/ordering: a freeze then a failure reports failure", async () => {
+    h = createLaneHarness();
+    await h.push("r1", [stackStep("S1"), fastStep("t1", { lane: "fast", barrier: true })]);
+    h.start();
+    await h.tick(3);
+    expect(h.queue.freezeLanes()).toEqual({ frozen: true });
+    h.fail(indexOfCall(h, "S1"), new Error("boom after freeze"));
+    await h.tick(3);
+    expect(h.queue.state).toBe(ToolStatus.FAILED);
+    expect(await router().laneStatus()).toMatchObject({ halted: true, haltReason: "failure" });
+  });
+
+  it("Edge LAN-09/ordering: a failure then a freeze keeps failure and logs Lanes Freeze Ignored", async () => {
+    h = createLaneHarness();
+    await h.push("r1", [stackStep("S1"), fastStep("t1", { lane: "fast", barrier: true })]);
+    h.start();
+    await h.tick(3);
+    h.fail(indexOfCall(h, "S1"), new Error("boom first"));
+    await h.tick(3);
+    expect(h.queue.state).toBe(ToolStatus.FAILED);
+
+    expect(h.queue.freezeLanes()).toEqual({ frozen: false });
+    expect(h.queue.state).toBe(ToolStatus.FAILED);
+    expect(h.queue.error?.message).toContain("boom first");
+    expect(await router().laneStatus()).toMatchObject({ halted: true, haltReason: "failure" });
+    const ignored = logs("Lanes Freeze Ignored");
+    expect(ignored).toHaveLength(1);
+    expect(ignored[0].details).toContain("failure");
+    expect(logs("Lanes Frozen")).toHaveLength(0);
+  });
+});
+
+describe("commandQueue.laneStatus (D-24, D-16)", () => {
+  it("reports both running lanes of the headline run", async () => {
+    h = createLaneHarness();
+    await h.push("r1", [
+      stackStep("in1"),
+      stackStep("in2"),
+      fastStep("transfer", { lane: "fast", barrier: true, params: { tag: "FAST" } }),
+      stackStep("goto-safe"),
+      stackStep("out1", { barrier: true }),
+    ]);
+    h.start();
+    await h.tick(3);
+    h.finish(0);
+    await h.tick(4);
+    h.finish(1);
+    await h.tick(4);
+    expect(commandsOf(h).slice(2).sort()).toEqual(["goto-safe", "transfer"]);
+
+    const status = await router().laneStatus();
+    expect(status).toMatchObject({
+      laneMode: true,
+      hasLaneRows: true,
+      halted: false,
+      haltReason: null,
+      queueBusy: true,
+      failures: [],
+      overflow: 0,
+    });
+    expect(status.runningLanes).toHaveLength(2);
+    expect(status.runningLanes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ lane: "primary", toolId: "stack-1", command: "goto-safe" }),
+        expect.objectContaining({ lane: "fast", toolId: "fast-1", command: "transfer" }),
+      ]),
+    );
+    expect(JSON.stringify(status)).not.toContain('"stack":');
+  });
+
+  it("reports a primary pause modal as halted with reason modal", async () => {
+    h = createLaneHarness();
+    await h.push("r1", [toolBoxStep("pause", { params: { message: "hold" } }), stackStep("A")]);
+    h.start();
+    await h.tick(5);
+    expect(await router().laneStatus()).toMatchObject({ halted: true, haltReason: "modal" });
+  });
+
+  it("reports an untagged run without lane rows, and lists a failure without its stack", async () => {
+    h = createLaneHarness();
+    await h.push("r1", [stackStep("A")]);
+    expect(await router().laneStatus()).toMatchObject({
+      laneMode: true,
+      hasLaneRows: false,
+      halted: false,
+    });
+    h.start();
+    await h.tick(3);
+    const error = new Error("boom g-1");
+    error.stack = "Error: boom g-1\n    at secret.ts:1:1";
+    h.fail(0, error);
+    await h.tick(3);
+    const status = await router().laneStatus();
+    expect(status.failures).toHaveLength(1);
+    expect(status.failures[0]).toMatchObject({ lane: "primary", message: "boom g-1" });
+    expect(JSON.stringify(status)).not.toContain("secret.ts");
+    expect(JSON.stringify(status)).not.toContain('"stack":');
+  });
+
+  it("with the flag off reports laneMode false and nothing halted", async () => {
+    h = createLaneHarness({ parallelLanes: false });
+    expect(await router().laneStatus()).toEqual({
+      laneMode: false,
+      hasLaneRows: false,
+      halted: false,
+      haltReason: null,
+      queueBusy: false,
+      runningLanes: [],
+      failures: [],
+      overflow: 0,
+    });
+  });
+
+  it("leaves the getError payload unchanged for one failure", async () => {
+    h = createLaneHarness();
+    await h.push("r1", [stackStep("A")]);
+    h.start();
+    await h.tick(3);
+    h.fail(0, new Error("boom g-1"));
+    await h.tick(3);
+    const payload = await router().getError();
+    expect(payload).toMatchObject({ message: "boom g-1", userFriendlyMessage: "boom g-1" });
+    expect(Object.keys(payload as object).sort()).toEqual(
+      ["message", "name", "seq", "userFriendlyMessage"].sort(),
+    );
+  });
+});
+
+describe("enqueue-time lane validation (D-14, D-17, LUI-03)", () => {
+  const badRun = () =>
+    ({
+      id: "r9",
+      protocolName: "p",
+      commands: [
+        {
+          runId: "r9",
+          status: "CREATED",
+          commandInfo: {
+            toolId: "stack-1",
+            toolType: ToolType.stack,
+            command: "x",
+            params: { tag: "r9-x" },
+          },
+        },
+        {
+          runId: "r9",
+          status: "CREATED",
+          commandInfo: {
+            toolId: "Tool Box",
+            toolType: ToolType.toolbox,
+            command: "note",
+            params: { message: "n" },
+            advancedParameters: { lane: "fast" },
+          },
+        },
+      ],
+    }) as any;
+
+  it("refuses an invalid lane setup before pushing any row and audits it", async () => {
+    h = createLaneHarness();
+    const before = await h.queue.commands.all();
+    let caught: unknown;
+    try {
+      await h.queue.enqueueRun(badRun());
+    } catch (e) {
+      caught = e;
+    }
+    expect(isLaneValidationError(caught)).toBe(true);
+    expect(await h.queue.commands.all()).toEqual(before);
+    const refused = logs("Lane Setup Refused");
+    expect(refused).toHaveLength(1);
+    expect(refused[0].level).toBe("warning");
+    expect(refused[0].details).toContain("stage=enqueue");
+    expect(refused[0].details).toContain("runId=r9");
+  });
+
+  it("with the flag off the same run is enqueued unchanged", async () => {
+    h = createLaneHarness({ parallelLanes: false });
+    await h.queue.enqueueRun(badRun());
+    expect(await h.queue.commands.all()).toHaveLength(2);
+    expect(logs("Lane Setup Refused")).toHaveLength(0);
   });
 });
