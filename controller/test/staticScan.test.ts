@@ -1403,3 +1403,58 @@ describe("lane halt and freeze invariants (D-12, D-15, D-16)", () => {
     expect(routerSrc).toContain("return { accepted };");
   });
 });
+
+describe("run page lane invariants (D-15, D-16, D-21)", () => {
+  const clientFiles = () => ["components", "hooks", "pages"].flatMap((dir) => walk(dir)).map(rel);
+  const src = (file: string) => stripComments(read(file));
+
+  it("only the hook reads laneStatus and only LanesPanel sends freezeLanes", () => {
+    const readers = clientFiles().filter((f) => /commandQueue\.laneStatus\b/.test(src(f)));
+    expect(readers).toEqual(["hooks/useLaneStatus.ts"]);
+    const senders = clientFiles().filter((f) => /commandQueue\.freezeLanes\b/.test(src(f)));
+    expect(senders).toEqual(["components/runs/LanesPanel.tsx"]);
+  });
+
+  it("the panel and the hook touch no run control, timers, focus grabs or defaults", () => {
+    const panel = src("components/runs/LanesPanel.tsx");
+    const hook = src("hooks/useLaneStatus.ts");
+    expect(panel).not.toMatch(/toolControl|recoveryControl|runState/);
+    expect(hook).not.toMatch(/toolControl|recoveryControl|runState/);
+    expect(panel).not.toMatch(
+      /\b(?:window\.|globalThis\.)?set(?:Timeout|Interval)\(|StopRunModal|autoFocus|defaultValue/,
+    );
+    expect(panel).toContain("leastDestructiveRef");
+  });
+
+  it("ControlBar carries neither the freeze nor the panel", () => {
+    expect(src("components/runs/ControlBar.tsx")).not.toMatch(/freezeLanes|LanesPanel/);
+  });
+
+  it("the failure list scrolls in its own box, wraps and never clamps or injects HTML", () => {
+    const raw = stripComments(read("components/runs/LaneFailureList.tsx"));
+    expect(raw).toContain('maxH="160px"');
+    expect(raw).toContain('whiteSpace="pre-wrap"');
+    expect(raw).not.toMatch(/noOfLines|dangerouslySetInnerHTML/);
+  });
+
+  it("no lane run file renders HTML from tool text", () => {
+    for (const file of [
+      "components/runs/LanesPanel.tsx",
+      "components/runs/LaneFailureList.tsx",
+      "components/runs/list/SwimLaneComponent.tsx",
+    ]) {
+      expect(src(file)).not.toMatch(/dangerouslySetInnerHTML/);
+    }
+  });
+
+  it("the panel is mounted below the control bar", () => {
+    const runs = src("components/runs/RunsComponent.tsx");
+    expect(runs.indexOf("<LanesPanel")).toBeGreaterThan(runs.indexOf("<ControlBar"));
+  });
+
+  it("the swim lane keeps its legacy flat DOM and empty message", () => {
+    const lane = src("components/runs/list/SwimLaneComponent.tsx");
+    expect(lane).toContain('<HStack spacing={0} width="900px">');
+    expect(lane).toContain("No pending commands to display ...");
+  });
+});
