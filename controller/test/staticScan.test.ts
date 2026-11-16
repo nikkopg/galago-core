@@ -1301,3 +1301,51 @@ describe("F.A.S.T. well picker invariants (D-10, D-13, D-16, D-17)", () => {
     expect(users).toStrictEqual([geometry, picker].sort());
   });
 });
+
+describe("concurrency lane seams (D-09, D-10, D-14)", () => {
+  const queueSrc = stripComments(read("server/command_queue.ts"));
+
+  it("_start's first statement is the lane-mode early return", () => {
+    const body = extractBracedRegion(queueSrc, /async _start\(/);
+    const early = body.indexOf("if (this._laneMode) return this._startLanes(source);");
+    expect(early).toBeGreaterThanOrEqual(0);
+    expect(early).toBeLessThan(body.indexOf("if (this._runningPromise)"));
+    // Nothing but whitespace sits between the opening brace and the early return.
+    expect(body.slice(body.indexOf("{") + 1, early).trim()).toBe("");
+  });
+
+  it("_pickNext has no await between the row read and the claim, and keeps the legacy call", () => {
+    const region = extractBracedRegion(queueSrc, /private async _pickNext\(/);
+    const read = region.indexOf("queuedRowsSync()");
+    const claim = region.indexOf("claimEligible(");
+    expect(read).toBeGreaterThanOrEqual(0);
+    expect(claim).toBeGreaterThan(read);
+    expect(region.slice(read, claim)).not.toMatch(/\bawait\b/);
+    expect(region).toContain("return this.commands.startNext();");
+  });
+
+  it("the side-lane worker never touches modal state, never stops the queue, runs no Tool Box step", () => {
+    const region = extractBracedRegion(queueSrc, /private async _runSideLane\(/);
+    expect(region).not.toMatch(/_isWaitingForInput|_messageResolve|_currentMessage|_timerTimeout/);
+    expect(region).not.toContain("this.stop(");
+    expect(region).not.toMatch(/=== "Tool Box"/);
+  });
+
+  it("laneScheduling.ts has no import line and no timer", () => {
+    const src = stripComments(read("server/laneScheduling.ts"));
+    expect(src).not.toMatch(/^\s*import\s/m);
+    expect(src).not.toMatch(/\bsetTimeout\s*\(|\bsetInterval\s*\(/);
+  });
+
+  it("the lane code adds no second failure-recording site", () => {
+    const assignments = queueSrc.match(/this\.error\s*=(?!=)(?!\s*undefined\b)/g) ?? [];
+    expect(assignments.length).toBe(1);
+  });
+
+  it("the flag is read once, in the constructor", () => {
+    const reads = queueSrc.match(/process\.env\.GALAGO_PARALLEL_LANES/g) ?? [];
+    expect(reads.length).toBe(1);
+    const ctor = extractBracedRegion(queueSrc, /constructor\(/);
+    expect(ctor).toContain('process.env.GALAGO_PARALLEL_LANES === "1"');
+  });
+});

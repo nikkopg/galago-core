@@ -1,10 +1,10 @@
 // LAN-01 / D-09 golden transcript of the flag-off queue. Fakes only; no
-// instrument can move. Captured at the commit named in
-// fixtures/lanesFlagOff.golden.ts; set GOLDEN_WRITE=1 only at that commit.
-import { describe, it, expect, vi, afterAll } from "vitest";
-import { execSync } from "node:child_process";
-import { writeFileSync } from "node:fs";
-import { join } from "node:path";
+// instrument can move. The fixture was captured once at the commit named in
+// fixtures/lanesFlagOff.golden.ts, before any Phase 8 production edit, and is
+// frozen: this file only reads it. The same transcripts must come out of three
+// constructions (env unset, parallelLanes false, parallelLanes true with an
+// untagged protocol) because an untagged protocol is byte-identical (D-07).
+import { describe, it, expect, vi, afterEach } from "vitest";
 import { ToolType } from "gen-interfaces/controller";
 import { ResponseCode, ToolStatus } from "gen-interfaces/tools/grpc_interfaces/tool_base";
 import { CommandQueue } from "@/server/command_queue";
@@ -25,8 +25,11 @@ interface Transcript {
 }
 
 const GLOBAL_KEY = "__global_command_queue_key";
-const WRITE = process.env.GOLDEN_WRITE === "1";
-const captured: Record<string, Transcript> = {};
+
+// Nobody may regenerate the golden: a re-capture would hide a flag-off regression.
+if (process.env.GOLDEN_WRITE === "1") {
+  throw new Error("golden capture is frozen after 08-01 (D-09)");
+}
 
 const OK = { response: ResponseCode.SUCCESS, return_reply: true };
 const STATUS_REPLY = {
@@ -257,28 +260,55 @@ const SCENARIOS: Record<string, (ctx: Ctx) => Promise<void>> = {
   },
 };
 
-afterAll(() => {
-  if (!WRITE) return;
-  const sha = execSync("git rev-parse HEAD", { cwd: __dirname }).toString().trim();
-  const text =
-    `// LAN-01 / D-09 golden transcripts of the flag-off command queue.\n` +
-    `// Captured once at the unmodified commit named below, before any Phase 8\n` +
-    `// production edit. NEVER regenerate this file after Phase 8 production edits:\n` +
-    `// a re-capture would hide a flag-off regression.\n` +
-    `export const GOLDEN_CAPTURE_SHA = ${JSON.stringify(sha)};\n\n` +
-    `export const GOLDEN_TRANSCRIPTS: Record<string, unknown> = ${JSON.stringify(captured, null, 2)};\n`;
-  writeFileSync(join(__dirname, "fixtures", "lanesFlagOff.golden.ts"), text);
-});
+const CONSTRUCTIONS: Array<[string, () => CommandQueue]> = [
+  ["env unset", () => new CommandQueue({} as any)],
+  ["parallelLanes false", () => new CommandQueue({} as any, { parallelLanes: false })],
+  [
+    "parallelLanes true, untagged protocol",
+    () => new CommandQueue({} as any, { parallelLanes: true }),
+  ],
+];
 
 describe("LAN-01 golden transcript (flag off)", () => {
-  for (const name of Object.keys(SCENARIOS)) {
-    it(`${name} matches the golden transcript`, async () => {
-      const transcript = await runScenario(() => new CommandQueue({} as any), SCENARIOS[name]);
-      if (WRITE) {
-        captured[name] = transcript;
-        return;
+  for (const [construction, makeQueue] of CONSTRUCTIONS) {
+    describe(construction, () => {
+      for (const name of Object.keys(SCENARIOS)) {
+        it(`${name} matches the golden transcript`, async () => {
+          const transcript = await runScenario(makeQueue, SCENARIOS[name]);
+          // Ordered arrays of actions, state transitions, dispatches and gRPC payloads:
+          // a reordering in any construction fails.
+          expect(transcript).toStrictEqual(GOLDEN_TRANSCRIPTS[name]);
+        });
       }
-      expect(transcript).toStrictEqual(GOLDEN_TRANSCRIPTS[name]);
     });
   }
+});
+
+describe("lane-mode flag (D-06)", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("only exactly '1' turns lane mode on", () => {
+    vi.stubEnv("GALAGO_PARALLEL_LANES", "1");
+    expect(new CommandQueue({} as any).laneMode).toBe(true);
+  });
+
+  it.each(["0", "", "true", " 1", "1 "])("%j leaves lane mode off", (value) => {
+    vi.stubEnv("GALAGO_PARALLEL_LANES", value);
+    expect(new CommandQueue({} as any).laneMode).toBe(false);
+  });
+
+  it("an unset variable leaves lane mode off", () => {
+    vi.stubEnv("GALAGO_PARALLEL_LANES", "1");
+    delete process.env.GALAGO_PARALLEL_LANES;
+    expect(new CommandQueue({} as any).laneMode).toBe(false);
+  });
+
+  it("an explicit option overrides the environment both ways", () => {
+    vi.stubEnv("GALAGO_PARALLEL_LANES", "1");
+    expect(new CommandQueue({} as any, { parallelLanes: false }).laneMode).toBe(false);
+    vi.stubEnv("GALAGO_PARALLEL_LANES", "0");
+    expect(new CommandQueue({} as any, { parallelLanes: true }).laneMode).toBe(true);
+  });
 });
