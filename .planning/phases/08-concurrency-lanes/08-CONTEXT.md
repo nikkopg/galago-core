@@ -159,6 +159,21 @@ only to `nikkopg` and only when the user says so).
   every lane is drained; failed if any lane has a failed row; "last row COMPLETED" no longer means done).
   Untagged runs keep today's logic exactly (research Pitfall 23 / L-6).
 
+### Auto-resolved research open questions (plan-phase `--auto`, recommended options; confirm at plan review)
+- **D-23 (research A3/OQ1):** `validateLanes` refuses a Tool Box `goto` in any run that has a non-primary
+  lane, and the two re-queue paths (`gotoCommand`, `gotoCommandByRunIndex`) refuse while any side-lane
+  step is running. Reason: a goto resets a STARTED side row to CREATED → F5-class double send.
+- **D-24 (research A2/OQ2):** `freezeLanes()` sets the dispatch latch and `ToolStatus.OFFLINE` (not
+  FAILED), so the existing Start button appears to release it and auto-start stays off; a freeze shows no
+  error banner. Lane state is exposed through a new additive `laneStatus` query (flag-off `getError`
+  payload stays byte-identical).
+- **D-25 (research A5/OQ3):** The "first secondary-lane row needs a barrier unless at position 0" rule
+  applies **per lane**; the refusal message names the lane.
+- **D-26 (research OQ4):** With the flag off and lane tags present, `protocol.preview` returns one
+  `laneWarnings` line ("lane tags ignored: parallel lanes disabled"), in addition to the D-08 log.
+- **D-27 (research A4):** Eligibility also consults an in-memory busy-tool set, so an accepted abort that
+  dequeues a run's remainder cannot let run N+1 overlap a still-running step on the same tool server.
+
 ### Claude's Discretion
 - File split and names beyond those fixed above, the exact failure-list cap, log wording, test file
   layout, and the precise visual treatment of lane rows and the "Lanes frozen" indicator (follow the
