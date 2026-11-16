@@ -4,17 +4,26 @@ import { describe, it, expect } from "vitest";
 import { normalizeToolKey } from "@/server/toolKey";
 import {
   LANE_NAME_PATTERN,
+  LaneValidationError,
   MAX_LANES_PER_RUN,
   PRIMARY_LANE,
+  commandWords,
+  groupByLane,
+  hasLaneTags,
   isBarrier,
   isEligible,
+  isLaneValidationError,
   isToolBoxStep,
   isValidLaneName,
+  laneMessages,
   laneOf,
   lanesWithWork,
   normalizeLane,
   pickEligible,
+  simulateDrain,
   toolKeyOf,
+  validateLanes,
+  type LaneCommandInfo,
   type LaneGate,
   type LaneRow,
 } from "@/server/laneScheduling";
@@ -293,6 +302,247 @@ describe("eligibility rules", () => {
     pickEligible(rows, "primary", gate());
     lanesWithWork(rows);
     expect(JSON.stringify(rows)).toBe(snapshot);
+  });
+});
+
+function info(
+  toolId: string,
+  opts: { toolType?: string; command?: string; lane?: unknown; barrier?: unknown } = {},
+): LaneCommandInfo {
+  const advancedParameters: { lane?: unknown; laneBarrier?: unknown } = {};
+  if (opts.lane !== undefined) advancedParameters.lane = opts.lane;
+  if (opts.barrier !== undefined) advancedParameters.laneBarrier = opts.barrier;
+  return {
+    toolId,
+    toolType: opts.toolType ?? (toolId === "Tool Box" ? "toolbox" : "stack"),
+    command: opts.command ?? "run",
+    params: {},
+    advancedParameters,
+  };
+}
+
+function headlineInfos(): LaneCommandInfo[] {
+  return headline().map((r) => r.commandInfo as LaneCommandInfo);
+}
+
+const BAR = '"Wait for all earlier steps"';
+
+describe("validateLanes sentences (UI-SPEC S2c)", () => {
+  it("accepts the headline cycle and an untagged list with a Tool Box goto", () => {
+    expect(validateLanes(headlineInfos())).toEqual([]);
+    expect(
+      validateLanes([
+        info("stack-1"),
+        info("Tool Box", { command: "goto" }),
+        info("fast-1", { toolType: "fast" }),
+      ]),
+    ).toEqual([]);
+  });
+
+  it("refuses a non-tool step on a secondary lane", () => {
+    expect(
+      validateLanes([info("stack-1"), info("Tool Box", { command: "note", lane: "fast" })]),
+    ).toEqual([
+      "Step 2 (note) is on lane 'fast', but only tool steps can run on a secondary lane. Move it to the primary lane.",
+    ]);
+  });
+
+  it("refuses one tool on two lanes, first-seen lane first, conflicting toolId shown", () => {
+    expect(
+      validateLanes([info("stack-1"), info("STACK-1", { lane: "fast", barrier: true })]),
+    ).toEqual([
+      "Tool 'STACK-1' is on lanes 'primary' and 'fast'. One tool can use only one lane per run.",
+    ]);
+  });
+
+  it("refuses an invalid lane name once per distinct normalised value", () => {
+    const msgs = validateLanes([
+      info("stack-1"),
+      info("fast-1", { toolType: "fast", lane: "Fast Lane", barrier: true }),
+      info("fast-2", { toolType: "fast", lane: "FAST LANE", barrier: true }),
+    ]);
+    expect(
+      msgs.filter(
+        (m) =>
+          m === "Lane name 'fast lane' is not valid. Use 1 to 32 characters: a-z, 0-9, - and _.",
+      ),
+    ).toHaveLength(1);
+  });
+
+  it("refuses more than 4 lanes", () => {
+    const infos = ["a", "b", "c", "d", "e"].map((l, i) =>
+      info(`fast-${i}`, { toolType: "fast", lane: l, barrier: true }),
+    );
+    expect(validateLanes(infos)).toContain("This run uses 5 lanes. A run can use at most 4.");
+  });
+
+  it("counts primary among the lanes when a step is on it", () => {
+    const infos = [
+      info("stack-1"),
+      ...["a", "b", "c", "d"].map((l, i) =>
+        info(`fast-${i}`, { toolType: "fast", lane: l, barrier: true }),
+      ),
+    ];
+    expect(validateLanes(infos)).toContain("This run uses 5 lanes. A run can use at most 4.");
+    expect(validateLanes(infos.slice(1))).toEqual([]);
+  });
+
+  it("requires a barrier on the first row of each secondary lane, except at step 1", () => {
+    expect(
+      validateLanes([
+        info("stack-1"),
+        info("stack-1"),
+        info("fast-1", { toolType: "fast", lane: "fast" }),
+      ]),
+    ).toEqual([
+      `The first step on lane 'fast' (step 3) must wait for all earlier steps. Turn on ${BAR} for it.`,
+    ]);
+    expect(
+      validateLanes([info("fast-1", { toolType: "fast", lane: "fast" }), info("stack-1")]),
+    ).toEqual([]);
+  });
+
+  it("judges the barrier rule per lane", () => {
+    const msgs = validateLanes([
+      info("stack-1"),
+      info("fast-1", { toolType: "fast", lane: "fast", barrier: true }),
+      info("fast-2", { toolType: "fast", lane: "side" }),
+    ]);
+    expect(msgs).toEqual([
+      `The first step on lane 'side' (step 3) must wait for all earlier steps. Turn on ${BAR} for it.`,
+    ]);
+  });
+
+  it("refuses a Tool Box goto in a run with a non-primary lane (D-23)", () => {
+    const msgs = validateLanes([
+      info("stack-1"),
+      info("fast-1", { toolType: "fast", lane: "fast", barrier: true }),
+      info("stack-1"),
+      info("Tool Box", { command: "goto" }),
+    ]);
+    expect(msgs).toEqual([
+      "Step 4 is a Go to step, which cannot be used in a run that has lanes. Remove it, or keep every step on the primary lane.",
+    ]);
+  });
+
+  it("builds the dead-wait sentence", () => {
+    expect(laneMessages.deadWait(7)).toBe(
+      `The lane setup cannot finish: step 7 would wait forever. Check the ${BAR} settings.`,
+    );
+  });
+
+  it("returns messages in rule order", () => {
+    const msgs = validateLanes([
+      info("stack-1"),
+      info("Tool Box", { command: "note", lane: "side" }),
+      info("STACK-1", { lane: "fast" }),
+      info("fast-1", { toolType: "fast", lane: "Bad Name" }),
+      info("fast-2", { toolType: "fast", lane: "c", barrier: true }),
+      info("fast-3", { toolType: "fast", lane: "d", barrier: true }),
+      info("Tool Box", { command: "goto" }),
+    ]);
+    const order = [
+      "is not valid",
+      "only tool steps can run",
+      "One tool can use only one lane",
+      "A run can use at most",
+      "must wait for all earlier steps",
+      "Go to step",
+    ];
+    const idx = order.map((needle) => msgs.findIndex((m) => m.includes(needle)));
+    expect(idx.every((i) => i >= 0)).toBe(true);
+    expect([...idx].sort((a, b) => a - b)).toEqual(idx);
+  });
+});
+
+describe("simulateDrain", () => {
+  it("drains the headline cycle and every valid setup in the table", () => {
+    const table: LaneCommandInfo[][] = [
+      headlineInfos(),
+      [info("stack-1"), info("stack-1")],
+      [info("fast-1", { toolType: "fast", lane: "fast", barrier: true })],
+      [
+        info("fast-1", { toolType: "fast", lane: "fast", barrier: true }),
+        info("stack-1", { lane: "side", barrier: true }),
+        info("fast-1", { toolType: "fast", lane: "fast" }),
+        info("stack-1", { lane: "side" }),
+      ],
+      [
+        info("stack-1", { barrier: true }),
+        info("fast-1", { toolType: "fast", lane: "fast", barrier: true }),
+      ],
+      [],
+    ];
+    for (const infos of table) {
+      expect(simulateDrain(infos)).toEqual({ drained: true });
+      expect(validateLanes(infos).some((m) => m.includes("cannot finish"))).toBe(false);
+    }
+  });
+});
+
+describe("LaneValidationError", () => {
+  it("carries name, messages and a joined message", () => {
+    const e = new LaneValidationError(["a.", "b."]);
+    expect(e.name).toBe("LaneValidationError");
+    expect(e.messages).toEqual(["a.", "b."]);
+    expect(e.message).toBe("a. b.");
+    expect(e).toBeInstanceOf(Error);
+  });
+
+  it("is recognised by Error.name, not class identity", () => {
+    const foreign = new Error("x");
+    foreign.name = "LaneValidationError";
+    expect(isLaneValidationError(foreign)).toBe(true);
+    expect(isLaneValidationError(new LaneValidationError(["a."]))).toBe(true);
+    expect(isLaneValidationError(new Error("x"))).toBe(false);
+    expect(isLaneValidationError(null)).toBe(false);
+    expect(isLaneValidationError(undefined)).toBe(false);
+    expect(isLaneValidationError("LaneValidationError")).toBe(false);
+  });
+});
+
+describe("groupByLane", () => {
+  it("is null for an untagged list", () => {
+    expect(groupByLane([info("stack-1"), info("Tool Box", { command: "note" })])).toBeNull();
+    expect(groupByLane([])).toBeNull();
+  });
+
+  it("groups the headline cycle with global 1-based positions", () => {
+    const groups = groupByLane(headlineInfos());
+    expect(groups).not.toBeNull();
+    expect(groups!.map((g) => g.lane)).toEqual(["primary", "fast"]);
+    expect(groups![0].steps.map((s) => s.position)).toEqual([1, 2, 4, 5, 6]);
+    expect(groups![1].steps).toEqual([
+      { position: 3, toolId: "fast-1", command: "FAST", barrier: true },
+    ]);
+    expect(groups![0].steps[3]).toEqual({
+      position: 5,
+      toolId: "stack-1",
+      command: "out1",
+      barrier: true,
+    });
+  });
+
+  it("puts a lane that appears first at the front", () => {
+    const groups = groupByLane([
+      info("fast-1", { toolType: "fast", lane: "fast", barrier: true }),
+      info("stack-1"),
+    ]);
+    expect(groups!.map((g) => g.lane)).toEqual(["fast", "primary"]);
+  });
+});
+
+describe("commandWords and hasLaneTags", () => {
+  it("replaces every underscore with a space", () => {
+    expect(commandWords("get_transfer_estimate")).toBe("get transfer estimate");
+    expect(commandWords("run")).toBe("run");
+  });
+
+  it("detects lane tags and barriers", () => {
+    expect(hasLaneTags([info("stack-1"), info("fast-1", { toolType: "fast" })])).toBe(false);
+    expect(hasLaneTags([info("stack-1", { barrier: true })])).toBe(true);
+    expect(hasLaneTags([info("stack-1", { lane: "primary" })])).toBe(false);
+    expect(hasLaneTags([info("fast-1", { toolType: "fast", lane: "fast" })])).toBe(true);
   });
 });
 

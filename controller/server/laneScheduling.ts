@@ -192,3 +192,53 @@ export function lanesWithWork(rows: ReadonlyArray<LaneRow>): string[] {
   }
   return lanes;
 }
+
+// RED stub for the Task 2 exports: present and deliberately wrong.
+export const laneMessages = Object.freeze({
+  invalidName: (_v: string): string => "",
+  nonToolOnSecondary: (_n: number, _command: string, _lane: string): string => "",
+  toolOnTwoLanes: (_tool: string, _a: string, _b: string): string => "",
+  tooManyLanes: (_n: number): string => "",
+  firstRowNeedsBarrier: (_lane: string, _n: number): string => "",
+  gotoInLaneRun: (_n: number): string => "",
+  deadWait: (_n: number): string => "",
+});
+
+export function validateLanes(_infos: ReadonlyArray<LaneCommandInfo>): string[] {
+  return ["stub"];
+}
+
+export function simulateDrain(
+  _infos: ReadonlyArray<LaneCommandInfo>,
+): { drained: true } | { drained: false; stuckPosition: number } {
+  return { drained: false, stuckPosition: 0 };
+}
+
+export class LaneValidationError extends Error {
+  readonly messages: string[];
+  constructor(messages: string[]) {
+    super("");
+    this.messages = messages;
+  }
+}
+
+export function isLaneValidationError(_e: unknown): _e is LaneValidationError {
+  return false;
+}
+
+export interface LaneGroup {
+  lane: string;
+  steps: Array<{ position: number; toolId: string; command: string; barrier: boolean }>;
+}
+
+export function groupByLane(_infos: ReadonlyArray<LaneCommandInfo>): LaneGroup[] | null {
+  return [];
+}
+
+export function commandWords(_command: string): string {
+  return "";
+}
+
+export function hasLaneTags(_infos: ReadonlyArray<LaneCommandInfo>): boolean {
+  return true;
+}
