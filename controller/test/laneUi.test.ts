@@ -418,7 +418,7 @@ describe("queuedStartLines per lane (D-20, LUI-04)", () => {
   const COUNT = "This Start will run 6 queued steps from 1 run.";
 
   it("lists the headline queue per lane, in first-appearance order, before the note", () => {
-    expect(queuedStartLines({ rows: headlineQueue(), isError: false })).toEqual([
+    expect(queuedStartLines({ rows: headlineQueue(), isError: false, laneMode: true })).toEqual([
       { text: COUNT, tone: "body" },
       { text: "Steps by lane (lane order is the order they first appear):", tone: "body" },
       { text: "Lane primary: 5 steps", tone: "body" },
@@ -438,26 +438,36 @@ describe("queuedStartLines per lane (D-20, LUI-04)", () => {
       queued(1, "CREATED"),
       queued(2, "CREATED", { lane: "fast", command: "pick_plate" }),
     ];
-    const lines = queuedStartLines({ rows, isError: false });
+    const lines = queuedStartLines({ rows, isError: false, laneMode: true });
     expect(lines.map((l) => l.text)).toContain("2. stack-1 · pick plate");
   });
 
   it("adds the freeze line before the note only when the lanes are frozen", () => {
-    const frozen = queuedStartLines({ rows: headlineQueue(), isError: false, laneFrozen: true });
+    const frozen = queuedStartLines({
+      rows: headlineQueue(),
+      isError: false,
+      laneMode: true,
+      laneFrozen: true,
+    });
     expect(frozen[frozen.length - 2]).toEqual({
       text: "Starting clears a lane freeze. Lanes then start again together.",
       tone: "caption",
     });
     expect(frozen[frozen.length - 1]).toEqual({ text: QUEUED_START_NOTE, tone: "caption" });
-    const plain = queuedStartLines({ rows: headlineQueue(), isError: false, laneFrozen: false });
+    const plain = queuedStartLines({
+      rows: headlineQueue(),
+      isError: false,
+      laneMode: true,
+      laneFrozen: false,
+    });
     expect(plain.map((l) => l.text)).not.toContain(QUEUED_START_FREEZE_NOTE);
-    const absent = queuedStartLines({ rows: headlineQueue(), isError: false });
+    const absent = queuedStartLines({ rows: headlineQueue(), isError: false, laneMode: true });
     expect(absent.map((l) => l.text)).not.toContain(QUEUED_START_FREEZE_NOTE);
   });
 
   it("never adds the freeze line for an untagged queue", () => {
     const rows = [queued(1, "CREATED"), queued(2, "CREATED")];
-    const lines = queuedStartLines({ rows, isError: false, laneFrozen: true });
+    const lines = queuedStartLines({ rows, isError: false, laneMode: true, laneFrozen: true });
     expect(lines.map((l) => l.text)).not.toContain(QUEUED_START_FREEZE_NOTE);
     expect(lines.map((l) => l.text)).not.toContain(QUEUED_START_LANES_HEADING);
   });
@@ -470,7 +480,7 @@ describe("queuedStartLines per lane (D-20, LUI-04)", () => {
       toolId: "fast-1",
       toolType: "fast",
     });
-    const texts = queuedStartLines({ rows, isError: false }).map((l) => l.text);
+    const texts = queuedStartLines({ rows, isError: false, laneMode: true }).map((l) => l.text);
     expect(texts).toContain("1 step still running. A Start is ignored until it ends.");
     expect(texts).not.toContain("Lane fast: 1 step");
     expect(texts.some((t) => t.startsWith("3. "))).toBe(false);
@@ -484,7 +494,7 @@ describe("queuedStartLines per lane (D-20, LUI-04)", () => {
       queued(2, "FAILED", { lane: "fast", barrier: true, toolId: "fast-1", toolType: "fast" }),
       queued(3, "CREATED", { lane: "fast", toolId: "fast-1", toolType: "fast" }),
     ];
-    const texts = queuedStartLines({ rows, isError: false }).map((l) => l.text);
+    const texts = queuedStartLines({ rows, isError: false, laneMode: true }).map((l) => l.text);
     const at = texts.indexOf("Lane fast: 2 steps");
     expect(at).toBeGreaterThan(-1);
     expect(texts[at + 1]).toBe("2. fast-1 · transfer · waits for all earlier steps");
@@ -495,7 +505,7 @@ describe("queuedStartLines per lane (D-20, LUI-04)", () => {
   it("names every queued step with no cap", () => {
     const rows = [queued(1, "CREATED")];
     for (let i = 2; i <= 60; i++) rows.push(queued(i, "CREATED", { lane: "fast" }));
-    const texts = queuedStartLines({ rows, isError: false }).map((l) => l.text);
+    const texts = queuedStartLines({ rows, isError: false, laneMode: true }).map((l) => l.text);
     expect(texts.filter((t) => /^\d+\. stack-1 · transfer$/.test(t))).toHaveLength(60);
   });
 
@@ -505,13 +515,13 @@ describe("queuedStartLines per lane (D-20, LUI-04)", () => {
       queued(2, "CREATED", { runId: "r2" }),
       queued(3, "CREATED", { runId: "r2", lane: "fast", barrier: true }),
     ];
-    const texts = queuedStartLines({ rows, isError: false }).map((l) => l.text);
+    const texts = queuedStartLines({ rows, isError: false, laneMode: true }).map((l) => l.text);
     expect(texts).toContain("2. stack-1 · transfer · waits for all earlier steps");
   });
 
   it("is unchanged for an untagged queue", () => {
     const rows = [queued(1, "CREATED"), queued(2, "FAILED")];
-    expect(queuedStartLines({ rows, isError: false })).toEqual([
+    expect(queuedStartLines({ rows, isError: false, laneMode: true })).toEqual([
       { text: "This Start will run 2 queued steps from 1 run.", tone: "body" },
       { text: "1 of them failed before and will be retried first.", tone: "body" },
       { text: QUEUED_START_NOTE, tone: "caption" },
@@ -529,15 +539,15 @@ describe("describeQueueStart lane suffix (D-20)", () => {
       ...r,
       commandInfo: queued(r.queueId, "CREATED").commandInfo,
     }));
-    const expected = describeQueueStart(untagged, "operator");
+    const expected = describeQueueStart(untagged, "operator", true);
     expect(expected).toBe(
       "Command Queue started by user. Will run 2 queued steps from 1 run. Queue order: queueId=1 runId=r1 status=CREATED; queueId=2 runId=r1 status=CREATED",
     );
-    expect(describeQueueStart(tagged, "operator")).toBe(expected);
+    expect(describeQueueStart(tagged, "operator", true)).toBe(expected);
   });
 
   it("appends the lane listing for the headline rows", () => {
-    const text = describeQueueStart(headlineQueue(), "operator");
+    const text = describeQueueStart(headlineQueue(), "operator", true);
     expect(text).toContain("Queue order: queueId=1 runId=r1 status=CREATED;");
     expect(
       text.endsWith(
@@ -550,13 +560,56 @@ describe("describeQueueStart lane suffix (D-20)", () => {
     const rows: QueueStartRow[] = [];
     for (let i = 1; i <= 52; i++)
       rows.push(queued(i, "CREATED", { lane: i === 51 ? "late" : undefined }));
-    const text = describeQueueStart(rows, "operator");
+    const text = describeQueueStart(rows, "operator", true);
     expect(text).toContain("; ... and 2 more");
     // Rows 51 and 52 are beyond the 50 listed rows, so no lane line is added.
     expect(text).not.toContain("Lanes (first appearance)");
     rows[10] = queued(11, "CREATED", { lane: "fast" });
-    const withLane = describeQueueStart(rows, "operator");
+    const withLane = describeQueueStart(rows, "operator", true);
     expect(withLane).toMatch(/; \.\.\. and 2 more\. Lanes \(first appearance\): primary=/);
+  });
+});
+
+describe("lane text follows the server lane mode (review WR-03)", () => {
+  it("queuedStartLines lists no lane lines and no freeze note when lane mode is off or unknown", () => {
+    const off = queuedStartLines({
+      rows: headlineQueue(),
+      isError: false,
+      laneFrozen: true,
+      laneMode: false,
+    });
+    const unknown = queuedStartLines({ rows: headlineQueue(), isError: false, laneFrozen: true });
+    for (const lines of [off, unknown]) {
+      const texts = lines.map((l) => l.text);
+      expect(texts).not.toContain(QUEUED_START_LANES_HEADING);
+      expect(texts).not.toContain(QUEUED_START_FREEZE_NOTE);
+      expect(lines).toEqual([
+        { text: "This Start will run 6 queued steps from 1 run.", tone: "body" },
+        { text: QUEUED_START_NOTE, tone: "caption" },
+      ]);
+    }
+  });
+
+  it("describeQueueStart omits the lane listing for tagged rows unless lane mode is on", () => {
+    const off = describeQueueStart(headlineQueue(), "operator");
+    expect(off).not.toContain("Lanes (first appearance)");
+    expect(describeQueueStart(headlineQueue(), "operator", false)).toBe(off);
+    expect(describeQueueStart(headlineQueue(), "operator", true)).toContain(
+      ". Lanes (first appearance): primary=",
+    );
+  });
+
+  it("the editor names the inert lanes and the queue passes its lane mode to the audit line", () => {
+    const view = source("components/protocols/ProtocolDetailView.tsx");
+    expect(view).toContain("useLaneStatus()");
+    expect(view).toContain("{!lanesActive && (");
+    const queue = source("server/command_queue.ts");
+    expect(queue).toContain(
+      "describeQueueStart(this.commands.queuedRowsSync(), source, this._laneMode)",
+    );
+    const status = source("components/runs/status/QueueStatuscomponent.tsx");
+    expect(status).toContain("laneStatusQuery.isSuccess ? laneStatusQuery.data : undefined");
+    expect(status).toMatch(/laneFrozen,\s*laneMode,/);
   });
 });
 

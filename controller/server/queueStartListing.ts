@@ -44,9 +44,12 @@ function laneListing(listed: ReadonlyArray<QueueStartRow>): string {
   return `. Lanes (first appearance): ${body} (* waits for all earlier steps)`;
 }
 
+// laneMode (review WR-03): with parallel lanes off, lane tags are inert (D-08) and the
+// run is sequential, so the lane listing is omitted and the line matches legacy text.
 export function describeQueueStart(
   rows: ReadonlyArray<QueueStartRow>,
   source: QueueStartSource,
+  laneMode = false,
 ): string {
   const prefix = prefixFor(source);
   if (rows.length === 0) {
@@ -72,7 +75,7 @@ export function describeQueueStart(
   if (rest > 0) {
     text += `; ... and ${rest} more`;
   }
-  return text + laneListing(rows.slice(0, MAX_LISTED_QUEUE_ROWS));
+  return laneMode ? text + laneListing(rows.slice(0, MAX_LISTED_QUEUE_ROWS)) : text;
 }
 
 export function describeQueueStartReadFailure(source: QueueStartSource, error: unknown): string {

@@ -115,6 +115,8 @@ export function queuedStartLines(input: {
   rows: ReadonlyArray<QueuedStartRow> | undefined;
   isError: boolean;
   laneFrozen?: boolean;
+  // Review WR-03: lane lines only when the server confirms parallel lanes are on.
+  laneMode?: boolean;
 }): QueuedStartLine[] {
   if (input.isError) {
     return [{ text: QUEUED_START_ERROR, tone: "caption" }, NOTE_LINE];
@@ -153,7 +155,7 @@ export function queuedStartLines(input: {
       tone: "caption",
     });
   }
-  const byLane = laneLines(input.rows);
+  const byLane = input.laneMode === true ? laneLines(input.rows) : [];
   lines.push(...byLane);
   if (byLane.length > 0 && input.laneFrozen === true) {
     lines.push({ text: QUEUED_START_FREEZE_NOTE, tone: "caption" });

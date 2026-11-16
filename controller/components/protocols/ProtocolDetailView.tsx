@@ -44,7 +44,8 @@ import { ConfirmationModal } from "../ui/ConfirmationModal";
 import { SaveIcon } from "@/components/ui/Icons";
 import { CommandDetailsDrawer } from "./CommandDetailsDrawer";
 import CommandImage from "@/components/tools/CommandImage";
-import { buildLaneSummary, laneWarningText } from "./laneFields";
+import { LANE_INERT_NOTE, buildLaneSummary, laneWarningText } from "./laneFields";
+import { useLaneStatus } from "@/hooks/useLaneStatus";
 import type { LaneSummary } from "./laneFields";
 import { successToast, errorToast, warningToast } from "../ui/Toast";
 import ProtocolParametersEditor from "./ProtocolParametersEditor";
@@ -305,6 +306,12 @@ export const ProtocolDetailView: React.FC<{ id: number }> = ({ id }) => {
       setIsAddCommandModalOpen(false);
     };
   }, []);
+
+  // Review WR-03: lane tags are inert unless the server confirms parallel lanes are on,
+  // so the lane summary says so instead of implying the steps will overlap.
+  const laneStatusQuery = useLaneStatus();
+  const lanesActive = laneStatusQuery.isSuccess && laneStatusQuery.data?.laneMode === true;
+  const inertNoteColor = useColorModeValue("gray.600", "whiteAlpha.700");
 
   if (isLoading) {
     return <Spinner size="xl" />;
@@ -768,6 +775,11 @@ export const ProtocolDetailView: React.FC<{ id: number }> = ({ id }) => {
             <Text fontSize="sm" fontWeight="bold">
               Lane summary
             </Text>
+            {!lanesActive && (
+              <Text fontSize="sm" color={inertNoteColor}>
+                {LANE_INERT_NOTE} This protocol runs its steps one at a time.
+              </Text>
+            )}
             <LaneGroups summary={visualSummary} spacing={6} />
             <LaneWarningsAlert warnings={visualSummary.warnings} />
           </VStack>

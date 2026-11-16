@@ -1096,7 +1096,7 @@ export class CommandQueue {
   // single-flight guard and the _runningPromise claim in _start.
   private _describeQueueStart(source: QueueStartSource): string {
     try {
-      return describeQueueStart(this.commands.queuedRowsSync(), source);
+      return describeQueueStart(this.commands.queuedRowsSync(), source, this._laneMode);
     } catch (e) {
       return describeQueueStartReadFailure(source, e);
     }

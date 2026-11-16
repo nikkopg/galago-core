@@ -48,10 +48,13 @@ export const QueueStatusComponent: React.FC<QueueStatusComponent> = ({
   // D-20: the Start summary names the lane freeze only when lanes are frozen by
   // a failure or an operator freeze (a prompt halt clears itself).
   const laneStatusQuery = useLaneStatus();
-  const laneStatusData = laneStatusQuery.data;
+  // Only a successful read counts: a failed re-read never shows a stale lane caption
+  // (review WR-03, security note T-08-32).
+  const laneStatusData = laneStatusQuery.isSuccess ? laneStatusQuery.data : undefined;
+  const laneMode = laneStatusData?.laneMode === true;
   const laneFrozen = Boolean(
     laneStatusData &&
-      laneStatusData.laneMode &&
+      laneMode &&
       laneStatusData.hasLaneRows &&
       (laneStatusData.haltReason === "failure" || laneStatusData.haltReason === "freeze"),
   );
@@ -126,6 +129,7 @@ export const QueueStatusComponent: React.FC<QueueStatusComponent> = ({
                 rows: queuedCommandsQuery.data,
                 isError: queuedCommandsQuery.isError,
                 laneFrozen,
+                laneMode,
               }).map((line, index) => (
                 <Text
                   key={`${line.text}-${index}`}
