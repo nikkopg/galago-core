@@ -5,16 +5,16 @@ milestone_name: Tool-inferred dropdowns + per-tool concurrency lanes
 current_phase: 8
 current_phase_name: Concurrency Lanes
 status: executing
-stopped_at: Phase 8 UI-SPEC approved
-last_updated: "2026-11-16T13:14:51.663Z"
+stopped_at: Completed 08-01-PLAN.md
+last_updated: "2026-11-16T13:20:54.015Z"
 last_activity: 2026-11-16
-last_activity_desc: Phase 07 complete, transitioned to Phase 8
-state_head: ab91115393d6eaafc2a5579d827c30b6ae4e7258
+last_activity_desc: Phase 8 execution started
+state_head: 9790431219b05631c9c09586bdd03ef2eb7450ad
 progress:
   total_phases: 4
   completed_phases: 2
   total_plans: 25
-  completed_plans: 15
+  completed_plans: 16
   percent: 50
 ---
 
@@ -30,10 +30,10 @@ decides every recovery action; the web app never acts on its own or pre-selects 
 
 ## Current Position
 
-Phase: 8 (Concurrency Lanes) — READY TO EXECUTE
-Plan: Not started
+Phase: 8 (Concurrency Lanes) — EXECUTING
+Plan: 2 of 10
 Status: Ready to execute
-Last activity: 2026-11-16 — Phase 07 complete, transitioned to Phase 8
+Last activity: 2026-11-16 — Phase 8 execution started
 
 Progress: [█████░░░░░] 50% (2 of 4 v1.2 phases)
 
@@ -105,6 +105,7 @@ Progress: [█████░░░░░] 50% (2 of 4 v1.2 phases)
 | Phase 07 P07 | 5 min | 3 tasks | 8 files |
 | Phase 07 P09 | 8 min | 3 tasks | 9 files |
 | Phase 07 P10 | 6 min | 2 tasks | 4 files |
+| Phase 08 P01 | 25 min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -185,6 +186,7 @@ Recent decisions affecting current work:
 - [Phase 07]: 07-09: Out-of-range plate/deck/well digit strings (> 2147483647) are kept as the operator's text, flagged, and refused at send time; never converted to a rounded or wrapped Number (CR-01)
 - [Phase 07]: 07-09: Int32 guard lives in Tool#executeCommand after {{variable}} substitution; audit names fields only, never values; estimateDuration and Config stay unguarded (T-07-35)
 - [Phase 07]: 07-10: source-grid drag is a pure sourcePointerStep in wellPointer.ts; a move with no button held, an uncaptured leave, up, cancel and lost capture end the drag (WR-01)
+- [Phase 08]: 08-01: golden fixture GOLDEN_CAPTURE_SHA kept at 0c1e06e (production-identical); fixture adding commit 98b50d6 is the baseline later plans must not change
 
 ### Pending Todos
 
@@ -252,9 +254,9 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-16T09:32:18.834Z
-Stopped at: Phase 8 UI-SPEC approved
-Resume file: .planning/phases/08-concurrency-lanes/08-UI-SPEC.md
+Last session: 2026-11-16T13:20:53.952Z
+Stopped at: Completed 08-01-PLAN.md
+Resume file: None
 
 ## Operator Next Steps
 
