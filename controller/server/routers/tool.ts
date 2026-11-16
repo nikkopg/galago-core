@@ -552,7 +552,7 @@ export const toolRouter = router({
         toolName: record.name,
         toolType: String(record.type),
         tool,
-        runningStep: CommandQueue.global.runningStep,
+        runningStep: CommandQueue.global.runningStepFor(record.name),
         action: input.action,
         params: input.params ?? {},
       });

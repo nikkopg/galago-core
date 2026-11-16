@@ -3,7 +3,6 @@
 // lands on a fake gRPC endpoint, so no instrument can move. Ordering is gated on deferreds and
 // tick(), never wall time.
 import { describe, it, expect, afterEach, vi } from "vitest";
-import { ToolType } from "gen-interfaces/controller";
 import { ResponseCode, ToolStatus } from "gen-interfaces/tools/grpc_interfaces/tool_base";
 import Tool from "@/server/tools";
 import { logAction } from "@/server/logger";

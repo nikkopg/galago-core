@@ -633,6 +633,45 @@ export class CommandQueue {
     await this.commands.complete(command.queueId);
   }
 
+  // Whether `step` is the snapshot a side lane is awaiting right now (identity comparison).
+  private _isSideRunning(step: Readonly<RunningStep>): boolean {
+    for (const running of this._sideRunning.values()) {
+      if (running === step) return true;
+    }
+    return false;
+  }
+
+  // Whether `step` is still running on any lane (the identity gate of toolControl).
+  private _isRunning(step: Readonly<RunningStep>): boolean {
+    return this._runningStep === step || this._isSideRunning(step);
+  }
+
+  // The step the operator's Pause, Resume and Abort address. With the flag off it is the
+  // primary step, exactly as before. In lane mode it is the running step, on any lane,
+  // whose tool type has a runControl entry; the eligibility rule keeps that to at most one
+  // (D-11). With none controllable it is the first running step, so a refusal keeps today's
+  // text for a STACK step, and undefined keeps "No step is currently running".
+  private _controlTarget(): Readonly<RunningStep> | undefined {
+    if (!this._laneMode) return this._runningStep;
+    const running: Readonly<RunningStep>[] = [];
+    if (this._runningStep) running.push(this._runningStep);
+    for (const step of this._sideRunning.values()) running.push(step);
+    return running.find((step) => getRunControl(String(step.toolType)) !== undefined) ?? running[0];
+  }
+
+  // The running step on the named tool, from any lane. recoveryControl refuses a STACK
+  // acknowledge while its tool runs a step; the key is the same normalisation it uses.
+  runningStepFor(toolName: string): Readonly<RunningStep> | undefined {
+    const key = toolKeyOf(toolName);
+    // Read through the public accessor, so the primary slot has one reading path.
+    const primary = this.runningStep;
+    if (primary && toolKeyOf(primary.toolId) === key) return primary;
+    for (const step of this._sideRunning.values()) {
+      if (toolKeyOf(step.toolId) === key) return step;
+    }
+    return undefined;
+  }
+
   // Sends an operator's Pause/Resume/Abort straight to the running step's
   // tool. Reached only through the commandQueue.toolControl tRPC mutation.
   // Deciding whether to send uses only the running-step snapshot and the
@@ -647,7 +686,7 @@ export class CommandQueue {
     action: string,
     params: Record<string, unknown> = {},
   ): Promise<ToolControlResult> {
-    const step = this._runningStep;
+    const step = this._controlTarget();
     const verdict = validateControlRequest(step?.toolType, action, params);
 
     const paramsJson = (() => {
@@ -683,7 +722,7 @@ export class CommandQueue {
       throw new TRPCError({ code: "PRECONDITION_FAILED", message });
     }
 
-    if (this._runningStep !== step) {
+    if (!this._isRunning(step!)) {
       const message = "The targeted step is no longer running.";
       await logAction({
         level: "warning",
@@ -761,8 +800,18 @@ export class CommandQueue {
       this._abortAcceptedQueueId = step.queueId;
       return;
     }
+    // A side-lane step keeps its marker per queueId, so another lane's dispatch never resets
+    // it (D-11, Pitfall 12); the legacy single field stays the primary step's own slot.
+    if (this._isSideRunning(step)) {
+      this._sideAbortAccepted.add(step.queueId);
+      return;
+    }
 
-    if (this._failedAttempt !== step) {
+    if (this._laneMode && this._sideFailedAttempts.get(step.queueId) === step) {
+      this._sideFailedAttempts.delete(step.queueId);
+    } else if (this._failedAttempt === step) {
+      this._failedAttempt = undefined;
+    } else {
       logAction({
         level: "warning",
         action: "Aborted Run Dequeue Skipped",
@@ -774,7 +823,6 @@ export class CommandQueue {
       return;
     }
 
-    this._failedAttempt = undefined;
     const removed = await this.commands.dequeueFailedRun(step.queueId, step.runId);
 
     if (removed === false) {
