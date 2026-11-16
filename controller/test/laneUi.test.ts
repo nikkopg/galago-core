@@ -28,6 +28,20 @@ import {
 import type { QueuedStartRow } from "@/components/runs/queuedStartSummary";
 import { describeQueueStart } from "@/server/queueStartListing";
 import type { QueueStartRow } from "@/server/queueStartListing";
+import {
+  isToolStep,
+  setLane,
+  setBarrier,
+  suggestLanes,
+  laneHelperText,
+  laneFlag,
+  LANE_BARRIER_HELP,
+  LANE_INERT_NOTE,
+  buildLaneSummary,
+  laneWarningText,
+} from "@/components/protocols/laneFields";
+import { validateLanes } from "@/server/laneScheduling";
+import type { AdvancedParameters } from "@/types";
 import type { LaneFailureEntry, RunningLaneEntry } from "@/server/laneScheduling";
 
 const root = resolve(__dirname, "..");
@@ -543,5 +557,292 @@ describe("describeQueueStart lane suffix (D-20)", () => {
     rows[10] = queued(11, "CREATED", { lane: "fast" });
     const withLane = describeQueueStart(rows, "operator");
     expect(withLane).toMatch(/; \.\.\. and 2 more\. Lanes \(first appearance\): primary=/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Task 3: drawer and preview helpers (laneFields.ts)
+// ---------------------------------------------------------------------------
+
+function step(o: RowOpts = {}): any {
+  const advancedParameters: Record<string, unknown> = {};
+  if (o.lane !== undefined) advancedParameters.lane = o.lane;
+  if (o.barrier) advancedParameters.laneBarrier = true;
+  return {
+    toolId: o.toolId ?? "stack-1",
+    toolType: o.toolType ?? "stack",
+    command: o.command ?? "transfer",
+    params: o.params ?? {},
+    advancedParameters,
+  };
+}
+
+const FAST = { lane: "fast", toolId: "fast-1", toolType: "fast" };
+
+function headlineSteps(): any[] {
+  return [
+    step(),
+    step(),
+    step({ ...FAST, barrier: true }),
+    step(),
+    step({ barrier: true }),
+    step(),
+  ];
+}
+
+function adv(extra: Record<string, unknown> = {}): AdvancedParameters {
+  return {
+    skipExecutionVariable: { variable: "v", value: "x" },
+    runAsynchronously: false,
+    ...extra,
+  } as AdvancedParameters;
+}
+
+describe("laneFields stored shape (D-01, D-02, Pitfall 24b)", () => {
+  it("isToolStep is false for a Tool Box step and true for a tool step", () => {
+    expect(isToolStep({ toolId: "Tool Box", toolType: "toolbox" })).toBe(false);
+    expect(isToolStep({ toolId: "fast-1", toolType: "fast" })).toBe(true);
+  });
+
+  it("setLane trims and lower-cases into a new object", () => {
+    const input = adv();
+    const out = setLane(input, "  Fast ");
+    expect(out).toEqual({ ...input, lane: "fast" });
+    expect(out).not.toBe(input);
+    expect("lane" in input).toBe(false);
+  });
+
+  it("setLane deletes the key for blank or primary and never writes an empty lane", () => {
+    for (const raw of ["", "   ", "primary", "  PRIMARY "]) {
+      const input = adv({ lane: "fast" });
+      const out = setLane(input, raw);
+      expect("lane" in out).toBe(false);
+      expect(input.lane).toBe("fast");
+    }
+  });
+
+  it("keeps skipExecutionVariable and runAsynchronously false unchanged", () => {
+    const out = setLane(adv({ laneBarrier: true }), "fast");
+    expect(out.runAsynchronously).toBe(false);
+    expect(out.skipExecutionVariable).toEqual({ variable: "v", value: "x" });
+    expect(out.laneBarrier).toBe(true);
+    const off = setLane(adv(), "");
+    expect(off.runAsynchronously).toBe(false);
+    expect(Object.keys(off).sort()).toEqual(["runAsynchronously", "skipExecutionVariable"]);
+  });
+
+  it("setBarrier adds true and deletes the key when off, never writing false", () => {
+    const input = adv({ lane: "fast" });
+    const on = setBarrier(input, true);
+    expect(on).toEqual({ ...input, laneBarrier: true });
+    expect(on).not.toBe(input);
+    expect("laneBarrier" in input).toBe(false);
+    const off = setBarrier(on, false);
+    expect("laneBarrier" in off).toBe(false);
+    expect(on.laneBarrier).toBe(true);
+    expect(off.lane).toBe("fast");
+    expect(off.runAsynchronously).toBe(false);
+  });
+
+  it("lane and barrier are stored or deleted independently", () => {
+    const a = setBarrier(adv(), true);
+    expect("lane" in a).toBe(false);
+    expect(a.laneBarrier).toBe(true);
+    const b = setLane(a, "fast");
+    expect(b.laneBarrier).toBe(true);
+    expect(b.lane).toBe("fast");
+    const c = setLane(b, "");
+    expect(c.laneBarrier).toBe(true);
+    expect("lane" in c).toBe(false);
+  });
+});
+
+describe("laneFields suggestions and helper text (E1, S1)", () => {
+  it("suggests primary first then each lane in first-appearance order, never preselecting", () => {
+    expect(suggestLanes([])).toEqual(["primary"]);
+    const steps = [
+      step(),
+      step({ lane: "fast" }),
+      step(),
+      step({ lane: "side" }),
+      step({ lane: "fast" }),
+    ];
+    expect(suggestLanes(steps)).toEqual(["primary", "fast", "side"]);
+  });
+
+  it("ignores a Tool Box step tagged with a lane", () => {
+    const tb = step({ lane: "x", toolId: "Tool Box", toolType: "toolbox" });
+    expect(suggestLanes([tb])).toEqual(["primary"]);
+  });
+
+  it("caps the suggestions at primary plus four lanes", () => {
+    const steps = ["a", "b", "c", "d", "e"].map((lane) => step({ lane }));
+    expect(suggestLanes(steps)).toEqual(["primary", "a", "b", "c", "d"]);
+  });
+
+  it("words the helper line", () => {
+    expect(laneHelperText(["primary"])).toBe(
+      "Blank means the primary lane. No other lanes are used in this protocol yet.",
+    );
+    expect(laneHelperText(["primary", "fast"])).toBe(
+      "Blank means the primary lane. Lanes in this protocol: primary, fast",
+    );
+  });
+
+  it("holds the barrier help and inert-flag note verbatim", () => {
+    expect(LANE_BARRIER_HELP).toBe(
+      "Runs only after every earlier step on every lane has finished. Use it before a step that needs the plates in place.",
+    );
+    expect(LANE_INERT_NOTE).toBe(
+      "Lanes take effect only when parallel lanes are enabled on the server.",
+    );
+  });
+});
+
+describe("laneFlag author-time warnings (D-18, never blocking)", () => {
+  it("flags an invalid lane name", () => {
+    expect(laneFlag([step()], 0, adv({ lane: "Fast Lane" }))).toBe(
+      "Lane name 'fast lane' is not valid. Use 1 to 32 characters: a-z, 0-9, - and _.",
+    );
+  });
+
+  it("flags a fifth distinct lane", () => {
+    const steps = [
+      step({ toolId: "t0" }),
+      step({ toolId: "t1", lane: "a", barrier: true }),
+      step({ toolId: "t2", lane: "b", barrier: true }),
+      step({ toolId: "t3", lane: "c", barrier: true }),
+      step({ toolId: "t4" }),
+    ];
+    expect(laneFlag(steps, 4, adv({ lane: "d", laneBarrier: true }))).toBe(
+      "This protocol would use 5 lanes. A run can use at most 4.",
+    );
+    expect(laneFlag(steps, 4, adv({ lane: "c", laneBarrier: true }))).toBeNull();
+  });
+
+  it("flags the same tool already on another lane", () => {
+    const steps = [step(), step()];
+    expect(laneFlag(steps, 1, adv({ lane: "fast", laneBarrier: true }))).toBe(
+      "stack-1 is already on lane 'primary'. One tool can use only one lane per run.",
+    );
+  });
+
+  it("flags a first secondary step without the barrier, except at position 1 or with it on", () => {
+    const steps = [step(), step(), step(FAST)];
+    const message =
+      "The first step on lane 'fast' should wait for all earlier steps, so it starts only after the plates are placed.";
+    expect(laneFlag(steps, 2, adv({ lane: "fast" }))).toBe(message);
+    expect(laneFlag(steps, 2, adv({ lane: "fast", laneBarrier: true }))).toBeNull();
+    expect(laneFlag([step(FAST)], 0, adv({ lane: "fast" }))).toBeNull();
+  });
+
+  it("does not flag the barrier on a later step of a lane that already has a first step", () => {
+    const steps = [step(), step({ ...FAST, barrier: true }), step(FAST)];
+    expect(laneFlag(steps, 2, adv({ lane: "fast" }))).toBeNull();
+  });
+
+  it("gives null for a blank lane", () => {
+    expect(laneFlag([step(), step()], 1, adv())).toBeNull();
+    expect(laneFlag([step(), step()], 1, adv({ laneBarrier: true }))).toBeNull();
+  });
+
+  it("returns the first matching flag in S1 order", () => {
+    const steps = [step(), step()];
+    expect(laneFlag(steps, 1, adv({ lane: "Bad Name" }))).toMatch(/is not valid/);
+  });
+});
+
+describe("buildLaneSummary (D-20, LUI-04)", () => {
+  it("is null for an untagged protocol", () => {
+    expect(buildLaneSummary([step(), step()])).toBeNull();
+    expect(buildLaneSummary([])).toBeNull();
+    expect(buildLaneSummary([step({ lane: "primary" })])).toBeNull();
+  });
+
+  it("groups the headline protocol in visual style", () => {
+    expect(buildLaneSummary(headlineSteps())).toEqual({
+      groups: [
+        {
+          lane: "primary",
+          header: "Lane primary · 5 steps",
+          lines: [
+            "1. [stack-1] transfer",
+            "2. [stack-1] transfer",
+            "4. [stack-1] transfer",
+            "5. [stack-1] transfer — waits for all earlier steps",
+            "6. [stack-1] transfer",
+          ],
+        },
+        {
+          lane: "fast",
+          header: "Lane fast · 1 step",
+          lines: ["3. [fast-1] transfer — waits for all earlier steps"],
+        },
+      ],
+      warnings: [],
+    });
+  });
+
+  it("uses command words in visual style", () => {
+    const summary = buildLaneSummary([
+      step({ command: "pick_plate" }),
+      step({ ...FAST, command: "go_home" }),
+    ]);
+    expect(summary?.groups[0].lines).toEqual(["1. [stack-1] pick plate"]);
+    expect(summary?.groups[1].lines).toEqual(["2. [fast-1] go home"]);
+  });
+
+  it("uses the raw command and params JSON in script style", () => {
+    const steps = headlineSteps();
+    steps[2] = step({ ...FAST, barrier: true, params: { a: 1 } });
+    const summary = buildLaneSummary(steps, { style: "script" });
+    expect(summary?.groups[1].lines).toEqual([
+      '3. [fast-1] transfer — {"a":1} — waits for all earlier steps',
+    ]);
+    expect(summary?.groups[0].lines[0]).toBe("1. [stack-1] transfer");
+  });
+
+  it("carries validateLanes warnings, including a Tool Box step on a secondary lane", () => {
+    const steps = [
+      step(),
+      step({ ...FAST, barrier: true }),
+      step({ lane: "fast", toolId: "Tool Box", toolType: "toolbox", command: "note" }),
+    ];
+    const summary = buildLaneSummary(steps);
+    expect(summary?.warnings).toEqual(validateLanes(steps));
+    expect(summary?.warnings).toContain(
+      "Step 3 (note) is on lane 'fast', but only tool steps can run on a secondary lane. Move it to the primary lane.",
+    );
+  });
+
+  it("still surfaces refusal warnings when a bad tag leaves every step on primary", () => {
+    const summary = buildLaneSummary([step(), step({ lane: "Bad Name" })]);
+    expect(summary).toEqual({
+      groups: [],
+      warnings: ["Lane name 'bad name' is not valid. Use 1 to 32 characters: a-z, 0-9, - and _."],
+    });
+  });
+
+  it("capitalises a server lane warning", () => {
+    expect(laneWarningText("lane tags ignored: parallel lanes disabled")).toBe(
+      "Lane tags ignored: parallel lanes disabled",
+    );
+    expect(laneWarningText("")).toBe("");
+  });
+});
+
+describe("laneFields stays pure and preselects nothing", () => {
+  it("has no react import, tsx import or timer", () => {
+    const src = stripComments(source("components/protocols/laneFields.ts"));
+    expect(src).not.toMatch(/from "react"|\.tsx"/);
+    expect(src).not.toMatch(/\b(?:window\.|globalThis\.)?set(?:Timeout|Interval)\(/);
+  });
+
+  it("a new step starts on primary with the barrier off", () => {
+    const fresh = adv();
+    expect("lane" in fresh).toBe(false);
+    expect("laneBarrier" in fresh).toBe(false);
+    expect(laneFlag([step()], 0, fresh)).toBeNull();
+    expect(suggestLanes([step()])).toEqual(["primary"]);
   });
 });
