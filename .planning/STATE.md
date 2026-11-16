@@ -5,16 +5,16 @@ milestone_name: Tool-inferred dropdowns + per-tool concurrency lanes
 current_phase: 8
 current_phase_name: Concurrency Lanes
 status: executing
-stopped_at: Completed 08-03-PLAN.md
-last_updated: "2026-11-16T13:30:37.988Z"
+stopped_at: Completed 08-04-PLAN.md
+last_updated: "2026-11-16T13:45:06.421Z"
 last_activity: 2026-11-16
 last_activity_desc: Phase 8 execution started
-state_head: 7e425dcc470b044fc03ea123096bf42374cb5b1d
+state_head: 2d488f8bf554f3367f8039dd0598909ab2f36054
 progress:
   total_phases: 4
   completed_phases: 2
   total_plans: 25
-  completed_plans: 18
+  completed_plans: 19
   percent: 50
 ---
 
@@ -31,7 +31,7 @@ decides every recovery action; the web app never acts on its own or pre-selects 
 ## Current Position
 
 Phase: 8 (Concurrency Lanes) — EXECUTING
-Plan: 4 of 10
+Plan: 5 of 10
 Status: Ready to execute
 Last activity: 2026-11-16 — Phase 8 execution started
 
@@ -108,6 +108,7 @@ Progress: [█████░░░░░] 50% (2 of 4 v1.2 phases)
 | Phase 08 P01 | 25 min | 2 tasks | 2 files |
 | Phase 08 P02 | 20min | 2 tasks | 3 files |
 | Phase 8 P03 | 8 min | 2 tasks | 4 files |
+| Phase 08 P04 | 20 min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -193,6 +194,10 @@ Recent decisions affecting current work:
 - [Phase 08]: 08-02: laneOf forces Tool Box steps and invalid lane names to primary; STARTED Tool Box row closes the gate on every lane
 - [Phase 8]: 08-03: claimEligible re-checks queue membership and CREATED/FAILED status in one synchronous transaction; STARTED/removed/unknown rows return false (D-10)
 - [Phase 8]: 08-03: RunStateMonitor.stopIf(queueId) stops only the exact running queueId so another lane never stops the F.A.S.T. poller (D-11)
+- [Phase 08]: An operator Start that launches the primary loop also launches every side lane with work in the same synchronous turn, so a same-tick second Start is ignored
+- [Phase 08]: _pickNext returns WAIT whenever the queue state is not BUSY in lane mode, a stand-in until the 08-05 halt latch
+- [Phase 08]: _startLanes does not clear _sideAbortAccepted, matching the legacy _start which leaves the abort marker alone
+- [Phase 08]: Lane runs are remembered in _laneRunIds so every step of a lane run is audited as Lane Step Dispatched
 
 ### Pending Todos
 
@@ -260,8 +265,8 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-16T13:30:37.929Z
-Stopped at: Completed 08-03-PLAN.md
+Last session: 2026-11-16T13:45:06.364Z
+Stopped at: Completed 08-04-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

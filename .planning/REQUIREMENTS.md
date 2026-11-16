@@ -98,13 +98,13 @@ on its own, and never preselects a physical decision for the operator.
 
 ### Lane engine (LAN)
 
-- [ ] **LAN-01**: With the lane-mode env var off, the queue behaves byte-identically to today. A
+- [x] **LAN-01**: With the lane-mode env var off, the queue behaves byte-identically to today. A
   golden transcript captured before the change proves it, and every existing test passes unedited.
 - [x] **LAN-02**: With lanes on, a step tagged with a lane can run while another tool's step is
   running. At most one step per tool server is in flight.
 - [x] **LAN-03**: A step can declare a barrier or dependency on steps in another lane, and won't
   start until they finish. An untagged step waits for everything before it, as today.
-- [ ] **LAN-04**: Each lane has its own single-flight Start guard. A Start never dispatches a row
+- [x] **LAN-04**: Each lane has its own single-flight Start guard. A Start never dispatches a row
   that is already in flight (the F5 guarantee, per lane).
 - [ ] **LAN-05**: When any step on any lane fails, new dispatch stops on every lane. Steps already
   running are never aborted, and only the operator's Start clears the halt.
@@ -199,10 +199,10 @@ the protocol surface and run page, as waves inside one phase.
 | PLT-07 | Phase 7 | Complete |
 | PLT-08 | Phase 7 | Complete |
 | PLT-09 | Phase 7 | Complete |
-| LAN-01 | Phase 8 | Pending |
+| LAN-01 | Phase 8 | Complete |
 | LAN-02 | Phase 8 | Complete |
 | LAN-03 | Phase 8 | Complete |
-| LAN-04 | Phase 8 | Pending |
+| LAN-04 | Phase 8 | Complete |
 | LAN-05 | Phase 8 | Pending |
 | LAN-06 | Phase 8 | Complete |
 | LAN-07 | Phase 8 | Pending |
