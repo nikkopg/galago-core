@@ -122,7 +122,7 @@ on its own, and never preselects a physical decision for the operator.
 
 - [x] **LUI-01**: In the visual protocol editor the operator can tag a tool step with a lane and a
   barrier or dependency.
-- [ ] **LUI-02**: A script protocol can tag steps with `galago.lane(...)` and declare dependencies.
+- [x] **LUI-02**: A script protocol can tag steps with `galago.lane(...)` and declare dependencies.
 - [x] **LUI-03**: Run creation refuses invalid lane setups with a clear error: a cycle, a non-tool
   step on a secondary lane, or one tool on two lanes.
 - [x] **LUI-04**: The preview and the Start confirmation list the steps per lane.
@@ -209,7 +209,7 @@ the protocol surface and run page, as waves inside one phase.
 | LAN-08 | Phase 8 | Complete |
 | LAN-09 | Phase 8 | Complete |
 | LUI-01 | Phase 8 | Complete |
-| LUI-02 | Phase 8 | Pending |
+| LUI-02 | Phase 8 | Complete |
 | LUI-03 | Phase 8 | Complete |
 | LUI-04 | Phase 8 | Complete |
 | LUI-05 | Phase 8 | Complete |
