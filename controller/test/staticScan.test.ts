@@ -1349,3 +1349,57 @@ describe("concurrency lane seams (D-09, D-10, D-14)", () => {
     expect(ctor).toContain('process.env.GALAGO_PARALLEL_LANES === "1"');
   });
 });
+
+describe("lane halt and freeze invariants (D-12, D-15, D-16)", () => {
+  const queueSrc = stripComments(read("server/command_queue.ts"));
+  const routerSrc = stripComments(read("server/routers/command_queue.ts"));
+
+  // The text right after a catch's opening brace, where the first statement sits. With a
+  // marker, the catch is the last one before the marker; without, the region's first catch.
+  function catchBodyStart(region: string, marker?: string): string {
+    const markerAt = marker === undefined ? -1 : region.indexOf(marker);
+    if (marker !== undefined) expect(markerAt, marker).toBeGreaterThanOrEqual(0);
+    const catchAt =
+      marker === undefined ? region.indexOf("catch (") : region.lastIndexOf("catch (", markerAt);
+    expect(catchAt).toBeGreaterThanOrEqual(0);
+    return region.slice(region.indexOf("{", catchAt) + 1).trimStart();
+  }
+  const latchFirst = /^if \(this\._laneMode\)\s*\{?\s*this\._latchFailure\(/;
+
+  it("the latch is the first statement of the primary, side-lane and supervisor catches (D-12)", () => {
+    const primary = extractBracedRegion(queueSrc, /private async _runBusyLoopWhileQueueNotEmpty\(/);
+    expect(catchBodyStart(primary, 'logger.error("Failed to execute command"')).toMatch(latchFirst);
+    const side = extractBracedRegion(queueSrc, /private async _runSideLane\(/);
+    expect(catchBodyStart(side, 'logger.error("Failed to execute lane command"')).toMatch(
+      latchFirst,
+    );
+    const supervisor = extractBracedRegion(queueSrc, /private _launchLane\(/);
+    expect(catchBodyStart(supervisor)).toMatch(latchFirst);
+  });
+
+  it("a freeze and the status read send nothing and read no instrument state (D-15)", () => {
+    const forbidden = /controlCommand|toolControl|executeCommand|_runStateMonitor|runState/;
+    expect(extractBracedRegion(queueSrc, /freezeLanes\(\)/)).not.toMatch(forbidden);
+    expect(extractBracedRegion(queueSrc, /laneStatus\(\): /)).not.toMatch(forbidden);
+    expect(extractBracedRegion(queueSrc, /freezeLanes\(\)/)).toContain("Lanes Frozen");
+    expect(extractBracedRegion(queueSrc, /laneStatus\(\): /)).toContain("haltReason");
+  });
+
+  it("the dispatch gate is not poll-driven (D-15)", () => {
+    const gate = extractBracedRegion(queueSrc, /private _dispatchGate\(/);
+    expect(gate).toContain("halted:");
+    expect(gate).not.toMatch(/runState|_runStateMonitor|getStatus/);
+  });
+
+  it("_recordFailure keeps the seq bump and the single error assignment (D-16)", () => {
+    const region = extractBracedRegion(queueSrc, /private _recordFailure\(/);
+    expect(region).toContain("this._failureSeq += 1");
+    expect(region.match(/this\.error\s*=(?!=)(?!\s*undefined\b)/g)?.length).toBe(1);
+  });
+
+  it("the router exposes the freeze and the status read and keeps the Start result (D-24)", () => {
+    expect(routerSrc).toContain("freezeLanes: procedure.mutation");
+    expect(routerSrc).toContain("laneStatus: procedure.query");
+    expect(routerSrc).toContain("return { accepted };");
+  });
+});
