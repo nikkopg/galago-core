@@ -956,8 +956,10 @@ export class CommandQueue {
 
   async gotoCommand(commandId: number) {
     this._refuseGotoWhileLaneStepRuns(`commandId=${commandId}`);
-    // An operator re-queue supersedes any pending stale abort reply (T-01-08).
+    // An operator re-queue supersedes any pending stale abort reply (T-01-08), on every
+    // lane: a failed side-lane attempt's token is cleared too (review WR-06).
     this._failedAttempt = undefined;
+    this._sideFailedAttempts.clear();
     try {
       await this.commands.gotoCommand(commandId);
 
@@ -981,8 +983,10 @@ export class CommandQueue {
   // Add this method to CommandQueue class
   async gotoCommandByRunIndex(runId: string, index: number): Promise<boolean> {
     this._refuseGotoWhileLaneStepRuns(`runId=${runId} index=${index}`);
-    // An operator re-queue supersedes any pending stale abort reply (T-01-08).
+    // An operator re-queue supersedes any pending stale abort reply (T-01-08), on every
+    // lane: a failed side-lane attempt's token is cleared too (review WR-06).
     this._failedAttempt = undefined;
+    this._sideFailedAttempts.clear();
     try {
       await this.commands.gotoCommandByIndex(runId, index);
 
@@ -1450,14 +1454,16 @@ export class CommandQueue {
       // A fresh marker for this attempt only; another row's marker is never touched.
       this._sideAbortAccepted.delete(picked.queueId);
       this._sideFailedAttempts.delete(picked.queueId);
-      this._sideRunning.set(lane, attempt);
-      // Only a controllable step is polled; the eligibility rule keeps that to one step at a
-      // time, so the single monitor never has two owners (D-11).
-      if (getRunControl(String(attempt.toolType)) !== undefined) {
-        this._runStateMonitor.start(attempt);
-      }
       try {
         try {
+          // Inside the try (review WR-02): anything that throws after the claim fails this
+          // row through the catch below, so a claimed row is never left STARTED with no owner.
+          this._sideRunning.set(lane, attempt);
+          // Only a controllable step is polled; the eligibility rule keeps that to one step
+          // at a time, so the single monitor never has two owners (D-11).
+          if (getRunControl(String(attempt.toolType)) !== undefined) {
+            this._runStateMonitor.start(attempt);
+          }
           await this.executeCommand(picked);
         } finally {
           this._runStateMonitor.stopIf(attempt.queueId);
@@ -1625,16 +1631,15 @@ export class CommandQueue {
     while (this.state === ToolStatus.BUSY) {
       // Small delay between processing commands to avoid race conditions
       await new Promise((resolve) => setTimeout(resolve, this._loopDelayMs));
+      // Reconcile side workers before the claim (review WR-02): a throw here leaves no row
+      // claimed, instead of stranding a STARTED row between the claim and the try below.
+      if (this._laneMode) this._ensureLaneWorkers();
       const nextCommand = await this._pickNext(PRIMARY_LANE);
-      if (nextCommand === WAIT) {
-        this._ensureLaneWorkers();
-        continue;
-      }
+      if (nextCommand === WAIT) continue;
       if (!nextCommand) {
         this.stop(); // stop the queue when there are no more commands available!!
         return;
       }
-      if (this._laneMode) this._ensureLaneWorkers();
       // Fresh marker per command: a stale value from a prior step must never
       // match a queueId that gotoCommand re-queued.
       this._abortAcceptedQueueId = undefined;
