@@ -165,6 +165,12 @@ export class RunStateMonitor {
     this.envelope = { running: false };
   }
 
+  // A lane's step end stops only its own poller; 08-06 uses it in lane mode
+  // instead of stop().
+  stopIf(queueId: number): void {
+    void queueId;
+  }
+
   snapshot(): RunStateEnvelope {
     // Deep copy: runState/pause must not alias the monitor's internal state.
     return structuredClone(this.envelope);
