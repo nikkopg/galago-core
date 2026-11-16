@@ -110,10 +110,10 @@ on its own, and never preselects a physical decision for the operator.
   running are never aborted, and only the operator's Start clears the halt.
 - [x] **LAN-06**: A modal on the primary lane (a form, a prompt or a pause) stops new dispatch on
   every lane. Non-tool steps run on the primary lane only.
-- [ ] **LAN-07**: Pause, resume and abort still reach a running F.A.S.T. on whatever lane it is on,
+- [x] **LAN-07**: Pause, resume and abort still reach a running F.A.S.T. on whatever lane it is on,
   and the run-state poller is never stopped by another lane's step. Abort markers and failed
   attempts are tracked per step.
-- [ ] **LAN-08**: Stop, Clear All and run delete still abort first for every controllable running
+- [x] **LAN-08**: Stop, Clear All and run delete still abort first for every controllable running
   step, whatever its lane.
 - [ ] **LAN-09**: The operator can freeze lanes: one control that stops new dispatch on every lane,
   for example after a tool-initiated pause. Nothing is aborted.
@@ -205,8 +205,8 @@ the protocol surface and run page, as waves inside one phase.
 | LAN-04 | Phase 8 | Complete |
 | LAN-05 | Phase 8 | Complete |
 | LAN-06 | Phase 8 | Complete |
-| LAN-07 | Phase 8 | Pending |
-| LAN-08 | Phase 8 | Pending |
+| LAN-07 | Phase 8 | Complete |
+| LAN-08 | Phase 8 | Complete |
 | LAN-09 | Phase 8 | Pending |
 | LUI-01 | Phase 8 | Pending |
 | LUI-02 | Phase 8 | Pending |

@@ -5,16 +5,16 @@ milestone_name: Tool-inferred dropdowns + per-tool concurrency lanes
 current_phase: 8
 current_phase_name: Concurrency Lanes
 status: executing
-stopped_at: Completed 08-07-PLAN.md
-last_updated: "2026-11-16T14:13:20.414Z"
+stopped_at: Completed 08-06-PLAN.md
+last_updated: "2026-11-16T14:23:57.933Z"
 last_activity: 2026-11-16
 last_activity_desc: Phase 8 execution started
-state_head: ad724f97a0760c386177504f5bd5149627ea3b4c
+state_head: 8d7204d54770576c1fe9bbb2b667543490b3fc13
 progress:
   total_phases: 4
   completed_phases: 2
   total_plans: 25
-  completed_plans: 22
+  completed_plans: 23
   percent: 50
 ---
 
@@ -31,7 +31,7 @@ decides every recovery action; the web app never acts on its own or pre-selects 
 ## Current Position
 
 Phase: 8 (Concurrency Lanes) — EXECUTING
-Plan: 8 of 10
+Plan: 9 of 10
 Status: Ready to execute
 Last activity: 2026-11-16 — Phase 8 execution started
 
@@ -112,6 +112,7 @@ Progress: [█████░░░░░] 50% (2 of 4 v1.2 phases)
 | Phase 08 P08 | 22 min | 3 tasks | 7 files |
 | Phase 08 P05 | 50 min | 3 tasks | 4 files |
 | Phase 08 P07 | 12 min | 2 tasks | 9 files |
+| Phase 08 P06 | 35 min | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -208,6 +209,8 @@ Recent decisions affecting current work:
 - [Phase 08]: Modal is read live in the dispatch gate rather than latched; laneStatus reports it as haltReason modal when no latch is set
 - [Phase 08]: Lane supervisor catch lists its failure with queueId 0 (no step known) so an unexpected loop failure is still latched and listed
 - [Phase 08]: 08-07: runs.ts reads CommandQueue.global.laneMode === true; operator-only refusal still wins over lane refusal; per-call lane on a Tool Box step is honoured so validateLanes refuses it with the S2c sentence
+- [Phase 08]: 08-06: runningStepFor reads the primary slot through the runningStep getter so recoveryControl tests pass unedited; side-lane abort markers are per queueId and never touch the legacy primary fields
+- [Phase 08]: 08-06: lane-mode run-state monitor starts only for a controllable step and ends with stopIf(queueId); goto mutations refuse while a side-lane step runs
 
 ### Pending Todos
 
@@ -275,8 +278,8 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-16T14:13:20.299Z
-Stopped at: Completed 08-07-PLAN.md
+Last session: 2026-11-16T14:23:57.872Z
+Stopped at: Completed 08-06-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
