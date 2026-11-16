@@ -35,6 +35,8 @@ import { PlusSquareIcon, ChevronUpIcon, TimeIcon } from "@chakra-ui/icons";
 import { QueueStatusComponent } from "./status/QueueStatuscomponent";
 import { ControlBar } from "./ControlBar";
 import { LanesPanel } from "./LanesPanel";
+import { LaneFailureList } from "./LaneFailureList";
+import { useLaneStatus } from "@/hooks/useLaneStatus";
 import { InstrumentStopModal } from "./InstrumentStopModal";
 import { shouldInterceptRunDelete, buildStopRequest } from "./stopInterception";
 import type { InstrumentStopRequest } from "./stopInterception";
@@ -226,6 +228,8 @@ export const RunsComponent: React.FC = () => {
     });
   };
 
+  const laneStatusQuery = useLaneStatus();
+
   const ErrorBanner = () => {
     const bannerError: unknown =
       getError.data ?? (getError.error ? { message: getError.error.message } : null);
@@ -254,6 +258,10 @@ export const RunsComponent: React.FC = () => {
               {message}
             </AlertDescription>
           </Box>
+          <LaneFailureList
+            failures={laneStatusQuery.data?.failures ?? []}
+            overflow={laneStatusQuery.data?.overflow ?? 0}
+          />
         </Box>
         <HStack>
           <Button

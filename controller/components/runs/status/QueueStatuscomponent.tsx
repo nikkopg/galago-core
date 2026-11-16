@@ -28,6 +28,7 @@ import type { InstrumentStopRequest } from "../stopInterception";
 import { InstrumentStopModal } from "../InstrumentStopModal";
 import type { RunStateEnvelope } from "@/server/runState";
 import { queuedStartLines } from "../queuedStartSummary";
+import { useLaneStatus } from "@/hooks/useLaneStatus";
 
 interface QueueStatusComponent {
   totalRuns: number;
@@ -44,6 +45,16 @@ export const QueueStatusComponent: React.FC<QueueStatusComponent> = ({
   // `commands`, not `getAll`, so a dequeued FAILED row is never promised as a
   // retry. Deliberately not part of the spinner condition below.
   const queuedCommandsQuery = trpc.commandQueue.commands.useQuery({}, { refetchInterval: 1000 });
+  // D-20: the Start summary names the lane freeze only when lanes are frozen by
+  // a failure or an operator freeze (a prompt halt clears itself).
+  const laneStatusQuery = useLaneStatus();
+  const laneStatusData = laneStatusQuery.data;
+  const laneFrozen = Boolean(
+    laneStatusData &&
+      laneStatusData.laneMode &&
+      laneStatusData.hasLaneRows &&
+      (laneStatusData.haltReason === "failure" || laneStatusData.haltReason === "freeze"),
+  );
   const stateMutationOpts = {
     onSettled: () => {
       stateQuery.refetch();
@@ -114,6 +125,7 @@ export const QueueStatusComponent: React.FC<QueueStatusComponent> = ({
               {queuedStartLines({
                 rows: queuedCommandsQuery.data,
                 isError: queuedCommandsQuery.isError,
+                laneFrozen,
               }).map((line, index) => (
                 <Text
                   key={`${line.text}-${index}`}
