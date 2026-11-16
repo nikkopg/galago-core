@@ -5,16 +5,16 @@ milestone_name: Tool-inferred dropdowns + per-tool concurrency lanes
 current_phase: 8
 current_phase_name: Concurrency Lanes
 status: executing
-stopped_at: Completed 08-04-PLAN.md
-last_updated: "2026-11-16T13:45:06.421Z"
+stopped_at: Completed 08-08-PLAN.md
+last_updated: "2026-11-16T13:51:43.667Z"
 last_activity: 2026-11-16
 last_activity_desc: Phase 8 execution started
-state_head: 2d488f8bf554f3367f8039dd0598909ab2f36054
+state_head: 3f80ee9963642e40de89b90caebf3d9e1997b394
 progress:
   total_phases: 4
   completed_phases: 2
   total_plans: 25
-  completed_plans: 19
+  completed_plans: 20
   percent: 50
 ---
 
@@ -31,7 +31,7 @@ decides every recovery action; the web app never acts on its own or pre-selects 
 ## Current Position
 
 Phase: 8 (Concurrency Lanes) — EXECUTING
-Plan: 5 of 10
+Plan: 6 of 10
 Status: Ready to execute
 Last activity: 2026-11-16 — Phase 8 execution started
 
@@ -109,6 +109,7 @@ Progress: [█████░░░░░] 50% (2 of 4 v1.2 phases)
 | Phase 08 P02 | 20min | 2 tasks | 3 files |
 | Phase 8 P03 | 8 min | 2 tasks | 4 files |
 | Phase 08 P04 | 20 min | 3 tasks | 5 files |
+| Phase 08 P08 | 22 min | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -198,6 +199,8 @@ Recent decisions affecting current work:
 - [Phase 08]: _pickNext returns WAIT whenever the queue state is not BUSY in lane mode, a stand-in until the 08-05 halt latch
 - [Phase 08]: _startLanes does not clear _sideAbortAccepted, matching the legacy _start which leaves the abort marker alone
 - [Phase 08]: Lane runs are remembered in _laneRunIds so every step of a lane run is audited as Lane Step Dispatched
+- [Phase 08]: 08-08: lane-aware deriveRunOutcome is a separate branch taken only when a row has a non-primary lane; untagged path unedited
+- [Phase 08]: 08-08: buildLaneSummary returns {groups:[],warnings} (not null) when a bad lane tag leaves all steps primary but validateLanes refuses; 08-10 must render warnings with empty groups
 
 ### Pending Todos
 
@@ -265,8 +268,8 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-16T13:45:06.364Z
-Stopped at: Completed 08-04-PLAN.md
+Last session: 2026-11-16T13:51:43.609Z
+Stopped at: Completed 08-08-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
