@@ -13,7 +13,15 @@ import { appSettings, variables, workcells } from "@/db/schema";
 import { and, eq } from "drizzle-orm";
 import { sendEmailMessage, sendSlackMessage } from "@/server/utils/integrationsLocal";
 import { TRPCError } from "@trpc/server";
-import { validateControlRequest } from "./runControl";
+import { getRunControl, runControl, validateControlRequest } from "./runControl";
+import {
+  PRIMARY_LANE,
+  lanesWithWork,
+  laneOf,
+  pickEligible,
+  toolKeyOf,
+  type LaneGate,
+} from "./laneScheduling";
 import { RunStateMonitor, type RunStateEnvelope } from "./runState";
 import {
   describeQueueStart,
@@ -22,6 +30,17 @@ import {
 } from "./queueStartListing";
 
 export type CommandQueueState = ToolStatus;
+
+// Lane mode is decided once at construction (D-06). Both options exist for tests:
+// the env flag is the production switch, the loop delay makes two-loop runs
+// deterministic under fake timers.
+export interface CommandQueueOptions {
+  parallelLanes?: boolean;
+  loopDelayMs?: number;
+}
+
+// Returned by _pickNext when work remains but nothing is eligible yet (lane mode only).
+const WAIT = Symbol("lane-wait");
 
 export enum QueueState {
   PAUSED = "PAUSED",
@@ -95,6 +114,21 @@ export class CommandQueue {
   // construction's own attempt failed (T-o44-03).
   private _interruptedStepsRecovered = false;
 
+  // Concurrency lanes (D-06, D-10). _laneMode is read once in the constructor and
+  // never changes, so with it false every statement below is unreachable.
+  private readonly _laneMode: boolean;
+  private readonly _loopDelayMs: number;
+  // One supervised loop per lane that has a live worker. The primary lane's loop
+  // is the legacy busy loop; a side lane's is _runSideLane.
+  private _laneLoops = new Map<string, Promise<void>>();
+  // The step each side lane is awaiting right now. The primary lane's step stays in
+  // _runningStep. Read by the dispatch gate so a tool server never gets two steps.
+  private _sideRunning = new Map<string, Readonly<RunningStep>>();
+  // Per-queueId abort marker and failed-attempt token for side-lane steps. The
+  // legacy single fields above stay the primary lane's own slot (RESEARCH A7).
+  private _sideAbortAccepted = new Set<number>();
+  private _sideFailedAttempts = new Map<number, Readonly<RunningStep>>();
+
   // Message handling state variables
   private _isWaitingForInput: boolean = false;
   private _currentMessage: UIMessage = {
@@ -107,7 +141,13 @@ export class CommandQueue {
 
   commands: SqliteQueue;
 
-  constructor(public runStore: RunStore) {
+  constructor(
+    public runStore: RunStore,
+    options?: CommandQueueOptions,
+  ) {
+    this._laneMode = options?.parallelLanes ?? process.env.GALAGO_PARALLEL_LANES === "1";
+    this._loopDelayMs = options?.loopDelayMs ?? 1500;
+
     const dbPath = process.env.SQLITE_DB_PATH || path.join(process.cwd(), "data", "queue.db");
 
     const dir = path.dirname(dbPath);
@@ -283,9 +323,23 @@ export class CommandQueue {
     return this._state;
   }
 
-  // True while a busy loop owns the queue, i.e. when _start would be ignored.
+  // True while a busy loop owns the queue, i.e. when _start would be ignored. In lane
+  // mode a Start is ignored only when every lane with work already has a live loop
+  // (the primary lane always counts), so the restart router's `accepted` is false
+  // only when a Start would launch nothing (P-2).
   get isStartInProgress(): boolean {
-    return this._runningPromise !== undefined;
+    if (!this._laneMode) return this._runningPromise !== undefined;
+    if (this._laneLoops.size === 0) return false;
+    try {
+      const lanes = [PRIMARY_LANE, ...lanesWithWork(this.commands.queuedRowsSync())];
+      return lanes.every((lane) => this._laneLoops.has(lane));
+    } catch {
+      return true;
+    }
+  }
+
+  get laneMode(): boolean {
+    return this._laneMode;
   }
 
   // Read-only accessor for the in-memory running-step record (D-01).
@@ -912,6 +966,7 @@ export class CommandQueue {
   }
 
   async _start(source: QueueStartSource = "operator") {
+    if (this._laneMode) return this._startLanes(source);
     // Single-flight guard (QUE-07, D-01): the busy loop owns the queue while
     // _runningPromise is set. A second Start (restart router, direct call or the
     // enqueueRun auto-start) must never dispatch the in-flight row again. It only
@@ -961,6 +1016,313 @@ export class CommandQueue {
     }
   }
 
+  // ---- Concurrency lanes (D-10). Everything below runs only when _laneMode is true. ----
+
+  // Recomputes the umbrella promise stop() awaits: it covers every live lane loop.
+  private _refreshRunningPromise(): void {
+    const loops = [...this._laneLoops.values()];
+    this._runningPromise = loops.length > 0 ? Promise.all(loops) : undefined;
+  }
+
+  // The same failure handling _start's catch applies when a loop cannot run at all.
+  private _failStart(e: unknown): void {
+    logAction({
+      level: "error",
+      action: "Queue failed to start",
+      details: "Error while starting the queue.: " + e,
+    });
+    const failure = e instanceof Error ? e : new Error("Execution failed");
+    this._recordFailure(failure);
+    this._setState(ToolStatus.FAILED);
+    // Not awaited (WR-01): the alert must not hold a loop slot.
+    void this._notifyFailure({ error: failure });
+  }
+
+  // Runs one lane's loop under a supervisor that owns its _laneLoops entry. The entry
+  // is registered before this returns, so a second Start in the same tick sees it
+  // (LAN-04, P-3). The supervisor never rejects.
+  private _launchLane(lane: string, body: () => Promise<void>): Promise<void> {
+    let supervisor!: Promise<void>;
+    supervisor = (async () => {
+      try {
+        await body();
+      } catch (e) {
+        this._failStart(e);
+      } finally {
+        if (this._laneLoops.get(lane) === supervisor) this._laneLoops.delete(lane);
+        this._refreshRunningPromise();
+        if (this._laneLoops.size === 0 && this.state === ToolStatus.BUSY) {
+          this._setState(ToolStatus.READY);
+        }
+      }
+    })();
+    this._laneLoops.set(lane, supervisor);
+    this._refreshRunningPromise();
+    return supervisor;
+  }
+
+  // Starts a side worker for every non-primary lane that has work in the active run and
+  // no live loop. Returns the supervisors it launched.
+  private _ensureLaneWorkers(): Promise<void>[] {
+    if (this.state !== ToolStatus.BUSY) return [];
+    const launched: Promise<void>[] = [];
+    for (const lane of lanesWithWork(this.commands.queuedRowsSync())) {
+      if (this._laneLoops.has(lane)) continue;
+      launched.push(this._launchLane(lane, () => this._runSideLane(lane)));
+    }
+    return launched;
+  }
+
+  // Lane-mode Start. Synchronous until every loop is launched: no await may sit
+  // between the per-lane guard and the _laneLoops registration (LAN-04).
+  private async _startLanes(source: QueueStartSource): Promise<void> {
+    try {
+      const lanes = [PRIMARY_LANE, ...lanesWithWork(this.commands.queuedRowsSync())];
+      const busyLanes = lanes.filter((lane) => this._laneLoops.has(lane));
+
+      if (busyLanes.length === lanes.length) {
+        // Every lane with work already has a live loop: the legacy text, nothing dispatched.
+        const inFlight = this._runningStep ?? this._sideRunning.values().next().value;
+        logAction({
+          level: "warning",
+          action: "Queue Start Ignored",
+          details: `A queue start was ignored because the queue is already running; nothing was dispatched again. source=${source} inFlightQueueId=${inFlight?.queueId ?? "unknown"} inFlightRunId=${inFlight?.runId ?? "unknown"} state=${this._state}`,
+        });
+        return;
+      }
+      for (const lane of busyLanes) {
+        logAction({
+          level: "warning",
+          action: "Lane Start Ignored",
+          details: sanitizeLogText(`lane=${lane} reason=lane already running source=${source}`),
+        });
+      }
+
+      // Same order as _start. A restart supersedes any pending stale abort reply (T-01-08).
+      this._failedAttempt = undefined;
+      this._sideFailedAttempts.clear();
+      logAction({
+        level: "info",
+        action: "Queue Started",
+        details: this._describeQueueStart(source),
+      });
+      this._setState(ToolStatus.READY);
+      this.error = undefined;
+
+      // Recovery fails any STARTED row as an orphan of a dead process, so it must never
+      // run while a lane loop of this process is alive (Pitfall 17e).
+      if (!this._interruptedStepsRecovered && this._laneLoops.size === 0) {
+        this._recoverInterruptedSteps();
+      }
+
+      const launched: Promise<void>[] = [];
+      if (!this._laneLoops.has(PRIMARY_LANE)) {
+        launched.push(
+          this._launchLane(PRIMARY_LANE, () => this._runBusyLoopWhileQueueNotEmpty(120)),
+        );
+      } else {
+        this._setState(ToolStatus.BUSY);
+        launched.push(...this._ensureLaneWorkers());
+      }
+      await Promise.all(launched);
+    } catch (e) {
+      this._failStart(e);
+    }
+  }
+
+  // The single place the dispatch gate and the claim meet. With lanes off it is the
+  // legacy call, byte for byte. In lane mode there is no await between reading the
+  // rows and claiming the chosen one, so the check and the claim are one atomic step.
+  private async _pickNext(lane: string): Promise<StoredRunCommand | false | typeof WAIT> {
+    if (!this._laneMode) return this.commands.startNext();
+    // A failure, stop or freeze leaves BUSY: nothing new is dispatched on any lane.
+    if (this.state !== ToolStatus.BUSY) return WAIT;
+    const rows = this.commands.queuedRowsSync();
+    const verdict = pickEligible(rows, lane, this._dispatchGate());
+    if (verdict.kind === "empty") return false;
+    if (verdict.kind === "drained") return lane === PRIMARY_LANE ? WAIT : false;
+    if (verdict.kind === "wait") return WAIT;
+    const claimed = this.commands.claimEligible(verdict.row.queueId);
+    if (claimed === false) return WAIT;
+    if (rows.some((r) => r.runId === claimed.runId && laneOf(r.commandInfo) !== PRIMARY_LANE)) {
+      logAction({
+        level: "info",
+        action: "Lane Step Dispatched",
+        details: sanitizeLogText(
+          `queueId=${claimed.queueId} runId=${claimed.runId} toolId=${claimed.commandInfo?.toolId} lane=${laneOf(claimed.commandInfo)}`,
+        ),
+      });
+    }
+    return claimed;
+  }
+
+  // The context pickEligible needs. `halted` and `modalOpen` are wired by the halt
+  // latch plan; the busy-tool set comes from memory, not from the stored rows, so a
+  // tool server whose running step was dequeued by an accepted abort stays busy.
+  private _dispatchGate(): LaneGate {
+    const running: Readonly<RunningStep>[] = [];
+    if (this._runningStep) running.push(this._runningStep);
+    for (const step of this._sideRunning.values()) running.push(step);
+    return {
+      halted: false,
+      modalOpen: false,
+      busyToolKeys: new Set(running.map((step) => toolKeyOf(step.toolId))),
+      controllableToolTypes: Object.keys(runControl),
+      controllableRunning: running.some((step) => getRunControl(step.toolType) !== undefined),
+    };
+  }
+
+  // The worker for one non-primary lane: tagged tool steps only. It never runs a Tool
+  // Box step (laneOf maps those to the primary lane), never touches modal state and
+  // never stops the queue; only the primary loop does that, and only when it is empty.
+  private async _runSideLane(lane: string): Promise<void> {
+    while (this.state === ToolStatus.BUSY) {
+      await new Promise((resolve) => setTimeout(resolve, this._loopDelayMs));
+      if (this.state !== ToolStatus.BUSY) return;
+      const picked = await this._pickNext(lane);
+      if (picked === false) {
+        // Exit decision and map removal in one synchronous turn (P-3).
+        this._laneLoops.delete(lane);
+        return;
+      }
+      if (picked === WAIT) continue;
+      if (await this._shouldSkip(picked, lane)) continue;
+
+      const attempt: Readonly<RunningStep> = Object.freeze({
+        queueId: picked.queueId,
+        runId: picked.runId,
+        toolId: picked.commandInfo.toolId,
+        toolType: picked.commandInfo.toolType,
+        command: picked.commandInfo.command,
+        startedAt: Date.now(),
+      });
+      // A fresh marker for this attempt only; another row's marker is never touched.
+      this._sideAbortAccepted.delete(picked.queueId);
+      this._sideFailedAttempts.delete(picked.queueId);
+      this._sideRunning.set(lane, attempt);
+      try {
+        try {
+          await this.executeCommand(picked);
+        } finally {
+          this._sideRunning.delete(lane);
+        }
+        logAction({
+          level: "info",
+          action: "Lane Step Ended",
+          details: sanitizeLogText(`queueId=${picked.queueId} lane=${lane} outcome=completed`),
+        });
+      } catch (e) {
+        logger.error("Failed to execute lane command", e);
+        const abortAccepted = this._sideAbortAccepted.delete(picked.queueId);
+        // Synchronously, before the first await (T-01-08, layer b), like the primary catch.
+        if (!abortAccepted) this._sideFailedAttempts.set(picked.queueId, attempt);
+
+        const err = e instanceof Error ? e : new Error("Unknown error");
+        let rowRemoved = false;
+        if (abortAccepted) {
+          const removed = await this.commands.failAndDequeueRun(picked.queueId, err);
+          if (removed === false) {
+            rowRemoved = true;
+          } else {
+            logAction({
+              level: "info",
+              action: "Aborted Run Dequeued",
+              details: sanitizeLogText(
+                `queueId=${picked.queueId} runId=${picked.runId} lane=${lane} ` +
+                  `toolId=${picked.commandInfo?.toolId} ` +
+                  `removed=${removed.length ? removed.join(",") : "none"} ` +
+                  `reason=operator abort accepted while the step ran`,
+              ),
+            });
+          }
+        } else {
+          const updated = await this.commands.fail(picked.queueId, err);
+          if (!updated) rowRemoved = true;
+        }
+
+        if (rowRemoved) {
+          logAction({
+            level: "warning",
+            action: "Step Removed While Running",
+            details: sanitizeLogText(
+              `queueId=${picked.queueId} runId=${picked.runId} lane=${lane} ` +
+                `toolId=${picked.commandInfo?.toolId} abortAccepted=${abortAccepted} ` +
+                `stepError=${err.message} ` +
+                `reason=the step's queue row was removed by the operator (Clear All or run delete) ` +
+                `while it ran; nothing was recorded and no queue error was set`,
+            ),
+          });
+          this._setState(ToolStatus.OFFLINE);
+          return;
+        }
+
+        const failure = e instanceof Error ? e : new Error("Execution failed");
+        this._recordFailure(failure);
+        this._setState(ToolStatus.FAILED);
+
+        logAction({
+          level: "error",
+          action: "Command Failed",
+          details: sanitizeLogText(
+            `Command failed: ${e instanceof Error ? e.message : e} lane=${lane} queueId=${picked.queueId}` +
+              (abortAccepted
+                ? " (operator abort accepted by the tool; this step and the rest of its run were removed from the queue and will not run on the next queue start)"
+                : ""),
+          ),
+        });
+
+        // Not awaited (WR-01): the alert must not keep this loop's slot alive.
+        void this._notifyFailure({
+          error: failure,
+          runId: picked.runId,
+          toolId: picked.commandInfo?.toolId,
+          toolType: picked.commandInfo?.toolType,
+          command: picked.commandInfo?.command,
+          label: picked.commandInfo?.label,
+        });
+        return;
+      }
+    }
+  }
+
+  // The lane-local skip check (D-14): the same variable comparison as the primary
+  // loop's skip block, which is deliberately not refactored.
+  private async _shouldSkip(row: StoredRunCommand, lane: string): Promise<boolean> {
+    const skip = row.commandInfo.advancedParameters?.skipExecutionVariable;
+    if (!skip?.variable) return false;
+    try {
+      let expectedValue = skip.value;
+      if (expectedValue.startsWith("{{") && expectedValue.endsWith("}}")) {
+        const v = await this._getVariableByName(expectedValue.slice(2, -2).trim());
+        expectedValue = v?.value ?? "";
+      } else if (expectedValue.startsWith("${") && expectedValue.endsWith("}")) {
+        const v = await this._getVariableByName(expectedValue.slice(2, -1).trim());
+        expectedValue = v?.value ?? "";
+      }
+      const varResponse = await this._getVariableByName(skip.variable);
+      if (varResponse && varResponse.value === expectedValue) {
+        logAction({
+          level: "info",
+          action: "Command Skipped",
+          details: sanitizeLogText(
+            `Skipping command: ${row.commandInfo.command} for tool: ${row.commandInfo.toolId} because variable ${skip.variable} = ${expectedValue} lane=${lane}`,
+          ),
+        });
+        await this.skipCommand(row.queueId);
+        return true;
+      }
+    } catch (e) {
+      logAction({
+        level: "warning",
+        action: "Skip Execution Variable Error",
+        details: sanitizeLogText(
+          `Failed to fetch skip execution variable ${skip.variable}: ${e} lane=${lane}`,
+        ),
+      });
+    }
+    return false;
+  }
+
   // Modify the stop method in CommandQueue.ts to reset _isWaitingForInput
   async stop() {
     this._setState(ToolStatus.OFFLINE);
@@ -999,12 +1361,17 @@ export class CommandQueue {
 
     while (this.state === ToolStatus.BUSY) {
       // Small delay between processing commands to avoid race conditions
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-      const nextCommand = await this.commands.startNext();
+      await new Promise((resolve) => setTimeout(resolve, this._loopDelayMs));
+      const nextCommand = await this._pickNext(PRIMARY_LANE);
+      if (nextCommand === WAIT) {
+        this._ensureLaneWorkers();
+        continue;
+      }
       if (!nextCommand) {
         this.stop(); // stop the queue when there are no more commands available!!
         return;
       }
+      if (this._laneMode) this._ensureLaneWorkers();
       // Fresh marker per command: a stale value from a prior step must never
       // match a queueId that gotoCommand re-queued.
       this._abortAcceptedQueueId = undefined;
