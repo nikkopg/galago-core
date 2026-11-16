@@ -7,6 +7,7 @@ export interface QueueStartRow {
   queueId: number;
   runId: string;
   status: string;
+  commandInfo?: unknown;
 }
 
 export const MAX_LISTED_QUEUE_ROWS = 50;

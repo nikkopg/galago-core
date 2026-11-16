@@ -9,6 +9,13 @@
 export interface QueuedStartRow {
   status: string;
   runId: string;
+  queueId?: number;
+  commandInfo?: {
+    toolId?: string;
+    command?: string;
+    toolType?: unknown;
+    advancedParameters?: unknown;
+  };
 }
 
 export interface QueuedStartSummary {
@@ -27,6 +34,10 @@ export interface QueuedStartLine {
 export const QUEUED_START_EMPTY = "The queue is empty.";
 export const QUEUED_START_LOADING = "Checking the queue...";
 export const QUEUED_START_ERROR = "Could not read the queue. Logs list the steps this Start ran.";
+export const QUEUED_START_LANES_HEADING =
+  "Steps by lane (lane order is the order they first appear):";
+export const QUEUED_START_FREEZE_NOTE =
+  "Starting clears a lane freeze. Lanes then start again together.";
 export const QUEUED_START_NOTE =
   "Counts refresh every second. Logs list the exact steps this Start ran.";
 
@@ -62,6 +73,7 @@ const NOTE_LINE: QueuedStartLine = { text: QUEUED_START_NOTE, tone: "caption" };
 export function queuedStartLines(input: {
   rows: ReadonlyArray<QueuedStartRow> | undefined;
   isError: boolean;
+  laneFrozen?: boolean;
 }): QueuedStartLine[] {
   if (input.isError) {
     return [{ text: QUEUED_START_ERROR, tone: "caption" }, NOTE_LINE];
