@@ -13,7 +13,7 @@ findings:
     title: "A row can be left STARTED with no owner when an exception escapes between the claim and the step's `try`"
   - id: WR-03
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "Lane-aware text is shown when the server has lanes off, which tells the operator work will run in parallel"
   - id: WR-04
     severity: warning
@@ -47,11 +47,11 @@ findings:
     severity: info
     disposition: open
     title: "The per-lane start summary numbers steps by queue position, not by protocol position"
-open: 9
+open: 8
 total: 11
 recorded: 2026-11-16T18:00:31.000Z
 ---
 
 # Phase 08 — Code Review Disposition
 
-WR-02 and WR-06 are `fixed` (regression tests in `controller/test/laneReviewFixes.test.ts`); the other 9 findings from 08-REVIEW.md are recorded as `open` (0 critical, 6 warning, 5 info). None violates a lane-engine safety invariant; they are candidates for a follow-up fix pass (`/gsd-code-review 8 --fix`).
+WR-02 and WR-06 are `fixed` (regression tests in `controller/test/laneReviewFixes.test.ts`), WR-03 is `fixed` (tests in `controller/test/laneUi.test.ts`, "lane text follows the server lane mode"); the other 8 findings from 08-REVIEW.md are recorded as `open` (0 critical, 6 warning, 5 info). None violates a lane-engine safety invariant; they are candidates for a follow-up fix pass (`/gsd-code-review 8 --fix`).
