@@ -1,5 +1,8 @@
 // Pure formatter for the "Queue Started" audit line (QUE-08, D-07). No imports
-// from command_queue.ts, the db or React, so it is unit-testable on its own.
+// from command_queue.ts, the db or React, so it is unit-testable on its own. The
+// one exception is the import-free laneScheduling.ts (lane listing suffix, D-20).
+import { PRIMARY_LANE, isBarrier, laneOf } from "./laneScheduling";
+import type { LaneCommandInfo } from "./laneScheduling";
 
 export type QueueStartSource = "operator" | "enqueue";
 
@@ -20,6 +23,25 @@ function prefixFor(source: QueueStartSource): string {
 
 function plural(count: number, singular: string, pluralForm: string): string {
   return count === 1 ? singular : pluralForm;
+}
+
+// D-20: for lane runs, names which queueIds sit on which lane (a trailing * marks
+// a barrier). Empty for an untagged queue, so its text is unchanged.
+function laneListing(listed: ReadonlyArray<QueueStartRow>): string {
+  const infoOf = (r: QueueStartRow) => r.commandInfo as LaneCommandInfo | undefined;
+  if (!listed.some((r) => laneOf(infoOf(r)) !== PRIMARY_LANE)) return "";
+  const lanes: Array<{ lane: string; ids: string[] }> = [];
+  for (const r of listed) {
+    const lane = laneOf(infoOf(r));
+    let entry = lanes.find((l) => l.lane === lane);
+    if (!entry) {
+      entry = { lane, ids: [] };
+      lanes.push(entry);
+    }
+    entry.ids.push(`${r.queueId}${isBarrier(infoOf(r)) ? "*" : ""}`);
+  }
+  const body = lanes.map((l) => `${l.lane}=${l.ids.join(",")}`).join("; ");
+  return `. Lanes (first appearance): ${body} (* waits for all earlier steps)`;
 }
 
 export function describeQueueStart(
@@ -50,7 +72,7 @@ export function describeQueueStart(
   if (rest > 0) {
     text += `; ... and ${rest} more`;
   }
-  return text;
+  return text + laneListing(rows.slice(0, MAX_LISTED_QUEUE_ROWS));
 }
 
 export function describeQueueStartReadFailure(source: QueueStartSource, error: unknown): string {
