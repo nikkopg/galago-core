@@ -168,7 +168,9 @@ export class RunStateMonitor {
   // A lane's step end stops only its own poller; 08-06 uses it in lane mode
   // instead of stop().
   stopIf(queueId: number): void {
-    void queueId;
+    if (this.envelope.running && this.envelope.queueId === queueId) {
+      this.stop();
+    }
   }
 
   snapshot(): RunStateEnvelope {
