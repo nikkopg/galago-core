@@ -5,16 +5,16 @@ milestone_name: Tool-inferred dropdowns + per-tool concurrency lanes
 current_phase: 8
 current_phase_name: Concurrency Lanes
 status: executing
-stopped_at: Completed 08-06-PLAN.md
-last_updated: "2026-11-16T14:23:57.933Z"
+stopped_at: Completed 08-09-PLAN.md
+last_updated: "2026-11-16T14:28:51.115Z"
 last_activity: 2026-11-16
 last_activity_desc: Phase 8 execution started
-state_head: 8d7204d54770576c1fe9bbb2b667543490b3fc13
+state_head: ce1c93251b7cf2af84a10a0de61da574df8f6efd
 progress:
   total_phases: 4
   completed_phases: 2
   total_plans: 25
-  completed_plans: 23
+  completed_plans: 24
   percent: 50
 ---
 
@@ -31,7 +31,7 @@ decides every recovery action; the web app never acts on its own or pre-selects 
 ## Current Position
 
 Phase: 8 (Concurrency Lanes) — EXECUTING
-Plan: 9 of 10
+Plan: 10 of 10
 Status: Ready to execute
 Last activity: 2026-11-16 — Phase 8 execution started
 
@@ -113,6 +113,7 @@ Progress: [█████░░░░░] 50% (2 of 4 v1.2 phases)
 | Phase 08 P05 | 50 min | 3 tasks | 4 files |
 | Phase 08 P07 | 12 min | 2 tasks | 9 files |
 | Phase 08 P06 | 35 min | 3 tasks | 4 files |
+| Phase 08 P09 | 10min | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -211,6 +212,7 @@ Recent decisions affecting current work:
 - [Phase 08]: 08-07: runs.ts reads CommandQueue.global.laneMode === true; operator-only refusal still wins over lane refusal; per-call lane on a Tool Box step is honoured so validateLanes refuses it with the S2c sentence
 - [Phase 08]: 08-06: runningStepFor reads the primary slot through the runningStep getter so recoveryControl tests pass unedited; side-lane abort markers are per queueId and never touch the legacy primary fields
 - [Phase 08]: 08-06: lane-mode run-state monitor starts only for a controllable step and ends with stopIf(queueId); goto mutations refuse while a side-lane step runs
+- [Phase 08]: 08-09: Freeze lanes is a Chakra AlertDialog in LanesPanel (focus on Keep lanes running via leastDestructiveRef); lane UI renders nothing on loading or failed laneStatus reads
 
 ### Pending Todos
 
@@ -278,8 +280,8 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-16T14:23:57.872Z
-Stopped at: Completed 08-06-PLAN.md
+Last session: 2026-11-16T14:28:51.053Z
+Stopped at: Completed 08-09-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
