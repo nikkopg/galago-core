@@ -100,15 +100,15 @@ on its own, and never preselects a physical decision for the operator.
 
 - [ ] **LAN-01**: With the lane-mode env var off, the queue behaves byte-identically to today. A
   golden transcript captured before the change proves it, and every existing test passes unedited.
-- [ ] **LAN-02**: With lanes on, a step tagged with a lane can run while another tool's step is
+- [x] **LAN-02**: With lanes on, a step tagged with a lane can run while another tool's step is
   running. At most one step per tool server is in flight.
-- [ ] **LAN-03**: A step can declare a barrier or dependency on steps in another lane, and won't
+- [x] **LAN-03**: A step can declare a barrier or dependency on steps in another lane, and won't
   start until they finish. An untagged step waits for everything before it, as today.
 - [ ] **LAN-04**: Each lane has its own single-flight Start guard. A Start never dispatches a row
   that is already in flight (the F5 guarantee, per lane).
 - [ ] **LAN-05**: When any step on any lane fails, new dispatch stops on every lane. Steps already
   running are never aborted, and only the operator's Start clears the halt.
-- [ ] **LAN-06**: A modal on the primary lane (a form, a prompt or a pause) stops new dispatch on
+- [x] **LAN-06**: A modal on the primary lane (a form, a prompt or a pause) stops new dispatch on
   every lane. Non-tool steps run on the primary lane only.
 - [ ] **LAN-07**: Pause, resume and abort still reach a running F.A.S.T. on whatever lane it is on,
   and the run-state poller is never stopped by another lane's step. Abort markers and failed
@@ -123,7 +123,7 @@ on its own, and never preselects a physical decision for the operator.
 - [ ] **LUI-01**: In the visual protocol editor the operator can tag a tool step with a lane and a
   barrier or dependency.
 - [ ] **LUI-02**: A script protocol can tag steps with `galago.lane(...)` and declare dependencies.
-- [ ] **LUI-03**: Run creation refuses invalid lane setups with a clear error: a cycle, a non-tool
+- [x] **LUI-03**: Run creation refuses invalid lane setups with a clear error: a cycle, a non-tool
   step on a secondary lane, or one tool on two lanes.
 - [ ] **LUI-04**: The preview and the Start confirmation list the steps per lane.
 - [ ] **LUI-05**: The run page shows each lane's steps in order, with their own statuses and
@@ -200,17 +200,17 @@ the protocol surface and run page, as waves inside one phase.
 | PLT-08 | Phase 7 | Complete |
 | PLT-09 | Phase 7 | Complete |
 | LAN-01 | Phase 8 | Pending |
-| LAN-02 | Phase 8 | Pending |
-| LAN-03 | Phase 8 | Pending |
+| LAN-02 | Phase 8 | Complete |
+| LAN-03 | Phase 8 | Complete |
 | LAN-04 | Phase 8 | Pending |
 | LAN-05 | Phase 8 | Pending |
-| LAN-06 | Phase 8 | Pending |
+| LAN-06 | Phase 8 | Complete |
 | LAN-07 | Phase 8 | Pending |
 | LAN-08 | Phase 8 | Pending |
 | LAN-09 | Phase 8 | Pending |
 | LUI-01 | Phase 8 | Pending |
 | LUI-02 | Phase 8 | Pending |
-| LUI-03 | Phase 8 | Pending |
+| LUI-03 | Phase 8 | Complete |
 | LUI-04 | Phase 8 | Pending |
 | LUI-05 | Phase 8 | Pending |
 | LUI-06 | Phase 8 | Pending |

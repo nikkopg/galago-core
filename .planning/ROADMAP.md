@@ -138,13 +138,13 @@ without aborting anything. Waves: lane engine first, then protocol surface and r
   2. Any failure, a primary-lane modal or the operator's run-page freeze control stops new dispatch on every lane, and control, Stop and recovery still work on any lane.
   3. The operator can author lane-tagged protocols, is refused invalid setups, and sees per-lane steps, outcome and failures in the preview, Start confirmation and run page.
 
-**Plans**: 1/10 plans executed
+**Plans**: 2/10 plans executed
 Plans:
 **Wave 1** *(golden first: committed before any production edit)*
 - [x] 08-01-PLAN.md — Golden transcript of today's queue (S0-S3) captured at the unmodified commit (LAN-01, D-09)
 
 **Wave 2** *(blocked on Wave 1 completion)*
-- [ ] 08-02-PLAN.md — Pure lane policy laneScheduling.ts: stored fields, eligibility with the headline cycle as case 1, validateLanes sentences, grouping
+- [x] 08-02-PLAN.md — Pure lane policy laneScheduling.ts: stored fields, eligibility with the headline cycle as case 1, validateLanes sentences, grouping
 - [ ] 08-03-PLAN.md — SqliteQueue.claimEligible (STARTED-excluding sync claim) and RunStateMonitor.stopIf(queueId)
 
 **Wave 3** *(blocked on Wave 2 completion)*
@@ -187,7 +187,7 @@ resolution is recorded.
 |-------|----------------|--------|-----------|
 | 6. STACK Dropdowns | 5/5 | Complete    | 2026-11-06 |
 | 7. F.A.S.T. Plate Dropdowns | 10/10 | Complete    | 2026-11-16 |
-| 8. Concurrency Lanes | 1/10 | In Progress | - |
+| 8. Concurrency Lanes | 2/10 | In Progress | - |
 | 9. Supervised Live Two-Tool Proof | 0/TBD | Not started | - |
 
 ## Backlog
