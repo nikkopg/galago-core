@@ -128,6 +128,9 @@ export class CommandQueue {
   // legacy single fields above stay the primary lane's own slot (RESEARCH A7).
   private _sideAbortAccepted = new Set<number>();
   private _sideFailedAttempts = new Map<number, Readonly<RunningStep>>();
+  // Runs seen with a non-primary lane row, so every later step of such a run is audited
+  // as a lane dispatch even after its tagged rows have drained. Emptied with the queue.
+  private _laneRunIds = new Set<string>();
 
   // Message handling state variables
   private _isWaitingForInput: boolean = false;
@@ -1122,8 +1125,10 @@ export class CommandQueue {
         );
       } else {
         this._setState(ToolStatus.BUSY);
-        launched.push(...this._ensureLaneWorkers());
       }
+      // Every lane with work gets its loop in this same synchronous turn, so a second
+      // Start in the same tick finds every lane covered and is ignored (LAN-04).
+      launched.push(...this._ensureLaneWorkers());
       await Promise.all(launched);
     } catch (e) {
       this._failStart(e);
@@ -1139,12 +1144,18 @@ export class CommandQueue {
     if (this.state !== ToolStatus.BUSY) return WAIT;
     const rows = this.commands.queuedRowsSync();
     const verdict = pickEligible(rows, lane, this._dispatchGate());
-    if (verdict.kind === "empty") return false;
+    for (const r of rows) {
+      if (laneOf(r.commandInfo) !== PRIMARY_LANE) this._laneRunIds.add(r.runId);
+    }
+    if (verdict.kind === "empty") {
+      this._laneRunIds.clear();
+      return false;
+    }
     if (verdict.kind === "drained") return lane === PRIMARY_LANE ? WAIT : false;
     if (verdict.kind === "wait") return WAIT;
     const claimed = this.commands.claimEligible(verdict.row.queueId);
     if (claimed === false) return WAIT;
-    if (rows.some((r) => r.runId === claimed.runId && laneOf(r.commandInfo) !== PRIMARY_LANE)) {
+    if (this._laneRunIds.has(claimed.runId)) {
       logAction({
         level: "info",
         action: "Lane Step Dispatched",
