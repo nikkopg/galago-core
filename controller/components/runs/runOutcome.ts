@@ -1,4 +1,6 @@
 import { storedErrorText } from "./storedError";
+import { laneOf, PRIMARY_LANE } from "@/server/laneScheduling";
+import type { LaneCommandInfo } from "@/server/laneScheduling";
 
 // Client-only run outcome (D-18). The persisted RunStatus is deliberately not
 // widened; this union is derived for display from the rows the page polls.
@@ -24,10 +26,42 @@ function errorOf(row: unknown): unknown {
   return typeof row === "object" && row !== null ? (row as { error?: unknown }).error : undefined;
 }
 
+function laneOfRow(row: unknown): string {
+  const info =
+    typeof row === "object" && row !== null
+      ? (row as { commandInfo?: unknown }).commandInfo
+      : undefined;
+  return laneOf(info as LaneCommandInfo | undefined);
+}
+
+// D-22: lanes overlap, so "the last row is COMPLETED" no longer means done. A lane
+// run is complete only when every row is COMPLETED or SKIPPED.
+function deriveLaneRunOutcome(commands: unknown[], statuses: unknown[]): RunOutcome {
+  if (statuses.includes("FAILED")) return "FAILED";
+  const hasStarted = statuses.includes("STARTED");
+  const hasCreated = statuses.includes("CREATED");
+  if (
+    !hasStarted &&
+    !hasCreated &&
+    commands.some((row) => statusOf(row) === "SKIPPED" && storedErrorText(errorOf(row)) !== null)
+  ) {
+    return "COMPLETED_WITH_SKIPPED_FAILURE";
+  }
+  if (statuses.every((status) => status === "COMPLETED" || status === "SKIPPED")) {
+    return "COMPLETED";
+  }
+  if (hasStarted) return "STARTED";
+  if (statuses.every((status) => status === "CREATED")) return "QUEUED";
+  return "CREATED";
+}
+
 export function deriveRunOutcome(commands: unknown): RunOutcome {
   if (!Array.isArray(commands) || commands.length === 0) return "CREATED";
 
   const statuses = commands.map(statusOf);
+  if (commands.some((row) => laneOfRow(row) !== PRIMARY_LANE)) {
+    return deriveLaneRunOutcome(commands, statuses);
+  }
   const last = statuses[statuses.length - 1];
   const hasStarted = statuses.includes("STARTED");
   const hasCreated = statuses.includes("CREATED");
