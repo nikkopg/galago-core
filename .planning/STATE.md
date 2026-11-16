@@ -4,16 +4,16 @@ milestone: v1.2
 milestone_name: Tool-inferred dropdowns + per-tool concurrency lanes
 current_phase: 8
 current_phase_name: Concurrency Lanes
-status: planning
+status: executing
 stopped_at: Phase 8 UI-SPEC approved
-last_updated: "2026-11-16T09:32:18.887Z"
+last_updated: "2026-11-16T13:14:51.663Z"
 last_activity: 2026-11-16
 last_activity_desc: Phase 07 complete, transitioned to Phase 8
-state_head: 5cf4ae28d2995ea7a9cb1322f035525a302d167b
+state_head: ab91115393d6eaafc2a5579d827c30b6ae4e7258
 progress:
   total_phases: 4
   completed_phases: 2
-  total_plans: 15
+  total_plans: 25
   completed_plans: 15
   percent: 50
 ---
@@ -30,9 +30,9 @@ decides every recovery action; the web app never acts on its own or pre-selects 
 
 ## Current Position
 
-Phase: 8 — Concurrency Lanes
+Phase: 8 (Concurrency Lanes) — READY TO EXECUTE
 Plan: Not started
-Status: Ready to plan
+Status: Ready to execute
 Last activity: 2026-11-16 — Phase 07 complete, transitioned to Phase 8
 
 Progress: [█████░░░░░] 50% (2 of 4 v1.2 phases)

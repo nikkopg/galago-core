@@ -138,7 +138,30 @@ without aborting anything. Waves: lane engine first, then protocol surface and r
   2. Any failure, a primary-lane modal or the operator's run-page freeze control stops new dispatch on every lane, and control, Stop and recovery still work on any lane.
   3. The operator can author lane-tagged protocols, is refused invalid setups, and sees per-lane steps, outcome and failures in the preview, Start confirmation and run page.
 
-**Plans**: TBD
+**Plans**: 10 plans
+Plans:
+**Wave 1** *(golden first: committed before any production edit)*
+- [ ] 08-01-PLAN.md — Golden transcript of today's queue (S0-S3) captured at the unmodified commit (LAN-01, D-09)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+- [ ] 08-02-PLAN.md — Pure lane policy laneScheduling.ts: stored fields, eligibility with the headline cycle as case 1, validateLanes sentences, grouping
+- [ ] 08-03-PLAN.md — SqliteQueue.claimEligible (STARTED-excluding sync claim) and RunStateMonitor.stopIf(queueId)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+- [ ] 08-04-PLAN.md — Tracer: headline cycle overlaps on two fake tools with the flag on; per-lane Start guard, lifecycle, golden re-run in three constructions
+- [ ] 08-08-PLAN.md — Pure client helpers: lane rows, lane-aware outcome, failure-list and panel copy, per-lane Start lines, drawer/preview helpers
+
+**Wave 4** *(blocked on Wave 3 completion)*
+- [ ] 08-05-PLAN.md — Fail-closed halt, modal gate, Freeze lanes (OFFLINE), bounded failure list, laneStatus/freezeLanes procedures, enqueue validation
+- [ ] 08-07-PLAN.md — Run-creation refusal with name-guarded mapping, inert tags with the flag off, galago.lane script API, preview laneWarnings, compose flag
+
+**Wave 5** *(blocked on Wave 4 completion)*
+- [ ] 08-06-PLAN.md — Lane-aware control target, per-queueId abort markers, poller ownership, abort-first envelope, goto refusal, 20x engine loop
+- [ ] 08-09-PLAN.md — Run page: Lanes panel with Freeze lanes, banner failure list, per-lane rows with timestamps, per-lane Start confirmation
+
+**Wave 6** *(blocked on Wave 5 completion)*
+- [ ] 08-10-PLAN.md — Drawer Lane/barrier controls, per-lane preview with warnings, phase gate
+
 **UI hint**: yes
 **Settle in discuss**: D1, D2, D3, D4, D9, D12 (D3 includes the freeze control and its run-page button).
 
