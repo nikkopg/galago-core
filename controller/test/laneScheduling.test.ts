@@ -439,6 +439,7 @@ describe("validateLanes sentences (UI-SPEC S2c)", () => {
       info("fast-1", { toolType: "fast", lane: "Bad Name" }),
       info("fast-2", { toolType: "fast", lane: "c", barrier: true }),
       info("fast-3", { toolType: "fast", lane: "d", barrier: true }),
+      info("fast-4", { toolType: "fast", lane: "e", barrier: true }),
       info("Tool Box", { command: "goto" }),
     ]);
     const order = [
