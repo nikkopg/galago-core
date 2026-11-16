@@ -717,6 +717,7 @@ export const ProtocolDetailView: React.FC<{ id: number }> = ({ id }) => {
         selectedCommand={selectedCommand}
         onSave={handleUpdateCommand}
         isEditing={isEditing}
+        protocolCommands={commands}
       />
 
       <AddToolCommandModal

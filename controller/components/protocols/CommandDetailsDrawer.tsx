@@ -17,17 +17,30 @@ import {
   Switch,
   FormControl,
   FormLabel,
+  FormHelperText,
   Accordion,
   AccordionItem,
   AccordionButton,
   AccordionPanel,
   AccordionIcon,
+  useColorModeValue,
 } from "@chakra-ui/react";
+import { InfoIcon, WarningTwoIcon } from "@chakra-ui/icons";
 import { useState, useEffect } from "react";
 import { trpc } from "@/utils/trpc";
 import { capitalizeFirst } from "@/utils/parser";
 import { successToast } from "../ui/Toast";
-import { AdvancedParameters } from "@/types";
+import { AdvancedParameters, ToolCommandInfo } from "@/types";
+import {
+  isToolStep,
+  setLane,
+  setBarrier,
+  suggestLanes,
+  laneHelperText,
+  laneFlag,
+  LANE_BARRIER_HELP,
+  LANE_INERT_NOTE,
+} from "./laneFields";
 import {
   applyChange,
   applyLocalChange,
@@ -53,10 +66,15 @@ interface CommandDetailsDrawerProps {
   selectedCommand: any;
   onSave: (updatedCommand: any) => void;
   isEditing: boolean;
+  // The protocol's own steps, for lane suggestions and author-time flags (D-18).
+  // The run-page drawer passes nothing: it is read-only and shows no flags.
+  protocolCommands?: ReadonlyArray<{ queueId?: number; commandInfo: ToolCommandInfo }>;
 }
 
 export const CommandDetailsDrawer: React.FC<CommandDetailsDrawerProps> = (props) => {
-  const { isOpen, onClose, selectedCommand, onSave, isEditing } = props;
+  const { isOpen, onClose, selectedCommand, onSave, isEditing, protocolCommands } = props;
+  const mutedColor = useColorModeValue("gray.600", "whiteAlpha.700");
+  const warnColor = useColorModeValue("orange.600", "orange.300");
   const [editedParams, setEditedParams] = useState<Record<string, any>>({});
   const [editedAdvancedParams, setEditedAdvancedParams] = useState<AdvancedParameters | null>(null);
   const { data: availableVariables } = trpc.variable.getAll.useQuery();
@@ -186,6 +204,16 @@ export const CommandDetailsDrawer: React.FC<CommandDetailsDrawerProps> = (props)
     });
   };
 
+  // Lane edits go only through setLane / setBarrier so a blank or "primary" lane
+  // deletes the key and an off barrier deletes the key (D-01, Pitfall 24b).
+  const handleLaneChange = (value: string) => {
+    setEditedAdvancedParams(setLane(getAdvancedParameters(), value));
+  };
+
+  const handleBarrierChange = (on: boolean) => {
+    setEditedAdvancedParams(setBarrier(getAdvancedParameters(), on));
+  };
+
   const handleSaveInputs = () => {
     if (isEditing && selectedCommand) {
       // Create updated params by merging original params with edited ones
@@ -223,6 +251,22 @@ export const CommandDetailsDrawer: React.FC<CommandDetailsDrawerProps> = (props)
   };
 
   const advancedParams = getAdvancedParameters();
+
+  // Lane suggestions and the author-time flag come from the protocol's own steps:
+  // pure derivations, no effect and no query (UI-SPEC S1).
+  const protocolInfos = (protocolCommands ?? []).map((c) => c.commandInfo);
+  const selectedByIdentity = protocolCommands
+    ? protocolCommands.findIndex((c) => c === selectedCommand)
+    : -1;
+  const selectedIndex =
+    selectedByIdentity >= 0
+      ? selectedByIdentity
+      : protocolCommands && selectedCommand?.queueId !== undefined
+        ? protocolCommands.findIndex((c) => c.queueId === selectedCommand.queueId)
+        : -1;
+  const laneSuggestions = suggestLanes(protocolInfos);
+  const laneFlagText =
+    isEditing && selectedIndex >= 0 ? laneFlag(protocolInfos, selectedIndex, advancedParams) : null;
 
   // The only writer of an instrument-fed param (D-09, DRP-05): the operator's
   // choice and its cascade clears land in ONE state update. A cleared child is
@@ -779,6 +823,69 @@ export const CommandDetailsDrawer: React.FC<CommandDetailsDrawerProps> = (props)
                             placeholder="Value that variable must match to skip"
                           />
                         </FormControl>
+
+                        {isToolStep(selectedCommand?.commandInfo) && (
+                          <>
+                            <Divider my={4} />
+                            <FormControl>
+                              <FormLabel>Lane</FormLabel>
+                              <Input
+                                value={advancedParams.lane ?? ""}
+                                onChange={(e) => handleLaneChange(e.target.value)}
+                                placeholder="primary"
+                                autoComplete="off"
+                                maxLength={32}
+                                list={isEditing ? "lane-suggestions" : undefined}
+                                isDisabled={!isEditing}
+                                aria-describedby={
+                                  laneFlagText
+                                    ? "lane-helper-text lane-flag-text"
+                                    : "lane-helper-text"
+                                }
+                              />
+                              {isEditing && (
+                                <datalist id="lane-suggestions">
+                                  {laneSuggestions.map((lane) => (
+                                    <option key={lane} value={lane} />
+                                  ))}
+                                </datalist>
+                              )}
+                              <FormHelperText
+                                id="lane-helper-text"
+                                fontSize="xs"
+                                color={mutedColor}>
+                                {laneHelperText(laneSuggestions)}
+                              </FormHelperText>
+                              {laneFlagText && (
+                                <Text id="lane-flag-text" fontSize="sm" color={warnColor} mt={2}>
+                                  <WarningTwoIcon aria-hidden mr={2} />
+                                  {laneFlagText}
+                                </Text>
+                              )}
+                            </FormControl>
+
+                            <FormControl display="flex" alignItems="center">
+                              <FormLabel mb="0">Wait for all earlier steps</FormLabel>
+                              <Switch
+                                colorScheme="teal"
+                                isChecked={advancedParams.laneBarrier === true}
+                                onChange={(e) => handleBarrierChange(e.target.checked)}
+                                isDisabled={!isEditing}
+                              />
+                            </FormControl>
+                            <Text fontSize="xs" color={mutedColor}>
+                              {LANE_BARRIER_HELP}
+                            </Text>
+
+                            <HStack align="flex-start" spacing={2}>
+                              <InfoIcon aria-hidden mt={1} color={mutedColor} />
+                              <Text fontSize="sm" color={mutedColor}>
+                                {LANE_INERT_NOTE}
+                              </Text>
+                            </HStack>
+                            <Divider my={4} />
+                          </>
+                        )}
 
                         {/* Run Asynchronously */}
                         <FormControl display="flex" alignItems="center" mt={4}>
