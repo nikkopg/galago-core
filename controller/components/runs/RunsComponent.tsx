@@ -34,6 +34,7 @@ import { DeleteWithConfirmation } from "../ui/Delete";
 import { PlusSquareIcon, ChevronUpIcon, TimeIcon } from "@chakra-ui/icons";
 import { QueueStatusComponent } from "./status/QueueStatuscomponent";
 import { ControlBar } from "./ControlBar";
+import { LanesPanel } from "./LanesPanel";
 import { InstrumentStopModal } from "./InstrumentStopModal";
 import { shouldInterceptRunDelete, buildStopRequest } from "./stopInterception";
 import type { InstrumentStopRequest } from "./stopInterception";
@@ -606,6 +607,7 @@ export const RunsComponent: React.FC = () => {
         </Card>
 
         <ControlBar envelope={runControlQuery.data} />
+        <LanesPanel />
 
         <Card bg={cardBg} shadow="md">
           <CardBody>
