@@ -2,7 +2,9 @@
 // client helpers, like runControl.ts and toolKey.ts): it must stay loadable from
 // both the server and the browser bundle, with no timers, no React and no db.
 //
-// RED stub: every Task 1 export is present and deliberately wrong.
+// Every lane rule is a function of the ordered queue rows plus a small gate, so
+// the queue class only feeds it rows and the rules are table-tested on their own.
+// Stored command JSON is untrusted: reads use typeof checks and own properties.
 
 export const PRIMARY_LANE = "primary";
 export const MAX_LANES_PER_RUN = 4;
@@ -68,46 +70,125 @@ export interface LaneStatusSnapshot {
   overflow: number;
 }
 
-export function normalizeLane(_raw: unknown): string {
-  return "";
+function hasOwn(obj: object, key: string): boolean {
+  return Object.prototype.hasOwnProperty.call(obj, key);
 }
 
-export function isValidLaneName(_name: string): boolean {
-  return false;
+// Reads one own property of the stored advancedParameters object, or undefined.
+function advancedValue(info: LaneCommandInfo | undefined, key: string): unknown {
+  if (!info || typeof info !== "object") return undefined;
+  const ap = info.advancedParameters;
+  if (!ap || typeof ap !== "object") return undefined;
+  return hasOwn(ap, key) ? (ap as Record<string, unknown>)[key] : undefined;
 }
 
-export function isToolBoxStep(_info: LaneCommandInfo | undefined): boolean {
-  return false;
+// Trim and lower-case; blank, non-string and "primary" all give "primary".
+export function normalizeLane(raw: unknown): string {
+  if (typeof raw !== "string") return PRIMARY_LANE;
+  const name = raw.trim().toLowerCase();
+  return name === "" ? PRIMARY_LANE : name;
 }
 
-export function laneOf(_info: LaneCommandInfo | undefined): string {
-  return "";
+export function isValidLaneName(name: string): boolean {
+  return LANE_NAME_PATTERN.test(name);
 }
 
-export function isBarrier(_info: LaneCommandInfo | undefined): boolean {
-  return false;
+export function isToolBoxStep(info: LaneCommandInfo | undefined): boolean {
+  if (!info || typeof info !== "object") return false;
+  return info.toolId === "Tool Box" || String(info.toolType) === "toolbox";
 }
 
-export function toolKeyOf(_toolId: string | undefined): string {
-  return "";
+// A Tool Box step is always primary, and so is an invalid name: a smuggled or
+// unvalidated tag can only make dispatch more sequential, never less.
+export function laneOf(info: LaneCommandInfo | undefined): string {
+  if (isToolBoxStep(info)) return PRIMARY_LANE;
+  const lane = normalizeLane(advancedValue(info, "lane"));
+  return isValidLaneName(lane) ? lane : PRIMARY_LANE;
+}
+
+export function isBarrier(info: LaneCommandInfo | undefined): boolean {
+  return advancedValue(info, "laneBarrier") === true;
+}
+
+// The exact normalizeToolKey transform, inlined because this module imports nothing.
+export function toolKeyOf(toolId: string | undefined): string {
+  return (toolId || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+function toolIdOf(info: LaneCommandInfo | undefined): string {
+  return info && typeof info.toolId === "string" ? info.toolId : "";
 }
 
 export function isEligible<R extends LaneRow>(
-  _rows: ReadonlyArray<R>,
-  _index: number,
-  _gate: LaneGate,
+  rows: ReadonlyArray<R>,
+  index: number,
+  gate: LaneGate,
 ): boolean {
-  return false;
+  const r = rows[index];
+  if (!r) return false;
+  if (r.status !== "CREATED" && r.status !== "FAILED") return false;
+  if (rows.length === 0 || r.runId !== rows[0].runId) return false;
+
+  const lane = laneOf(r.commandInfo);
+
+  // The highest-index barrier of this run at or before r (r itself when it is one).
+  let lastBarrier = -1;
+  for (let i = index; i >= 0; i--) {
+    if (rows[i].runId === r.runId && isBarrier(rows[i].commandInfo)) {
+      lastBarrier = i;
+      break;
+    }
+  }
+
+  for (let i = 0; i < index; i++) {
+    const p = rows[i];
+    if (p.runId !== r.runId) continue;
+    if (i < lastBarrier) return false;
+    if (laneOf(p.commandInfo) === lane) return false;
+  }
+
+  for (const o of rows) {
+    if (o.status !== "STARTED") continue;
+    if (laneOf(o.commandInfo) === lane) return false;
+    if (isToolBoxStep(o.commandInfo)) return false;
+  }
+
+  if (gate.busyToolKeys.has(toolKeyOf(toolIdOf(r.commandInfo)))) return false;
+  if (gate.halted || gate.modalOpen) return false;
+  if (
+    gate.controllableRunning &&
+    gate.controllableToolTypes.includes(String(r.commandInfo?.toolType))
+  ) {
+    return false;
+  }
+  return true;
 }
 
 export function pickEligible<R extends LaneRow>(
-  _rows: ReadonlyArray<R>,
-  _lane: string,
-  _gate: LaneGate,
+  rows: ReadonlyArray<R>,
+  lane: string,
+  gate: LaneGate,
 ): LaneVerdict<R> {
-  return { kind: "wait" };
+  if (rows.length === 0) return { kind: "empty" };
+  let onLane = false;
+  for (let i = 0; i < rows.length; i++) {
+    if (laneOf(rows[i].commandInfo) !== lane) continue;
+    onLane = true;
+    if (isEligible(rows, i, gate)) return { kind: "pick", row: rows[i] };
+  }
+  return onLane ? { kind: "wait" } : { kind: "drained" };
 }
 
-export function lanesWithWork(_rows: ReadonlyArray<LaneRow>): string[] {
-  return ["stub"];
+// Non-primary lanes, in first-appearance order, with a CREATED or FAILED row in the active run.
+export function lanesWithWork(rows: ReadonlyArray<LaneRow>): string[] {
+  if (rows.length === 0) return [];
+  const active = rows[0].runId;
+  const lanes: string[] = [];
+  for (const r of rows) {
+    if (r.runId !== active) continue;
+    if (r.status !== "CREATED" && r.status !== "FAILED") continue;
+    const lane = laneOf(r.commandInfo);
+    if (lane !== PRIMARY_LANE && !lanes.includes(lane)) lanes.push(lane);
+  }
+  return lanes;
 }

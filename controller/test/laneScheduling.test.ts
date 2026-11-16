@@ -179,9 +179,9 @@ describe("laneOf and isBarrier", () => {
   });
 
   it("normalises a tool step's lane, maps an invalid name or no params to primary", () => {
-    expect(laneOf({ toolId: "fast-1", toolType: "fast", advancedParameters: { lane: " FAST " } })).toBe(
-      "fast",
-    );
+    expect(
+      laneOf({ toolId: "fast-1", toolType: "fast", advancedParameters: { lane: " FAST " } }),
+    ).toBe("fast");
     expect(
       laneOf({ toolId: "fast-1", toolType: "fast", advancedParameters: { lane: "bad name!" } }),
     ).toBe("primary");

@@ -37,6 +37,10 @@ export interface HasRunStatus {
 export interface AdvancedParameters {
   skipExecutionVariable: SkipExecution;
   runAsynchronously?: boolean;
+  // absent or "primary" = primary lane
+  lane?: string;
+  // true = waits for every earlier row of the run
+  laneBarrier?: boolean;
 }
 
 export interface ToolCommandInfo {
