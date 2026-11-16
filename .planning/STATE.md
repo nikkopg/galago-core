@@ -2,46 +2,45 @@
 gsd_state_version: "1.0"
 milestone: v1.2
 milestone_name: Tool-inferred dropdowns + per-tool concurrency lanes
-current_phase: 07
-current_phase_name: F.A.S.T. Plate Dropdowns
-status: executing
-stopped_at: Completed 07-10-PLAN.md
-last_updated: "2026-11-13T07:30:57.742Z"
-last_activity: 2026-11-13
-last_activity_desc: Phase 07 execution started
-state_head: ddd5ed59aec9b61c99a2333060241e454593fa47
+current_phase: 8
+current_phase_name: Concurrency Lanes
+status: planning
+stopped_at: Phase 07 complete, ready to plan Phase 8
+last_updated: "2026-11-16T09:02:10.201Z"
+last_activity: 2026-11-16
+last_activity_desc: Phase 07 complete, transitioned to Phase 8
+state_head: 5f2c5bf661e285852fa42c48acf0a3d4461daa39
 progress:
   total_phases: 4
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 15
   completed_plans: 15
-  percent: 25
+  percent: 50
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-11-06)
+See: .planning/PROJECT.md (updated 2026-11-16)
 
 **Core value:** While an instrument step runs, the operator sees what the instrument is doing and
 decides every recovery action; the web app never acts on its own or pre-selects a physical decision.
-**Current focus:** Phase 07 — F.A.S.T. Plate Dropdowns
-concurrency lanes)
+**Current focus:** Phase 8 — Concurrency Lanes
 
 ## Current Position
 
-Phase: 07 (F.A.S.T. Plate Dropdowns) — EXECUTING
-Plan: 3 of 10
-Status: Ready to execute
-Last activity: 2026-11-13 — Phase 07 execution started
+Phase: 8 — Concurrency Lanes
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-11-16 — Phase 07 complete, transitioned to Phase 8
 
-Progress: [███░░░░░░░] 25% (1 of 4 v1.2 phases)
+Progress: [█████░░░░░] 50% (2 of 4 v1.2 phases)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 34
+- Total plans completed: 44
 - Average duration: -
 - Total execution time: 0 hours
 
@@ -55,6 +54,7 @@ Progress: [███░░░░░░░] 25% (1 of 4 v1.2 phases)
 | 04 | 7 | - | - |
 | 05 | 4 | - | - |
 | 06 | 5 | - | - |
+| 07 | 10 | - | - |
 
 **Recent Trend:**
 - Last 5 plans: none yet
@@ -188,7 +188,7 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
-- [2026-10-15] [ui] Fetch F.A.S.T. plate list for source/dest plate dropdowns — [todo file](.planning/todos/pending/2026-10-15-fetch-f-a-s-t-plate-list-for-source-dest-plate-dropdowns.md) — Needs TBD. A likely shape:.
+None. (The F.A.S.T. plate-list todo shipped in Phase 7, PLT-01..09.)
 
 ### Blockers/Concerns
 
@@ -201,10 +201,16 @@ Recent decisions affecting current work:
 - [Phase 6, galago-tools]: the launcher's stop does not wait for the tool process to exit and its port
   check is IPv4-connect only, so a quick restart can crash on `Address already in use` (seen on STACK2-6
   2026-11-06). galago-tools repo, not fixed here.
-- [Phase 7]: Hard-gated on galago-tools freezing a read-only F.A.S.T. `get_plates` that answers while a
-  Transfer runs (`FastServer.ExecuteCommand` otherwise refuses reads while BUSY), proven by a test through
-  `ExecuteCommand`. Contract is still "proposed": `.planning/research/FAST-GET-PLATES-CONTRACT.md`. Phase 7
-  may slip; Phases 8-9 do not wait on it.
+- [Phase 7]: `07-REVIEW-DISPOSITION.md` carries WR-02 open by decision (accepted as T-07-39 in
+  `07-SECURITY.md`): a source drag can overwrite a `{{variable}}` well binding, and a clamped header press
+  writes an edge-well patch. WR-04 advisory: the int32 refusal is execution-time only, so a saved step with
+  a literal out-of-range id fails mid-run after earlier steps ran (safe, no wrong value sent).
+- [Phase 7 UAT, galago-tools]: `base_server` reports READY after Configure and never re-checks the
+  instrument, so a powered-off F.A.S.T. showed connected/ready. galago-tools repo, not fixed here.
+- [Phase 7 UAT, env]: the F.A.S.T. is now at 192.168.0.7 on the STACK LAN, reached via
+  `~/fast-forward.py` on stack-server (10.150.1.125:5003, allowlisted IPs, not reboot-persistent). Tool
+  records must point at `host.docker.internal:<launcher port>` (F.A.S.T. 40001, STACK 40012). The tool
+  edit form's `isValidIP` flags hostnames as invalid (cosmetic; save works).
 - [Phase 5]: Hard-gated on galago-tools Phase 4 pushing the frozen `stack.proto` to `feat/stack-tool`
   (not there yet). A needed `stack.proto` change or a stack-automation-layer gap stops the work and is
   noted for the user; it is never patched here.
@@ -226,8 +232,6 @@ Recent decisions affecting current work:
   when a tool has no image (cosmetic); IN-01 full card error is hover-only; IN-02 label scan is
   whitespace-sensitive. The earlier WR-01/WR-02 `fixed` rows (5191ffe) were dropped by id reuse.
   The G-03-3 live fit retest was waived by the user (marked pass).
-- [Phase 2]: The real F.A.S.T. may still hold a paused run from the 2026-10-14 09:33 WrongPlateType
-  test; clear it (Run Recovery → Abort, or on the instrument) before the next real run.
 
 ### Quick Tasks Completed
 
@@ -248,11 +252,11 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-13T07:30:57.697Z
-Stopped at: Completed 07-10-PLAN.md
+Last session: 2026-11-16
+Stopped at: Phase 07 complete, ready to plan Phase 8
 Resume file: None
 
 ## Operator Next Steps
 
-- Phase 7 is hard-gated on galago-tools `get_plates` (see Blockers); discuss with /gsd-discuss-phase 7 once the contract is frozen, or plan Phase 8 first (it does not depend on 6-7)
+- Phase 8 (Concurrency Lanes) is next: /gsd-discuss-phase 8 then /gsd-plan-phase 8
 - /gsd-secure-phase 6 (security enforcement on, no SECURITY.md yet)

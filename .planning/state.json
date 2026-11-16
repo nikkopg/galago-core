@@ -1,12 +1,33 @@
 {
   "contract": "1.0.0",
   "flavor": "core",
-  "milestone": "v1.2",
-  "phases": [],
+  "milestone": "v1.2 — Tool-inferred dropdowns + per-tool concurrency lanes",
+  "phases": [
+    {
+      "number": "6",
+      "name": "STACK Dropdowns",
+      "status": "complete"
+    },
+    {
+      "number": "7",
+      "name": "F.A.S.T. Plate Dropdowns",
+      "status": "complete"
+    },
+    {
+      "number": "8",
+      "name": "Concurrency Lanes",
+      "status": "pending"
+    },
+    {
+      "number": "9",
+      "name": "Supervised Live Two-Tool Proof",
+      "status": "pending"
+    }
+  ],
   "next": {
-    "command": "/gsd:discuss-phase",
-    "label": "Discuss the first phase",
-    "reason": "Project initialized — plan your first phase"
+    "command": "/gsd:progress --next",
+    "label": "Advance to the next step (plan phase 8)",
+    "reason": "Phase 8 of 4 — needs a plan"
   },
-  "updated_at": "2026-11-05T11:45:14.058Z"
+  "updated_at": "2026-11-16T09:02:10.209Z"
 }

@@ -128,10 +128,16 @@ operator-decides-recovery guarantee.
   empty, typed fallback when the instrument is unreachable, saved values never rewritten,
   `vendor/galago-tools` pinned to `4ccd3da` with a zero-diff regen — Phase 6 (verification 17/17,
   UAT 11/11 live, 2026-11-06)
+- ✓ PLT-01..09 — v1.2: F.A.S.T. Transfer `source_plate_id` / `dest_plate_id` dropdowns from the
+  instrument's registered plates via the frozen read-only `get_plates` (`vendor/galago-tools`
+  re-pinned to `d53da53`), deck selects 1-6, a "Reuse tips" checkbox, and a drag/click well-block
+  picker on grids of the chosen plates (misfit and 96-vs-384 mismatch flagged, never clipped); typed
+  out-of-range int32 values are kept, flagged and refused before any gRPC send — Phase 7
+  (verification passed after gap closure 07-09/07-10, UAT 4/4 live against the F.A.S.T.,
+  security 49/49 closed, 2026-11-16)
 
 ### Active
 
-- [ ] F.A.S.T. source/dest plate dropdowns from the instrument's registered plates — v1.2
 - [ ] Per-toolId concurrency lanes for live two-tool runs — v1.2
 
 (Detailed REQ-IDs in `.planning/REQUIREMENTS.md`.)
@@ -220,6 +226,9 @@ operator-decides-recovery guarantee.
 | v1.2 options read: dedicated `Tool.readOptions` (Metadata, 5 s deadline, never queued) over a closed four-source registry instead of `Tool.executeCommand` (D-01) | A dropdown read must never queue behind or race a running step; failures map to a closed reason set and fall back to a typed input | ✓ Phase 6 |
 | v1.2 cascade: `applyChange` is the only patch producer; children clear only on the parent's user change, never on hydrate/refresh; typed fallback writes only its own field | A saved step is never rewritten by a list refresh; review WR-01/WR-02 tightened the typed and unbind paths (faccb5e) | ✓ Phase 6 |
 | Connect All sends the stored type-keyed sub-config via `buildConnectConfig` (1c4f875) | Upstream #186 double-wrapped `tools.config`, so every tool server refused with `Config.host is required`; found during Phase 6 UAT | ✓ Phase 6 (container rebuilt) |
+| v1.2 int32 send guard: `Tool#executeCommand` refuses any Transfer int32 field that is not an exact int32, after `{{variable}}` substitution and before gRPC; producers keep out-of-range digits as text (CR-01) | The ts-proto encoder silently wraps modulo 2^32 (4294967297 → plate 1); a refusal is safe, a wrapped value moves the robot | ✓ Phase 7 (07-09) |
+| v1.2 well picker: drag logic is the pure `sourcePointerStep` reducer, the React shell only forwards events (WR-01) | Real pointer capture can't run under node vitest; the reducer carries 17 sequence tests and the shell passed a real-browser UAT | ✓ Phase 7 (07-10, UAT 2026-11-16) |
+| Dev compose maps `host.docker.internal:host-gateway`; tool records point at `host.docker.internal:<launcher port>` | On Linux Docker has no host alias, so the containerised controller could not reach host tool servers (found in Phase 7 UAT, `0ddaaf0`) | ✓ Phase 7 UAT |
 
 ## Evolution
 
@@ -239,4 +248,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-11-06 after Phase 6*
+*Last updated: 2026-11-16 after Phase 7*

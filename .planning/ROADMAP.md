@@ -44,7 +44,7 @@ galago-tools gate without blocking Phases 8-9.
 
 - [x] **Phase 6: STACK Dropdowns** - STACK robot, location, labware and transfer-profile fields offer (completed 2026-11-06)
   instrument-reported lists, on one shared dropdown layer (DRP-01..09, STK-01..08).
-- [ ] **Phase 7: F.A.S.T. Plate Dropdowns** - Transfer plate, deck and tip-reuse fields are dropdowns and the
+- [x] **Phase 7: F.A.S.T. Plate Dropdowns** - Transfer plate, deck and tip-reuse fields are dropdowns and the (completed 2026-11-16)
   well block is drag-selected on a plate grid; plate parts gated on galago-tools shipping `get_plates` (PLT-01..09).
 - [ ] **Phase 8: Concurrency Lanes** - Behind a default-off flag, one run drives two tool servers at once,
   with lane authoring, per-lane run page and failure freeze (LAN-01..09, LUI-01..06).
@@ -98,7 +98,7 @@ the chosen plate.
   5. Matching the approved mockup (`research/PLT-08-WELL-PICKER-MOCKUP.html`), dragging on the source grid sets start row/col and block size, and a click on the destination grid places the same-size footprint. Typed fields sit in a collapsed "Edit as fields" section that opens on its own for a hidden grid, a `{{variable}}` or a flagged value, and stay in sync; a block that does not fit is flagged, never clipped.
   6. Source and destination plates of different sizes (96 vs 384) are flagged on the destination grid before the run, since fast-mcp refuses cross-format transfers.
 
-**Plans**: 10/10 plans executed
+**Plans**: 10/10 plans complete
 Plans:
 **Wave 1** *(ungated)*
 - [x] 07-01-PLAN.md — Tracer: deck 1-6 dropdowns on the tool page end to end (static binding, numeric write, wire), then the "Reuse tips" checkbox with the new-step default
@@ -163,7 +163,7 @@ resolution is recorded.
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 6. STACK Dropdowns | 5/5 | Complete    | 2026-11-06 |
-| 7. F.A.S.T. Plate Dropdowns | 10/10 | In Progress (plates gated on get_plates) | - |
+| 7. F.A.S.T. Plate Dropdowns | 10/10 | Complete    | 2026-11-16 |
 | 8. Concurrency Lanes | 0/TBD | Not started | - |
 | 9. Supervised Live Two-Tool Proof | 0/TBD | Not started | - |
 

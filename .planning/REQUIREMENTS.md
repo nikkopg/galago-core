@@ -55,19 +55,19 @@ on its own, and never preselects a physical decision for the operator.
 
 ### F.A.S.T. plates (PLT)
 
-- [ ] **PLT-01**: galago-tools ships a frozen `get_plates` read that answers while a Transfer is
+- [x] **PLT-01**: galago-tools ships a frozen `get_plates` read that answers while a Transfer is
   running. A test calls it through `ExecuteCommand` during a transfer. This is a cross-repo
   precondition (contract: `research/FAST-GET-PLATES-CONTRACT.md`).
-- [ ] **PLT-02**: `vendor/galago-tools` is re-pinned to that frozen commit. The interface diff is
+- [x] **PLT-02**: `vendor/galago-tools` is re-pinned to that frozen commit. The interface diff is
   exactly `GetPlates` plus oneof entry 11, and `Transfer.expected_tray_id = 13` is unchanged.
-- [ ] **PLT-03**: The operator picks `source_plate_id` and `dest_plate_id` from the registered
+- [x] **PLT-03**: The operator picks `source_plate_id` and `dest_plate_id` from the registered
   plates. The label shows the id and description, and the value is the numeric id.
 - [x] **PLT-04**: Plate entries whose id is not an integer ≥ 1 are rejected, never truncated.
   Duplicate ids are flagged. An unset plate is never saved as `0`.
-- [ ] **PLT-05**: `get_plates` never appears as a protocol step or a tool-page command.
-- [ ] **PLT-06**: `source_deck` and `dest_deck` are dropdowns of deck slots 1-6 (the tool server's
+- [x] **PLT-05**: `get_plates` never appears as a protocol step or a tool-page command.
+- [x] **PLT-06**: `source_deck` and `dest_deck` are dropdowns of deck slots 1-6 (the tool server's
   `_DECK_SLOTS`). They start empty, a saved value is kept verbatim, and this needs no `get_plates`.
-- [ ] **PLT-07**: `tip_reuse` is a "Reuse tips" checkbox: checked sends `reuse`, unchecked sends
+- [x] **PLT-07**: `tip_reuse` is a "Reuse tips" checkbox: checked sends `reuse`, unchecked sends
   `fresh`. A new step starts checked (`reuse`) — a deliberate user decision (2026-11-06), the one
   default allowed on a Transfer field. The wire stays the same string, so saved protocols load
   unchanged: a saved `fresh` shows unchecked, and a saved blank or other value is kept verbatim and
@@ -88,7 +88,7 @@ on its own, and never preselects a physical decision for the operator.
     Clear selection empties both grids and all six fields.
   - Nothing is selected at start. Keyboard use goes through the typed fields, so the grid itself
     needs no keyboard navigation.
-- [ ] **PLT-09**: A block that does not fit the chosen plate (start or extent past `rowCount` /
+- [x] **PLT-09**: A block that does not fit the chosen plate (start or extent past `rowCount` /
   `colCount`), or a saved row label the grid cannot show, is flagged and never clipped or rewritten.
   When the source and destination plates differ in size (for example 8x12 vs 16x24), the destination
   grid shows a size-mismatch warning instead of a footprint, because fast-mcp `build_transfer` refuses
@@ -190,15 +190,15 @@ the protocol surface and run page, as waves inside one phase.
 | STK-06 | Phase 6 | Complete |
 | STK-07 | Phase 6 | Complete |
 | STK-08 | Phase 6 | Complete |
-| PLT-01 | Phase 7 | Gaps Found |
-| PLT-02 | Phase 7 | Gaps Found |
-| PLT-03 | Phase 7 | Gaps Found |
+| PLT-01 | Phase 7 | Complete |
+| PLT-02 | Phase 7 | Complete |
+| PLT-03 | Phase 7 | Complete |
 | PLT-04 | Phase 7 | Complete |
-| PLT-05 | Phase 7 | Gaps Found |
-| PLT-06 | Phase 7 | Gaps Found |
-| PLT-07 | Phase 7 | Gaps Found |
+| PLT-05 | Phase 7 | Complete |
+| PLT-06 | Phase 7 | Complete |
+| PLT-07 | Phase 7 | Complete |
 | PLT-08 | Phase 7 | Complete |
-| PLT-09 | Phase 7 | Gaps Found |
+| PLT-09 | Phase 7 | Complete |
 | LAN-01 | Phase 8 | Pending |
 | LAN-02 | Phase 8 | Pending |
 | LAN-03 | Phase 8 | Pending |
