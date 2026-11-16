@@ -15,6 +15,8 @@ services:
       - PORT=3010
       - GRPC_SERVER_IP=host.docker.internal
       - GRPC_HOST=host.docker.internal
+    extra_hosts:
+      - "host.docker.internal:host-gateway" # Linux: reach tool servers on the host
     stdin_open: true # for debugging
     tty: true # for debugging
     #network_mode: "host"
