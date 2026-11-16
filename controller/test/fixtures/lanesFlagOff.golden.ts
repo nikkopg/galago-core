@@ -205,4 +205,240 @@ export const GOLDEN_TRANSCRIPTS: Record<string, unknown> = {
     ],
     error: null,
   },
+  S2: {
+    actions: [
+      {
+        level: "info",
+        action: "Queue Started",
+        details:
+          "Command Queue started by user. Will run 2 queued steps from 1 run. Queue order: queueId=1 runId=run-2 status=CREATED; queueId=2 runId=run-2 status=CREATED",
+      },
+      {
+        level: "info",
+        action: "Tool Command Execution",
+        details: 'Executing command: transfer, Tool: stack-1, Params:"tag":"f1"',
+      },
+      {
+        level: "error",
+        action: "Tool Command Execution Error",
+        details:
+          'Failed to execute command: transfer, Tool: stack-1. Error: Invalid arguments provided for command "transfer". Check the parameters and try again. Tool said: bad nest (Code: INVALID_ARGUMENTS)',
+      },
+      {
+        level: "error",
+        action: "Command Failed",
+        details:
+          'Command failed: Invalid arguments provided for command "transfer". Check the parameters and try again. Tool said: bad nest',
+      },
+      {
+        level: "info",
+        action: "Queue Started",
+        details:
+          "Command Queue started by user. Will run 2 queued steps from 1 run; 1 failed before and will be retried first. Queue order: queueId=1 runId=run-2 status=FAILED; queueId=2 runId=run-2 status=CREATED",
+      },
+      {
+        level: "info",
+        action: "Tool Command Execution",
+        details: 'Executing command: transfer, Tool: stack-1, Params:"tag":"f1"',
+      },
+      {
+        level: "info",
+        action: "Command Executed",
+        details: "Command executed successfully.",
+      },
+      {
+        level: "info",
+        action: "Tool Command Execution",
+        details: 'Executing command: transfer, Tool: stack-1, Params:"tag":"f2"',
+      },
+      {
+        level: "info",
+        action: "Command Executed",
+        details: "Command executed successfully.",
+      },
+      {
+        level: "info",
+        action: "Queue stopped",
+        details: "Queue stopped.",
+      },
+    ],
+    states: [
+      "CommandQueue state: READY (was OFFLINE)",
+      "CommandQueue state: BUSY (was READY)",
+      "CommandQueue state: FAILED (was BUSY)",
+      "CommandQueue state: READY (was FAILED)",
+      "CommandQueue state: READY (was READY)",
+      "CommandQueue state: BUSY (was READY)",
+      "CommandQueue state: OFFLINE (was BUSY)",
+      "CommandQueue state: OFFLINE (was OFFLINE)",
+    ],
+    dispatched: [
+      {
+        toolId: "stack-1",
+        command: "transfer",
+        params: {
+          tag: "f1",
+        },
+      },
+      {
+        toolId: "stack-1",
+        command: "transfer",
+        params: {
+          tag: "f1",
+        },
+      },
+      {
+        toolId: "stack-1",
+        command: "transfer",
+        params: {
+          tag: "f2",
+        },
+      },
+    ],
+    grpcSends: [
+      {
+        stack: {
+          transfer: {
+            tag: "f1",
+          },
+        },
+      },
+      {
+        stack: {
+          transfer: {
+            tag: "f1",
+          },
+        },
+      },
+      {
+        stack: {
+          transfer: {
+            tag: "f2",
+          },
+        },
+      },
+    ],
+    midStep: null,
+    rows: [
+      {
+        queueId: 1,
+        runId: "run-2",
+        status: "COMPLETED",
+      },
+      {
+        queueId: 2,
+        runId: "run-2",
+        status: "COMPLETED",
+      },
+    ],
+    error: null,
+  },
+  S3: {
+    actions: [
+      {
+        level: "info",
+        action: "Queue Started",
+        details:
+          "Command Queue started by user. Will run 2 queued steps from 1 run. Queue order: queueId=1 runId=run-3 status=CREATED; queueId=2 runId=run-3 status=CREATED",
+      },
+      {
+        level: "info",
+        action: "Tool Command Execution",
+        details: 'Executing command: transfer, Tool: fast-1, Params:"tag":"p1"',
+      },
+      {
+        level: "warning",
+        action: "Queue Start Ignored",
+        details:
+          "A queue start was ignored because the queue is already running; nothing was dispatched again. source=operator inFlightQueueId=1 inFlightRunId=run-3 state=OFFLINE",
+      },
+      {
+        level: "info",
+        action: "Command Executed",
+        details: "Command executed successfully.",
+      },
+      {
+        level: "info",
+        action: "Queue stopped",
+        details: "Queue stopped.",
+      },
+      {
+        level: "info",
+        action: "Queue Started",
+        details:
+          "Command Queue started by user. Will run 1 queued step from 1 run. Queue order: queueId=2 runId=run-3 status=CREATED",
+      },
+      {
+        level: "info",
+        action: "Tool Command Execution",
+        details: 'Executing command: transfer, Tool: stack-1, Params:"tag":"p2"',
+      },
+      {
+        level: "info",
+        action: "Command Executed",
+        details: "Command executed successfully.",
+      },
+      {
+        level: "info",
+        action: "Queue stopped",
+        details: "Queue stopped.",
+      },
+    ],
+    states: [
+      "CommandQueue state: READY (was OFFLINE)",
+      "CommandQueue state: BUSY (was READY)",
+      "CommandQueue state: OFFLINE (was BUSY)",
+      "CommandQueue state: OFFLINE (was OFFLINE)",
+      "CommandQueue state: READY (was OFFLINE)",
+      "CommandQueue state: BUSY (was READY)",
+      "CommandQueue state: OFFLINE (was BUSY)",
+      "CommandQueue state: OFFLINE (was OFFLINE)",
+    ],
+    dispatched: [
+      {
+        toolId: "fast-1",
+        command: "transfer",
+        params: {
+          tag: "p1",
+        },
+      },
+      {
+        toolId: "stack-1",
+        command: "transfer",
+        params: {
+          tag: "p2",
+        },
+      },
+    ],
+    grpcSends: [
+      {
+        fast: {
+          transfer: {
+            tag: "p1",
+          },
+        },
+      },
+      {
+        stack: {
+          transfer: {
+            tag: "p2",
+          },
+        },
+      },
+    ],
+    midStep: null,
+    rows: [
+      {
+        queueId: 1,
+        runId: "run-3",
+        status: "COMPLETED",
+      },
+      {
+        queueId: 2,
+        runId: "run-3",
+        status: "COMPLETED",
+      },
+    ],
+    error: null,
+  },
 };

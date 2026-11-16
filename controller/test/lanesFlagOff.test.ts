@@ -6,7 +6,7 @@ import { execSync } from "node:child_process";
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { ToolType } from "gen-interfaces/controller";
-import { ResponseCode } from "gen-interfaces/tools/grpc_interfaces/tool_base";
+import { ResponseCode, ToolStatus } from "gen-interfaces/tools/grpc_interfaces/tool_base";
 import { CommandQueue } from "@/server/command_queue";
 import Tool from "@/server/tools";
 import { logAction } from "@/server/logger";
@@ -219,6 +219,41 @@ const SCENARIOS: Record<string, (ctx: Ctx) => Promise<void>> = {
     await ctx.until(() => queue.isWaitingForInput);
     queue.resume();
     await ctx.settle(p);
+  },
+
+  // A step fails with INVALID_ARGUMENTS, clearError, then an operator Start retries it.
+  S2: async (ctx) => {
+    const { queue } = ctx;
+    ctx.reply("stack-1", 0, {
+      response: ResponseCode.INVALID_ARGUMENTS,
+      error_message: "bad nest",
+    });
+    await ctx.push(stack("run-2", "f1"), stack("run-2", "f2"));
+
+    const p1 = ctx.start();
+    await ctx.until(() => queue.state === ToolStatus.FAILED);
+    await ctx.settle(p1);
+    await queue.clearError();
+    const p2 = ctx.start();
+    await ctx.settle(p2);
+  },
+
+  // Pause queue while a step is in flight, an ignored Start, then a Start after the step ends.
+  S3: async (ctx) => {
+    const { queue } = ctx;
+    const held = deferred<any>();
+    ctx.hold("fast-1", 0, held.promise);
+    await ctx.push(fast("run-3", "p1"), stack("run-3", "p2"));
+
+    const p1 = ctx.start();
+    await ctx.until(() => queue.runningStep?.toolId === "fast-1");
+    const stopP = queue.stop();
+    await queue._start();
+    held.resolve(OK);
+    await ctx.settle(p1);
+    await ctx.settle(stopP);
+    const p2 = ctx.start();
+    await ctx.settle(p2);
   },
 };
 
