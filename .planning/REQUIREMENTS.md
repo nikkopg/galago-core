@@ -106,7 +106,7 @@ on its own, and never preselects a physical decision for the operator.
   start until they finish. An untagged step waits for everything before it, as today.
 - [x] **LAN-04**: Each lane has its own single-flight Start guard. A Start never dispatches a row
   that is already in flight (the F5 guarantee, per lane).
-- [ ] **LAN-05**: When any step on any lane fails, new dispatch stops on every lane. Steps already
+- [x] **LAN-05**: When any step on any lane fails, new dispatch stops on every lane. Steps already
   running are never aborted, and only the operator's Start clears the halt.
 - [x] **LAN-06**: A modal on the primary lane (a form, a prompt or a pause) stops new dispatch on
   every lane. Non-tool steps run on the primary lane only.
@@ -203,7 +203,7 @@ the protocol surface and run page, as waves inside one phase.
 | LAN-02 | Phase 8 | Complete |
 | LAN-03 | Phase 8 | Complete |
 | LAN-04 | Phase 8 | Complete |
-| LAN-05 | Phase 8 | Pending |
+| LAN-05 | Phase 8 | Complete |
 | LAN-06 | Phase 8 | Complete |
 | LAN-07 | Phase 8 | Pending |
 | LAN-08 | Phase 8 | Pending |

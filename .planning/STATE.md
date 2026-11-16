@@ -5,16 +5,16 @@ milestone_name: Tool-inferred dropdowns + per-tool concurrency lanes
 current_phase: 8
 current_phase_name: Concurrency Lanes
 status: executing
-stopped_at: Completed 08-08-PLAN.md
-last_updated: "2026-11-16T13:51:43.667Z"
+stopped_at: Completed 08-05-PLAN.md
+last_updated: "2026-11-16T14:05:31.753Z"
 last_activity: 2026-11-16
 last_activity_desc: Phase 8 execution started
-state_head: 3f80ee9963642e40de89b90caebf3d9e1997b394
+state_head: fef17d3916d453802c6e1d822f805e176065c039
 progress:
   total_phases: 4
   completed_phases: 2
   total_plans: 25
-  completed_plans: 20
+  completed_plans: 21
   percent: 50
 ---
 
@@ -31,7 +31,7 @@ decides every recovery action; the web app never acts on its own or pre-selects 
 ## Current Position
 
 Phase: 8 (Concurrency Lanes) — EXECUTING
-Plan: 6 of 10
+Plan: 7 of 10
 Status: Ready to execute
 Last activity: 2026-11-16 — Phase 8 execution started
 
@@ -110,6 +110,7 @@ Progress: [█████░░░░░] 50% (2 of 4 v1.2 phases)
 | Phase 8 P03 | 8 min | 2 tasks | 4 files |
 | Phase 08 P04 | 20 min | 3 tasks | 5 files |
 | Phase 08 P08 | 22 min | 3 tasks | 7 files |
+| Phase 08 P05 | 50 min | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -201,6 +202,10 @@ Recent decisions affecting current work:
 - [Phase 08]: Lane runs are remembered in _laneRunIds so every step of a lane run is audited as Lane Step Dispatched
 - [Phase 08]: 08-08: lane-aware deriveRunOutcome is a separate branch taken only when a row has a non-primary lane; untagged path unedited
 - [Phase 08]: 08-08: buildLaneSummary returns {groups:[],warnings} (not null) when a bad lane tag leaves all steps primary but validateLanes refuses; 08-10 must render warnings with empty groups
+- [Phase 08]: Lane-halt latch is its own field, not a queue state: only an accepted operator Start clears it; resume, clearError, clearAll, stop and the enqueue auto-start leave it
+- [Phase 08]: A failure overrides a freeze; a failure then a freeze returns frozen false and logs Lanes Freeze Ignored
+- [Phase 08]: Modal is read live in the dispatch gate rather than latched; laneStatus reports it as haltReason modal when no latch is set
+- [Phase 08]: Lane supervisor catch lists its failure with queueId 0 (no step known) so an unexpected loop failure is still latched and listed
 
 ### Pending Todos
 
@@ -268,8 +273,8 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-16T13:51:43.609Z
-Stopped at: Completed 08-08-PLAN.md
+Last session: 2026-11-16T14:05:31.694Z
+Stopped at: Completed 08-05-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
