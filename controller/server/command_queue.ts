@@ -937,7 +937,25 @@ export class CommandQueue {
     });
   }
 
+  // A re-queue resets rows to CREATED, including a STARTED side-lane row, which would send
+  // that step to its instrument again (D-23). Refused while any side-lane step runs.
+  private _refuseGotoWhileLaneStepRuns(target: string): void {
+    if (!this._laneMode || this._sideRunning.size === 0) return;
+    const lanes = [...this._sideRunning.entries()]
+      .map(([lane, step]) => `${lane}:${step.queueId}`)
+      .join(",");
+    logAction({
+      level: "warning",
+      action: "Queue Goto Refused",
+      details: sanitizeLogText(`target=${target} runningSideLanes=${lanes}`),
+    });
+    throw new Error(
+      "Go to is refused while a lane step is running: it would send that step again. Wait for the lane step to end.",
+    );
+  }
+
   async gotoCommand(commandId: number) {
+    this._refuseGotoWhileLaneStepRuns(`commandId=${commandId}`);
     // An operator re-queue supersedes any pending stale abort reply (T-01-08).
     this._failedAttempt = undefined;
     try {
@@ -962,6 +980,7 @@ export class CommandQueue {
 
   // Add this method to CommandQueue class
   async gotoCommandByRunIndex(runId: string, index: number): Promise<boolean> {
+    this._refuseGotoWhileLaneStepRuns(`runId=${runId} index=${index}`);
     // An operator re-queue supersedes any pending stale abort reply (T-01-08).
     this._failedAttempt = undefined;
     try {
@@ -1432,10 +1451,16 @@ export class CommandQueue {
       this._sideAbortAccepted.delete(picked.queueId);
       this._sideFailedAttempts.delete(picked.queueId);
       this._sideRunning.set(lane, attempt);
+      // Only a controllable step is polled; the eligibility rule keeps that to one step at a
+      // time, so the single monitor never has two owners (D-11).
+      if (getRunControl(String(attempt.toolType)) !== undefined) {
+        this._runStateMonitor.start(attempt);
+      }
       try {
         try {
           await this.executeCommand(picked);
         } finally {
+          this._runStateMonitor.stopIf(attempt.queueId);
           this._sideRunning.delete(lane);
         }
         logAction({
@@ -1962,11 +1987,24 @@ export class CommandQueue {
           startedAt: Date.now(),
         });
         this._runningStep = attempt;
-        this._runStateMonitor.start(this._runningStep);
+        // Lane mode starts the poller only for a controllable step and ends it by queueId, so
+        // a STACK step never stops the F.A.S.T. poller of another lane (D-11, Pitfall 13).
+        // With the flag off the literal start and stop are unchanged.
+        if (this._laneMode) {
+          if (getRunControl(String(attempt.toolType)) !== undefined) {
+            this._runStateMonitor.start(attempt);
+          }
+        } else {
+          this._runStateMonitor.start(this._runningStep);
+        }
         try {
           await this.executeCommand(nextCommand);
         } finally {
-          this._runStateMonitor.stop();
+          if (this._laneMode) {
+            this._runStateMonitor.stopIf(attempt.queueId);
+          } else {
+            this._runStateMonitor.stop();
+          }
           this._runningStep = undefined;
         }
 
