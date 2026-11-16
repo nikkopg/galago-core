@@ -120,12 +120,12 @@ on its own, and never preselects a physical decision for the operator.
 
 ### Lane protocol surface and run page (LUI)
 
-- [ ] **LUI-01**: In the visual protocol editor the operator can tag a tool step with a lane and a
+- [x] **LUI-01**: In the visual protocol editor the operator can tag a tool step with a lane and a
   barrier or dependency.
 - [ ] **LUI-02**: A script protocol can tag steps with `galago.lane(...)` and declare dependencies.
 - [x] **LUI-03**: Run creation refuses invalid lane setups with a clear error: a cycle, a non-tool
   step on a secondary lane, or one tool on two lanes.
-- [ ] **LUI-04**: The preview and the Start confirmation list the steps per lane.
+- [x] **LUI-04**: The preview and the Start confirmation list the steps per lane.
 - [x] **LUI-05**: The run page shows each lane's steps in order, with their own statuses and
   timestamps, and the run outcome takes every lane into account.
 - [x] **LUI-06**: The error banner lists each lane's failure. The first failure keeps the STACK
@@ -208,10 +208,10 @@ the protocol surface and run page, as waves inside one phase.
 | LAN-07 | Phase 8 | Complete |
 | LAN-08 | Phase 8 | Complete |
 | LAN-09 | Phase 8 | Complete |
-| LUI-01 | Phase 8 | Pending |
+| LUI-01 | Phase 8 | Complete |
 | LUI-02 | Phase 8 | Pending |
 | LUI-03 | Phase 8 | Complete |
-| LUI-04 | Phase 8 | Pending |
+| LUI-04 | Phase 8 | Complete |
 | LUI-05 | Phase 8 | Complete |
 | LUI-06 | Phase 8 | Complete |
 | LIV-01 | Phase 9 | Pending |

@@ -4,17 +4,17 @@ milestone: v1.2
 milestone_name: Tool-inferred dropdowns + per-tool concurrency lanes
 current_phase: 8
 current_phase_name: Concurrency Lanes
-status: executing
-stopped_at: Completed 08-09-PLAN.md
-last_updated: "2026-11-16T14:28:51.115Z"
+status: verifying
+stopped_at: Completed 08-10-PLAN.md
+last_updated: "2026-11-16T14:35:21.507Z"
 last_activity: 2026-11-16
 last_activity_desc: Phase 8 execution started
-state_head: ce1c93251b7cf2af84a10a0de61da574df8f6efd
+state_head: 849e6e3a0ba00e504c65da37599d7701e7aba7bd
 progress:
   total_phases: 4
   completed_phases: 2
   total_plans: 25
-  completed_plans: 24
+  completed_plans: 25
   percent: 50
 ---
 
@@ -32,7 +32,7 @@ decides every recovery action; the web app never acts on its own or pre-selects 
 
 Phase: 8 (Concurrency Lanes) — EXECUTING
 Plan: 10 of 10
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-11-16 — Phase 8 execution started
 
 Progress: [█████░░░░░] 50% (2 of 4 v1.2 phases)
@@ -114,6 +114,7 @@ Progress: [█████░░░░░] 50% (2 of 4 v1.2 phases)
 | Phase 08 P07 | 12 min | 2 tasks | 9 files |
 | Phase 08 P06 | 35 min | 3 tasks | 4 files |
 | Phase 08 P09 | 10min | 3 tasks | 7 files |
+| Phase 08 P10 | 8 min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -213,6 +214,8 @@ Recent decisions affecting current work:
 - [Phase 08]: 08-06: runningStepFor reads the primary slot through the runningStep getter so recoveryControl tests pass unedited; side-lane abort markers are per queueId and never touch the legacy primary fields
 - [Phase 08]: 08-06: lane-mode run-state monitor starts only for a controllable step and ends with stopIf(queueId); goto mutations refuse while a side-lane step runs
 - [Phase 08]: 08-09: Freeze lanes is a Chakra AlertDialog in LanesPanel (focus on Keep lanes running via leastDestructiveRef); lane UI renders nothing on loading or failed laneStatus reads
+- [Phase 08]: 08-10: drawer lane controls fed by optional protocolCommands prop; run-page drawer passes none (read-only, no flags)
+- [Phase 08]: 08-10: script preview falls back to legacy list when lane summary has no groups; sentences still shown via laneWarnings
 
 ### Pending Todos
 
@@ -280,8 +283,8 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-16T14:28:51.053Z
-Stopped at: Completed 08-09-PLAN.md
+Last session: 2026-11-16T14:35:21.445Z
+Stopped at: Completed 08-10-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

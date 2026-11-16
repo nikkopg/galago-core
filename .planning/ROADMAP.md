@@ -138,7 +138,7 @@ without aborting anything. Waves: lane engine first, then protocol surface and r
   2. Any failure, a primary-lane modal or the operator's run-page freeze control stops new dispatch on every lane, and control, Stop and recovery still work on any lane.
   3. The operator can author lane-tagged protocols, is refused invalid setups, and sees per-lane steps, outcome and failures in the preview, Start confirmation and run page.
 
-**Plans**: 9/10 plans executed
+**Plans**: 10/10 plans executed
 Plans:
 **Wave 1** *(golden first: committed before any production edit)*
 - [x] 08-01-PLAN.md — Golden transcript of today's queue (S0-S3) captured at the unmodified commit (LAN-01, D-09)
@@ -160,7 +160,7 @@ Plans:
 - [x] 08-09-PLAN.md — Run page: Lanes panel with Freeze lanes, banner failure list, per-lane rows with timestamps, per-lane Start confirmation
 
 **Wave 6** *(blocked on Wave 5 completion)*
-- [ ] 08-10-PLAN.md — Drawer Lane/barrier controls, per-lane preview with warnings, phase gate
+- [x] 08-10-PLAN.md — Drawer Lane/barrier controls, per-lane preview with warnings, phase gate
 
 **UI hint**: yes
 **Settle in discuss**: D1, D2, D3, D4, D9, D12 (D3 includes the freeze control and its run-page button).
@@ -187,7 +187,7 @@ resolution is recorded.
 |-------|----------------|--------|-----------|
 | 6. STACK Dropdowns | 5/5 | Complete    | 2026-11-06 |
 | 7. F.A.S.T. Plate Dropdowns | 10/10 | Complete    | 2026-11-16 |
-| 8. Concurrency Lanes | 9/10 | In Progress | - |
+| 8. Concurrency Lanes | 10/10 | In Progress | - |
 | 9. Supervised Live Two-Tool Proof | 0/TBD | Not started | - |
 
 ## Backlog
