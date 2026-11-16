@@ -17,6 +17,8 @@ services:
       - TOOLBOX_PORT=${TOOLBOX_PORT:-1010}
       - GRPC_SERVER_IP=localhost
       - GRPC_HOST=host.docker.internal
+      # Parallel tool lanes (Phase 8): "1" turns them on; unset or anything else = off
+      - GALAGO_PARALLEL_LANES=${GALAGO_PARALLEL_LANES:-}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     networks:

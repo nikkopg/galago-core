@@ -1,6 +1,7 @@
 import * as vm from "vm";
-import { ToolCommandInfo } from "@/types";
+import { AdvancedParameters, ToolCommandInfo } from "@/types";
 import { logAction } from "@/server/logger";
+import { normalizeLane, PRIMARY_LANE } from "@/server/laneScheduling";
 
 export interface ScriptExecutionResult {
   commands: ToolCommandInfo[];
@@ -16,19 +17,50 @@ export async function executeProtocolScript(
 ): Promise<ScriptExecutionResult> {
   const commands: ToolCommandInfo[] = [];
   const logs: string[] = [];
+  // Sticky lane set by galago.lane(); undefined means the primary lane (D-19).
+  let currentLane: string | undefined;
 
   const galago = {
-    command(toolId: string, command: string, cmdParams: Record<string, any> = {}) {
+    // Sets the lane for later galago.command calls. Blank or "primary" resets it.
+    lane(name?: string) {
+      const normalised = normalizeLane(name);
+      currentLane = normalised === PRIMARY_LANE ? undefined : normalised;
+    },
+
+    command(
+      toolId: string,
+      command: string,
+      cmdParams: Record<string, any> = {},
+      opts: { lane?: string; barrier?: boolean } = {},
+    ) {
+      // Tool Box helpers never inherit the sticky lane (D-19); an explicit per-call
+      // lane is still honoured so validation can refuse it with a clear sentence.
+      const effectiveLane =
+        opts.lane !== undefined
+          ? normalizeLane(opts.lane)
+          : toolId === "Tool Box"
+            ? undefined
+            : currentLane;
+
+      // lane / laneBarrier are written only when set, never as undefined, "" or false.
+      const advancedParameters: AdvancedParameters = {
+        skipExecutionVariable: { variable: null, value: "" },
+        runAsynchronously: false,
+      };
+      if (effectiveLane !== undefined && effectiveLane !== PRIMARY_LANE) {
+        advancedParameters.lane = effectiveLane;
+      }
+      if (opts.barrier === true) {
+        advancedParameters.laneBarrier = true;
+      }
+
       commands.push({
         toolId,
         toolType: "unknown" as any,
         command,
         params: cmdParams,
         label: "",
-        advancedParameters: {
-          skipExecutionVariable: { variable: null, value: "" },
-          runAsynchronously: false,
-        },
+        advancedParameters,
       });
     },
 

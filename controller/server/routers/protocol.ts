@@ -6,6 +6,7 @@ import { protocols, workcells } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { zProtocolParameter } from "@/protocols/params";
+import type { ToolCommandInfo } from "@/types";
 
 const zProtocolCreate = z.object({
   name: z.string(),
@@ -259,6 +260,17 @@ export const protocolRouter = router({
       const { executeProtocolScript } = await import("@/server/scripting/protocol-script-executor");
       const { resolveToolTypes } = await import("@/server/scripting/resolve-tool-types");
 
+      // Lane warnings (D-17, D-26): the creation-time messages when lane mode is on, the
+      // single inert line when it is off and tags exist, otherwise none.
+      const computeLaneWarnings = async (commands: ToolCommandInfo[]): Promise<string[]> => {
+        const { default: CommandQueue } = await import("@/server/command_queue");
+        const { validateLanes, hasLaneTags, LANE_TAGS_IGNORED_WARNING } = await import(
+          "@/server/laneScheduling"
+        );
+        if (CommandQueue.global.laneMode === true) return validateLanes(commands);
+        return hasLaneTags(commands) ? [LANE_TAGS_IGNORED_WARNING] : [];
+      };
+
       const result = await executeProtocolScript(input.scriptContent, input.params || {});
 
       if (!result.success) {
@@ -268,6 +280,7 @@ export const protocolRouter = router({
           logs: result.logs,
           commands: [],
           commandCount: 0,
+          laneWarnings: [] as string[],
         };
       }
 
@@ -278,6 +291,7 @@ export const protocolRouter = router({
           commands: resolved,
           commandCount: resolved.length,
           logs: result.logs,
+          laneWarnings: await computeLaneWarnings(resolved),
         };
       } catch (error: any) {
         return {
@@ -286,6 +300,7 @@ export const protocolRouter = router({
           logs: result.logs,
           commands: result.commands,
           commandCount: result.commands.length,
+          laneWarnings: await computeLaneWarnings(result.commands),
         };
       }
     }),

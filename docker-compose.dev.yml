@@ -15,6 +15,8 @@ services:
       - PORT=3010
       - GRPC_SERVER_IP=host.docker.internal
       - GRPC_HOST=host.docker.internal
+      # Parallel tool lanes (Phase 8): "1" turns them on; unset or anything else = off
+      - GALAGO_PARALLEL_LANES=${GALAGO_PARALLEL_LANES:-}
     extra_hosts:
       - "host.docker.internal:host-gateway" # Linux: reach tool servers on the host
     stdin_open: true # for debugging
