@@ -9,7 +9,7 @@ findings:
     title: "Non-canonical `laneBarrier` / `lane` values are silently ignored and are not rejected by `validateLanes`"
   - id: WR-02
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "A row can be left STARTED with no owner when an exception escapes between the claim and the step's `try`"
   - id: WR-03
     severity: warning
@@ -25,7 +25,7 @@ findings:
     title: "The first entry of the failure list is assumed to be the banner error, which is false after `clearError()`"
   - id: WR-06
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "`gotoCommand` and `gotoCommandByRunIndex` no longer supersede a pending late abort reply for a failed side-lane attempt"
   - id: IN-01
     severity: info
@@ -47,11 +47,11 @@ findings:
     severity: info
     disposition: open
     title: "The per-lane start summary numbers steps by queue position, not by protocol position"
-open: 11
+open: 9
 total: 11
 recorded: 2026-11-16T18:00:31.000Z
 ---
 
 # Phase 08 — Code Review Disposition
 
-All 11 findings from 08-REVIEW.md are recorded as `open` (0 critical, 6 warning, 5 info). None violates a lane-engine safety invariant; they are candidates for a follow-up fix pass (`/gsd-code-review 8 --fix`).
+WR-02 and WR-06 are `fixed` (regression tests in `controller/test/laneReviewFixes.test.ts`); the other 9 findings from 08-REVIEW.md are recorded as `open` (0 critical, 6 warning, 5 info). None violates a lane-engine safety invariant; they are candidates for a follow-up fix pass (`/gsd-code-review 8 --fix`).
