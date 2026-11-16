@@ -3,6 +3,8 @@
 // lands on a fake gRPC endpoint, so no instrument can move. Ordering is gated on deferreds and
 // tick(), never wall time.
 import { describe, it, expect, afterEach, vi } from "vitest";
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { ResponseCode, ToolStatus } from "gen-interfaces/tools/grpc_interfaces/tool_base";
 import Tool from "@/server/tools";
 import { logAction } from "@/server/logger";
@@ -506,5 +508,73 @@ describe("goto refusal while a side-lane step runs (D-23, T-08-19)", () => {
     const rows = await h.queue.commands.all();
     await expect(h.queue.gotoCommand(rows[1].queueId)).resolves.toBe(true);
     expect(logs("Queue Goto Refused")).toHaveLength(0);
+  });
+});
+
+// Source pins: the control path stays one send path, lane-aware and free of state checks.
+function readSource(relative: string): string {
+  const text = readFileSync(path.join(process.cwd(), relative), "utf8");
+  // Line comments are removed so a pin never matches prose.
+  return text.replace(/^\s*\/\/.*$/gm, "");
+}
+
+function bracedRegion(source: string, startPattern: RegExp): string {
+  const match = startPattern.exec(source);
+  if (!match) return "";
+  const open = source.indexOf("{", source.indexOf(")", match.index));
+  let depth = 0;
+  for (let i = open; i < source.length; i++) {
+    if (source[i] === "{") depth += 1;
+    if (source[i] === "}") {
+      depth -= 1;
+      if (depth === 0) return source.slice(open, i + 1);
+    }
+  }
+  return "";
+}
+
+describe("lane control source pins (D-11)", () => {
+  const queueSrc = readSource("server/command_queue.ts");
+
+  it("toolControl resolves its target with _controlTarget and gates identity with _isRunning", () => {
+    const body = bracedRegion(queueSrc, /async toolControl\(/);
+    expect(body.length).toBeGreaterThan(0);
+    expect(body).toContain("this._controlTarget()");
+    expect(body).toContain("this._isRunning(");
+    expect(body).not.toContain("this._runningStep");
+  });
+
+  it("command_queue.ts keeps exactly one .controlCommand( send", () => {
+    expect(queueSrc.match(/\.controlCommand\(/g)).toHaveLength(1);
+  });
+
+  it("_recordAcceptedAbort reads the per-queueId side markers", () => {
+    const body = bracedRegion(queueSrc, /private async _recordAcceptedAbort\(/);
+    expect(body.length).toBeGreaterThan(0);
+    expect(body).toContain("_sideAbortAccepted");
+    expect(body).toContain("_sideFailedAttempts");
+  });
+
+  it("both dispatch brackets end the poller with stopIf in lane mode and keep the literal stop with the flag off", () => {
+    expect(
+      queueSrc.match(/_runStateMonitor\.stopIf\(attempt\.queueId\)/g)?.length,
+    ).toBeGreaterThanOrEqual(2);
+    expect(queueSrc).toContain("this._runStateMonitor.stop();");
+    expect(queueSrc).toContain("this._runStateMonitor.start(this._runningStep);");
+  });
+
+  it("both goto mutations refuse first while a side-lane step runs", () => {
+    for (const pattern of [/async gotoCommand\(/, /async gotoCommandByRunIndex\(/]) {
+      const body = bracedRegion(queueSrc, pattern);
+      expect(body.trimStart().slice(1).trimStart()).toMatch(
+        /^this\._refuseGotoWhileLaneStepRuns\(/,
+      );
+    }
+  });
+
+  it("routers/tool.ts passes the running step for the tool from any lane", () => {
+    const routerSrc = readSource("server/routers/tool.ts");
+    expect(routerSrc).toContain("runningStepFor(record.name)");
+    expect(routerSrc).not.toMatch(/runningStep:\s*CommandQueue\.global\.runningStep,/);
   });
 });
