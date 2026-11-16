@@ -149,6 +149,14 @@ export default class SqliteQueue {
     return command;
   }
 
+  // Called by the lane picker in the same synchronous turn as the eligibility check;
+  // excludes STARTED rows, the F5 guarantee per lane. startNext stays the flag-off
+  // path and is not changed.
+  claimEligible(queueId: number): StoredRunCommand | false {
+    void queueId;
+    return false;
+  }
+
   async gotoCommandByIndex(runId: string, targetIndex: number): Promise<boolean> {
     const db = this.db;
 
