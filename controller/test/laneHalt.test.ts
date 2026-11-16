@@ -191,10 +191,14 @@ describe("who clears the latch (D-13, Pitfall 16)", () => {
     h = createLaneHarness();
     await h.push("r1", [
       fastStep("t1", { lane: "fast", barrier: true, params: { tag: "F1" } }),
+      stackStep("A"),
       toolBoxStep("pause", { params: { message: "hold on" } }),
       stackStep("B"),
     ]);
     h.start();
+    await h.tick(3);
+    expect(commandsOf(h).sort()).toEqual(["A", "t1"]);
+    h.finish(indexOfCall(h, "A"));
     await h.tick(4);
     expect(h.queue.isWaitingForInput).toBe(true);
     h.fail(indexOfCall(h, "t1"), new Error("boom g-1"));
@@ -206,7 +210,7 @@ describe("who clears the latch (D-13, Pitfall 16)", () => {
     expect(latchOf(h)?.reason).toBe("failure");
     expect(h.queue.state).toBe(ToolStatus.FAILED);
     await h.tick(60);
-    expect(commandsOf(h)).toEqual(["t1"]);
+    expect(commandsOf(h).sort()).toEqual(["A", "t1"]);
   });
 
   it("clearError turns FAILED into READY but leaves the latch", async () => {
@@ -275,12 +279,14 @@ describe("who clears the latch (D-13, Pitfall 16)", () => {
     expect(ignored).toHaveLength(1);
     expect(ignored[0].details).toContain("source=operator");
     expect(latchOf(h)?.reason).toBe("failure");
-    expect(failureListOf(h)).toHaveLength(1);
-    expect(h.queue.error?.message).toContain("boom g-1");
+    expect(h.calls()).toHaveLength(1);
 
     gate.resolve();
     await h.tick(4);
     expect(h.queue.state).toBe(ToolStatus.FAILED);
+    expect(h.queue.error?.message).toContain("boom g-1");
+    expect(failureListOf(h)).toHaveLength(1);
+    expect(latchOf(h)?.reason).toBe("failure");
     expect(h.calls()).toHaveLength(1);
   });
 

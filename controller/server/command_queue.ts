@@ -20,6 +20,7 @@ import {
   laneOf,
   pickEligible,
   toolKeyOf,
+  type LaneFailureEntry,
   type LaneGate,
 } from "./laneScheduling";
 import { RunStateMonitor, type RunStateEnvelope } from "./runState";
@@ -41,6 +42,18 @@ export interface CommandQueueOptions {
 
 // Returned by _pickNext when work remains but nothing is eligible yet (lane mode only).
 const WAIT = Symbol("lane-wait");
+
+// The failure list the run banner shows is bounded (D-16, T-08-15): this many entries,
+// then only a count of the rest.
+const LANE_FAILURE_CAP = 8;
+
+// Who failed, for the lane failure list. Passed only in lane mode.
+interface LaneFailureContext {
+  lane: string;
+  queueId: number;
+  toolId?: string;
+  toolType?: unknown;
+}
 
 export enum QueueState {
   PAUSED = "PAUSED",
@@ -131,6 +144,17 @@ export class CommandQueue {
   // Runs seen with a non-primary lane row, so every later step of such a run is audited
   // as a lane dispatch even after its tagged rows have drained. Emptied with the queue.
   private _laneRunIds = new Set<string>();
+  // The lane-halt latch (D-12, D-13, D-15). Set synchronously as the first statement of every
+  // failure catch (or by freezeLanes), read by the dispatch gate in the same synchronous turn
+  // as a claim. It is independent of the queue state, so a state that turns READY again
+  // (clearError, resume, enqueue auto-start) never re-arms dispatch: only an accepted operator
+  // Start clears it. A failure overrides a freeze.
+  private _laneHalt?: { reason: "failure" | "freeze"; queueId?: number; lane?: string; at: number };
+  // Every failure since the last operator Start, in time order (messages only, never a stack).
+  private _laneFailures: LaneFailureEntry[] = [];
+  private _laneFailureOverflow = 0;
+  // The lane of the failure that is the banner error, for the "additional failure" audit line.
+  private _bannerFailureLane?: string;
 
   // Message handling state variables
   private _isWaitingForInput: boolean = false;
@@ -488,9 +512,44 @@ export class CommandQueue {
 
   // The single place a failure is recorded: sets the error and bumps the seq in
   // failure order. Never clears, acknowledges or retries anything (ERR-04).
-  private _recordFailure(error: Error): void {
+  // In lane mode a failure with a context is also listed, and the first failure, which
+  // carries the STACK guid, stays the banner error: a later one never replaces it (D-16).
+  private _recordFailure(error: Error, ctx?: LaneFailureContext): void {
     this._failureSeq += 1;
+    if (this._laneMode && ctx) {
+      if (this._laneFailures.length < LANE_FAILURE_CAP) {
+        this._laneFailures.push({
+          lane: ctx.lane,
+          queueId: ctx.queueId,
+          toolId: ctx.toolId ?? "",
+          toolType: ctx.toolType === undefined ? "" : String(ctx.toolType),
+          message: error.message,
+          at: Date.now(),
+        });
+      } else {
+        this._laneFailureOverflow += 1;
+      }
+      if (this.error) {
+        logAction({
+          level: "warning",
+          action: "Lane Halt Additional Failure",
+          details: sanitizeLogText(
+            `firstLane=${this._bannerFailureLane ?? "unknown"} lane=${ctx.lane} queueId=${ctx.queueId} message=${error.message}`,
+          ),
+        });
+        return;
+      }
+      this._bannerFailureLane = ctx.lane;
+    }
     this.error = error;
+  }
+
+  // Closes dispatch on every lane. Synchronous on purpose: it runs as the first statement of a
+  // failure catch, before any await, so a lane that wakes during the failed step's own
+  // fail-the-row await still finds the gate shut (D-12, Pitfall 15). Nothing is aborted.
+  private _latchFailure(ctx: { queueId?: number; lane?: string }): void {
+    if (this._laneHalt?.reason === "failure") return;
+    this._laneHalt = { reason: "failure", ...ctx, at: Date.now() };
   }
 
   private async _ensureModalReady(): Promise<void> {
@@ -898,7 +957,7 @@ export class CommandQueue {
     this._messageResolve = undefined;
 
     // Clear any previous errors when resuming
-    if (this.error) {
+    if (this.error && !this._laneHalt) {
       console.log("Clearing error on resume");
       this.clearError();
     }
@@ -1028,14 +1087,14 @@ export class CommandQueue {
   }
 
   // The same failure handling _start's catch applies when a loop cannot run at all.
-  private _failStart(e: unknown): void {
+  private _failStart(e: unknown, ctx?: LaneFailureContext): void {
     logAction({
       level: "error",
       action: "Queue failed to start",
       details: "Error while starting the queue.: " + e,
     });
     const failure = e instanceof Error ? e : new Error("Execution failed");
-    this._recordFailure(failure);
+    this._recordFailure(failure, ctx);
     this._setState(ToolStatus.FAILED);
     // Not awaited (WR-01): the alert must not hold a loop slot.
     void this._notifyFailure({ error: failure });
@@ -1050,7 +1109,9 @@ export class CommandQueue {
       try {
         await body();
       } catch (e) {
-        this._failStart(e);
+        if (this._laneMode) this._latchFailure({ lane });
+        // No step is known here: queueId 0 stands for "no step".
+        this._failStart(e, { lane, queueId: 0 });
       } finally {
         if (this._laneLoops.get(lane) === supervisor) this._laneLoops.delete(lane);
         this._refreshRunningPromise();
@@ -1080,6 +1141,18 @@ export class CommandQueue {
   // between the per-lane guard and the _laneLoops registration (LAN-04).
   private async _startLanes(source: QueueStartSource): Promise<void> {
     try {
+      // Only an operator Start re-arms a halted queue (D-13): the auto-start after an enqueue
+      // launches nothing while the latch is set, and changes no state.
+      if (source === "enqueue" && this._laneHalt) {
+        logAction({
+          level: "warning",
+          action: "Queue Start Ignored",
+          details: sanitizeLogText(
+            `A queue start was ignored because the lanes are halted; nothing was dispatched. source=enqueue halted=true reason=${this._laneHalt.reason}`,
+          ),
+        });
+        return;
+      }
       const lanes = [PRIMARY_LANE, ...lanesWithWork(this.commands.queuedRowsSync())];
       const busyLanes = lanes.filter((lane) => this._laneLoops.has(lane));
 
@@ -1111,6 +1184,11 @@ export class CommandQueue {
       });
       this._setState(ToolStatus.READY);
       this.error = undefined;
+      // An accepted operator Start is the only thing that clears the halt and the failure list.
+      this._laneHalt = undefined;
+      this._laneFailures = [];
+      this._laneFailureOverflow = 0;
+      this._bannerFailureLane = undefined;
 
       // Recovery fails any STARTED row as an orphan of a dead process, so it must never
       // run while a lane loop of this process is alive (Pitfall 17e).
@@ -1167,16 +1245,18 @@ export class CommandQueue {
     return claimed;
   }
 
-  // The context pickEligible needs. `halted` and `modalOpen` are wired by the halt
-  // latch plan; the busy-tool set comes from memory, not from the stored rows, so a
-  // tool server whose running step was dequeued by an accepted abort stays busy.
+  // The context pickEligible needs. `halted` is the failure/freeze latch and `modalOpen` the
+  // primary-lane modal flag, both read synchronously here (D-12, D-14); a STARTED Tool Box row
+  // is handled by pickEligible itself. Nothing here reads run_state (D-15). The busy-tool set
+  // comes from memory, not from the stored rows, so a tool server whose running step was
+  // dequeued by an accepted abort stays busy.
   private _dispatchGate(): LaneGate {
     const running: Readonly<RunningStep>[] = [];
     if (this._runningStep) running.push(this._runningStep);
     for (const step of this._sideRunning.values()) running.push(step);
     return {
-      halted: false,
-      modalOpen: false,
+      halted: this._laneHalt !== undefined,
+      modalOpen: this._isWaitingForInput,
       busyToolKeys: new Set(running.map((step) => toolKeyOf(step.toolId))),
       controllableToolTypes: Object.keys(runControl),
       controllableRunning: running.some((step) => getRunControl(step.toolType) !== undefined),
@@ -1223,6 +1303,7 @@ export class CommandQueue {
           details: sanitizeLogText(`queueId=${picked.queueId} lane=${lane} outcome=completed`),
         });
       } catch (e) {
+        if (this._laneMode) this._latchFailure({ queueId: picked.queueId, lane });
         logger.error("Failed to execute lane command", e);
         const abortAccepted = this._sideAbortAccepted.delete(picked.queueId);
         // Synchronously, before the first await (T-01-08, layer b), like the primary catch.
@@ -1268,7 +1349,12 @@ export class CommandQueue {
         }
 
         const failure = e instanceof Error ? e : new Error("Execution failed");
-        this._recordFailure(failure);
+        this._recordFailure(failure, {
+          lane,
+          queueId: picked.queueId,
+          toolId: picked.commandInfo?.toolId,
+          toolType: picked.commandInfo?.toolType,
+        });
         this._setState(ToolStatus.FAILED);
 
         logAction({
@@ -1750,6 +1836,9 @@ export class CommandQueue {
         });
         logger.info("Command executed successfully");
       } catch (e) {
+        if (this._laneMode) {
+          this._latchFailure({ queueId: nextCommand.queueId, lane: PRIMARY_LANE });
+        }
         logger.error("Failed to execute command", e);
 
         // An accepted operator abort for this exact step must leave the
@@ -1812,7 +1901,17 @@ export class CommandQueue {
 
         // Set error state for UI to display
         const failure = e instanceof Error ? e : new Error("Execution failed");
-        this._recordFailure(failure);
+        this._recordFailure(
+          failure,
+          this._laneMode
+            ? {
+                lane: PRIMARY_LANE,
+                queueId: nextCommand.queueId,
+                toolId: nextCommand.commandInfo?.toolId,
+                toolType: nextCommand.commandInfo?.toolType,
+              }
+            : undefined,
+        );
         this._setState(ToolStatus.FAILED);
 
         logAction({
