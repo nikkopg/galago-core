@@ -27,7 +27,7 @@ in this file or under `evidence/` (runbook credential rule).
 | `FA100056.log` | 139686 lines, 4 "Running command", 1 "Running command Transfer" | baseline file |
 | Ledger | `~/.local/state/galago-tools/stack/stack-ledger.json`, sha256 `94892d6fdb184022ef3f453ef57f800dd4fab9703ccc75167cf4ec9b911ef68c`, 4 records (all `done`/`ran`, 2026-11-16 11:21Z to 11:25Z) | baseline file |
 | Image IDs (running, rollback anchor, new) | dev image `a331fa4d812a...` before and after (no build, no anchor); container `18b8638fc1c8` to `855c334135eb` (09-04, Deploy section) | Deploy section |
-| galago-core HEAD at each event | deploy: `486cf09` (09-04); drill: _pending_; event 1: _pending_; event 2: _pending_ | |
+| galago-core HEAD at each event | deploy: `486cf09` (09-04); drill: `2de6b0b` at the pre-drill-go baseline (09-06); event 1: _pending_; event 2: _pending_ | |
 | galago-tools SHA re-verified at each baseline | pre-spare-check: `d53da53` (above); others: _pending_ | |
 | Runbook SHA (galago-tools) after rows 3a-11..3a-15 | _pending (09-08, 09-12)_ | |
 
@@ -437,9 +437,33 @@ Read-back (D-18 verification):
 `uat-sim` is left selected. Nothing was imported, queued or started. 09-07 switches back to `test` (workcellId 1)
 before event 1; while `uat-sim` is selected pre-flight check 6 blocks, as expected.
 
+### Drill protocol import and pre-GO record (09-06 Task 1), 2026-11-17
+
+Imported by Claude into `uat-sim` only (D-10, D-18: Claude registers, the operator runs). The import only writes a
+protocol row; it sends nothing to any tool.
+
+| Item | Result |
+|------|--------|
+| Call | `POST /api/trpc/protocol.import` body `{"json":{"workcellId":3,"protocol":<the .protocol object of protocols/09-sim-drill.protocol.json>}}`, HTTP 200 at 08:59:40Z |
+| Reply | `evidence/20261117T085940Z-drill-import.json`: protocol id `8`, name "LIV-02 sim drill: lanes halt and freeze (uat-sim only)", `workcellId` 3, mode `script`, 24 parameters |
+| Workcell | `uat-sim` id 3 (`GET /api/settings/workcell` returns `uat-sim`); `GET /api/workcells` shows the drill protocol under uat-sim only; the real workcell `test` (id 1) still lists only protocol 4 "test" |
+| Tools in uat-sim | exactly `SIM-STACK` (id 9, `host.docker.internal:40091`) and `SIM-FAST` (id 10, `host.docker.internal:40092`), both stored `simulated:true`; `GET /api/tools` lists nothing else |
+| Real-name refusal (checked before import, T-09-23) | the script throws "the drill must not address a real tool" when `stack_tool` or `fast_tool` equals `STACK2-6` or `FA100056` (case-insensitive), before the first galago call; the parameter defaults are `SIM-STACK` and `SIM-FAST` |
+| Sim servers | SIM-STACK pid `23042` (port 40091) and SIM-FAST pid `23184` (port 40092), both still up (about 20 minutes), not restarted |
+| Real listeners | 8081 `6872`, 11010 `7490`, 40012 `7491`, 40001 `2320808`, all unchanged |
+| Baseline | `evidence/20261117T085943Z-pre-drill-go.baseline.txt`: diff against `20261117T085710Z-post-rig-config.baseline.txt` is only label, time and HEAD (`2de6b0b`). `STACK2-6.log` 12 Transfer (52 "Running command"), `FA100056.log` 1 Transfer (4), ledger sha256 `5de43c84...670b`, 9 records; `galago_core_controller_dirty_lines=0` |
+| Queue snapshot | `evidence/20261117T085944Z-pre-drill-go.queue.json`: `laneStatus` `laneMode:true`, `halted:false`, `queueBusy:false`, `runningLanes:[]`, `failures:[]`; `getAll` 6 rows, all `COMPLETED` (queueIds 27 to 32), no CREATED or STARTED row; `getAllRuns` 2 runs, both `CREATED` with no live rows (the same two stale runs recorded at deploy; nobody presses Start on them) |
+
+Operator note: those two stale `CREATED` runs belong to earlier work in the shared store. The drill run queued
+for scenario 1 is a new run (batch label `DRILL-S1`); the Start confirmation must list only the drill rows.
+
+### Drill GO (D-14)
+
+_Pending: the operator's literal typed reply and its UTC time are recorded here after the GO gate._
+
 ### Scenario 1
 
-_Pending (09-05 to 09-07)._
+_Pending (the operator runs it after the typed go)._
 
 ### Scenario 2
 
@@ -483,3 +507,5 @@ All files are under `evidence/`, named `<UTC stamp>-<label>.<kind>`.
 | `20261117T083845Z-post-sim-launch.baseline.txt`, `.tracefiles.txt` | baseline after the first sim launch (superseded by the relaunch) | 09-05 |
 | `20261117T083912Z-post-sim-relaunch.baseline.txt`, `.tracefiles.txt` | baseline after the sim relaunch with the fixed `start-sim`; real tools untouched | 09-05 |
 | `20261117T085710Z-post-rig-config.baseline.txt`, `.tracefiles.txt` | baseline after uat-sim and the two sim tools were configured; selected workcell uat-sim, real tools untouched | 09-05 |
+| `20261117T085940Z-drill-import.json` | protocol.import reply (protocol id 8 in uat-sim, id 3) | 09-06 |
+| `20261117T085943Z-pre-drill-go.baseline.txt`, `20261117T085944Z-pre-drill-go.queue.json` | pre-GO baseline and queue snapshot (halted false, no CREATED or STARTED row) | 09-06 |
