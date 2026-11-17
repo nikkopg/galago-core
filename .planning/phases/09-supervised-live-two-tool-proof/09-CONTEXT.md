@@ -45,8 +45,29 @@ change, any change to the tool servers' own discipline, upstream PRs.
   (plates 1 and 2's homes). The operator confirms reach at the GO gate. If no free, calibrated spare
   nest pair exists on the rig (`ListDevices` showed only nest-1 and nest-2 STACK-side on 2026-11-03),
   **stop and return to the user**. Don't fall back to another move without them.
+  - **Amendment (2026-11-17, user decision, recorded in 09-03):** the original rule found no spare pair
+    (one new nest, `nest-3`, only). The user amended D-02. The third 96 plate starts on
+    `nest-3/deck1/A1`. The overlap STACK move x1 is `nest-3/deck1/A1` to `nest-1/deck1/A1` during the
+    F.A.S.T. liquid leg; nest-1 is empty then because in1 already moved plate 1 to `fa100056/tray1/5`.
+    out1 becomes `fa100056/tray1/5` to `nest-3/deck1/A1` (not nest-1); out2 is unchanged
+    (`fa100056/tray1/6` to `nest-2/deck`/A1`, the deck name is a literal backtick). The overlap
+    destination may equal plate 1's home ONLY (never plate 2's home, never the F.A.S.T. side); the overlap
+    source is never a plate home and never on the F.A.S.T. side; out1's destination must equal the overlap
+    source. Safety basis: STACK legs serialize on the STACK lane, so x1 is sent only after in1 COMPLETED
+    and out1 only after x1 COMPLETED; a failed in1 or x1 halts the run. Evidence: estimates nest-3 to
+    nest-1 58 s and tray1/5 to nest-3 59 s, no advisories; reach confirmed by eye. Protocol parameters
+    keep the names `spare_a_*` (overlap source) and `spare_b_*` (overlap destination) so plans 09-09,
+    09-11 and 09-12 still type the right fields; read "spare A" as nest-3 and "spare B" as nest-1. New
+    required parameters `out1_dest_*` (no default) carry out1's destination. Plans 09-09, 09-11 and 09-12
+    must honor this.
 - **D-03:** A **serial return leg** (spare B → spare A) runs in the same run, after the lane barrier, so
   the rig ends where it started. Only the A → B leg overlaps.
+  - **Amendment (2026-11-17, user decision, recorded in 09-03): D-03 is DROPPED.** There is no serial
+    return leg and no `-x2` step; event 2 has five STACK transfers (`-in1`, `-in2`, `-x1`, `-out1`,
+    `-out2`). End state: third plate on nest-1, plate 1 on nest-3, plate 2 on nest-2. The operator
+    restores the rig by hand after the run. Plans 09-11 and 09-12 must not expect a `-x2` row, a sixth
+    ledger record, or the third plate back on its start nest. Event 1 (estimate only, no x1) is unchanged
+    in its motion: plate 1 returns to nest-1, because nest-3 still holds the third plate.
 - **D-04:** Lane layout follows "each tool maps to exactly one lane per run" (research D5) and Phase 8's
   rules: the F.A.S.T. liquid step is on lane `fast`. All STACK steps (in1, in2, overlap, out1, out2,
   return) stay on the primary lane. The overlap STACK step comes right after the F.A.S.T. step in

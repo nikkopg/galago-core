@@ -55,11 +55,11 @@ card seconds are corroboration only).
 Tool-log clause (D-05): the same window shows attempts in both tool logs. The baseline-to-after line
 counts of `STACK2-6.log` and `FA100056.log` (`phase9-ctl.sh logs-since`) must show the expected
 "Running command Transfer" lines (event 1: four STACK transfers plus the estimate read line, one
-F.A.S.T. transfer; event 2: six STACK transfers, one F.A.S.T. transfer) and nothing else that moves
+F.A.S.T. transfer; event 2: five STACK transfers, one F.A.S.T. transfer (amended D-03: no return leg)) and nothing else that moves
 hardware.
 
-Event-2 ledger clause (D-05): six new `done`/`ran` ledger records with distinct keys, one per explicit
-step key (`-in1`, `-in2`, `-x1`, `-out1`, `-out2`, `-x2`), copied with `phase9-ctl.sh ledger LABEL PREFIX`
+Event-2 ledger clause (D-05): five new `done`/`ran` ledger records with distinct keys, one per explicit
+step key (`-in1`, `-in2`, `-x1`, `-out1`, `-out2`; the `-x2` return leg was dropped by the amended D-03), copied with `phase9-ctl.sh ledger LABEL PREFIX`
 immediately after the event (done records older than 7 days are pruned on write).
 
 ## Code gate (D-09, D-15)
@@ -76,7 +76,7 @@ From the 09-01 and 09-02 summaries (offline, fakes only, no tool contacted):
 
 ## Spare-nest check (D-02)
 
-Status: pre-check baseline captured, operator read-only check pending.
+Status: decided. Original rule gave no spare pair; the user amended D-02 and D-03 (below).
 
 Captured so far (all by Claude, reads only):
 
@@ -148,8 +148,59 @@ New reference baseline for later GO gates (Transfer count and ledger sha come fr
 `c9432d84632d4e94a82bfeda6090560e6cfb5fe6`, `STACK2-6.log` 12 "Running command Transfer", ledger sha256
 `5de43c84a422c05ffb66f1bf9dee92b3fdf9183537c3e93d9bac1b08b353670b`, 9 records.
 
-Verdict, exact spare A / spare B triples, and the UTC time of the reply: _pending the operator reply and
-the D-02 decision_.
+Operator reply (STACK2-6 tool page, operator-run, Claude sent nothing; raw text in
+`evidence/20261117T045034Z-spare-check.txt`, estimates run 04:48:07Z to 04:49:01Z, reply recorded
+04:50:34Z):
+
+- `list_devices` (refresh on): four devices, all calibrated where it matters: `nest-1` (deck1/A1),
+  `nest-2` (deck`/A1, the deck name is a literal backtick), `fa100056` (tray1 slots 1 to 6, slots 4, 5, 6
+  calibrated), and the new `nest-3` (deck1/A1, `DEFAULT PORTRAIT`, calibrated). There is exactly one extra
+  STACK-side nest, not a pair.
+- `get_transfer_estimate`, robot `stack2-6`, labware profile `Default`, `nest-3/deck1/A1` to
+  `nest-1/deck1/A1`: `estimated`, 58 s, no advisories.
+- `get_transfer_estimate`, `fa100056/tray1/5` to `nest-3/deck1/A1`: `estimated`, 59 s, no advisories.
+- Reach by eye: the operator confirms the arm reaches nest-3 and nest-1 without crossing the F.A.S.T. tray
+  while it runs ("yes it can").
+- `get_labware_presence` was not run (evidence gap; placement is operator-stated).
+
+Verdict under the ORIGINAL D-02 rule (two spare nests, never nest-1/nest-2/fa100056): **no spare pair**.
+Only nest-3 is free. Per D-02 this was returned to the user instead of falling back.
+
+**Decision: pair confirmed under AMENDED D-02 (user decision 2026-11-17, recorded about 05:09Z).** The user
+amended D-02 and D-03; the exact moves, as typed by the operator for the protocol parameters:
+
+| Step | Source | Destination | When |
+|------|--------|-------------|------|
+| in1 | `nest-1/deck1/A1` | `fa100056/tray1/5` | cycle, before the overlap |
+| in2 | `nest-2/deck`/A1` | `fa100056/tray1/6` | cycle |
+| x1 (overlap, event 2 only) | `nest-3/deck1/A1` (overlap source, third plate starts here) | `nest-1/deck1/A1` (overlap destination = plate 1's home, empty because in1 already moved plate 1) | during the F.A.S.T. liquid leg |
+| out1 | `fa100056/tray1/5` | `nest-3/deck1/A1` (the overlap source, vacated by x1) | after the F.A.S.T. barrier |
+| out2 | `fa100056/tray1/6` | `nest-2/deck`/A1` | after out1 |
+
+The D-03 serial return leg is DROPPED. End state of event 2: third plate on nest-1, plate 1 on nest-3,
+plate 2 on nest-2; the operator restores the rig by hand after the run. Event 1 (estimate only, no x1)
+keeps plate 1 returning to nest-1: nest-3 still holds the third plate, so out1 must not target it.
+
+Safety basis (user): STACK legs serialize on the STACK (primary) lane, so x1 is sent only after in1
+COMPLETED and out1 only after x1 COMPLETED; a failed in1 or x1 halts the run, so out1 never lands a plate
+on an occupied nest. Offline proof: `controller/test/liveLanesProtocol.test.ts` (event-2 amendment tests).
+
+Evidence for the pair: estimates 58 s (nest-3 to nest-1) and 59 s (tray1/5 to nest-3), no advisories;
+reach confirmed by eye. Both estimates are real-mode manager reads, not motion.
+
+Open risk carried to the GO gates (not decided here): three of the operator's five recorded live moves
+between nest-1 and nest-3 on 2026-11-17 ended `failed` (see the nest-3 testing note above).
+
+### Preconditions added for 09-04 and later GO gates
+
+1. The STACK failure latch is cleared and the arm is idle, confirmed live by the operator
+   (`GetFailureLatch` `latched:false`) immediately before the deploy GO. The local files read as cleared
+   (see above) but only the operator's live read counts. Claude does not clear it.
+2. The real workcell (STACK2-6 + FA100056) is selected again; `/api/settings/workcell` currently returns
+   `test`, and pre-flight check 6 (`/api/tools`) is workcell-scoped.
+3. Plates are physically where the amended plan expects at the start of each event: plate 1 on
+   nest-1, plate 2 on nest-2, third plate on nest-3 (event 2 and event 1 alike), confirmed by the operator
+   at the GO gate (no `get_labware_presence` read exists yet).
 
 ## Deploy (D-13), runbook row 3a-11
 
@@ -171,11 +222,11 @@ _Pending._
 
 ## Live event 1, row 3a-13
 
-_Pending (09-09, 09-10). Waits on the D-02 verdict._
+_Pending (09-09, 09-10). D-02 decided (amended, above)._
 
 ## Live event 2, row 3a-14
 
-_Pending (09-11). Waits on the D-02 verdict._
+_Pending (09-11). D-02 decided (amended, above)._
 
 ## LIV-01 verdict
 
