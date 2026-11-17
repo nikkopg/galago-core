@@ -1077,7 +1077,56 @@ command Transfer" 20 to 25 (no GetTransferEstimate from the run); `FA100056.log`
 new ones keyed `<LIV01-E2 key base>-in1 / -in2 / -x1 / -out1 / -out2`, each done / ran; the operator's GO-gate reads add other "Running command" lines
 that move nothing. End state: third plate on nest-1, plate 1 on nest-3, plate 2 on nest-2, restored by hand only after Claude says "capture done".
 
-_Pending: the one-way GO and the run (09-11 Tasks 2 and 3)._
+### Event-2 GO (09-11 Task 2)
+
+Operator GO replies, verbatim and in order (relayed by the orchestrator):
+
+1. `{"reason":null,"latched":false,"guid":null,"kind":"latchStatus","resultKind":null,"explanation":null}` and "yes 2-7, go". The orchestrator confirmed a fresh `GetFailureLatch` in `STACK2-6.log` at 11:02:59Z (log 18:02:59), but no fresh `GetRobotStates`, so it asked for one before accepting the go.
+2. `{"robots":[{"state":"idle","robotName":"stack2-6"}],"kind":"robotStates"}` and "go". Fresh `GetRobotStates` in the log at 11:06:47Z (18:06:47 local). Items 2-7 were answered "yes 2-7". **GO accepted and recorded by the orchestrator at 2026-11-17T11:07:01Z.**
+
+### Event-2 run and raw capture (09-11 Task 3)
+
+The orchestrator gave the plan's run steps verbatim. **Operator's run reply**, verbatim, at 2026-11-17T11:13:42Z: "event 2 done, extra plate on nest-1, plate 1 on nest-3". The operator did not mention plate 2 (expected on nest-2); that is recorded as not reported, not as a defect.
+
+Orchestrator read at 11:13:42Z: `laneStatus` `laneMode:true`, `halted:false`, `haltReason:null`, `failures:[]`, `runningLanes:[]`. No failure was reported, so no D-11 recovery was needed; nothing was re-sent, restarted or deleted.
+
+**Raw capture (Claude, right after the reply, 11:14:07Z-11:14:16Z, every CTL call with stdin `/dev/null`):** `snapshot e2-after`, `baseline e2-after`, `logs-since` (reference `20261117T110058Z-pre-e2.baseline.txt`), `ledger e2`. The capture was committed (`f35b22e`) before this record was written; the two tool-log copies are gitignored (`*log`) and exist on disk only, as for event 1.
+
+- Run id `1596f9bcf081e7000`; **key base `LIV01-E2-2026-11-17T11:08:44.895Z-abf060a9`** (the run's key-base note, queueId 70). The stored run record reads `CREATED` with 7 commands (the known lanes-mode finding); completion is read from the rows and `laneStatus`.
+- Rows (`evidence/20261117T111407Z-e2-after.queue.json`; the run's 7 rows are all `COMPLETED`; the whole queue is 35 rows, all COMPLETED, none CREATED or STARTED):
+
+| queueId | Step | Lane | Started (UTC) | Completed (UTC) |
+|---------|------|------|---------------|-----------------|
+| 70 | note (key base) | primary | 11:08:54.283 | 11:08:54.284 |
+| 71 | in1 transfer (STACK2-6) | primary | 11:08:55.785 | 11:09:25.556 |
+| 72 | in2 transfer (STACK2-6) | primary | 11:09:27.057 | 11:09:56.992 |
+| 73 | F.A.S.T. transfer (FA100056, deck 5 to 6, 8 rows, volume 5) | fast | 11:09:57.309 | 11:11:08.787 |
+| 74 | -x1 transfer (STACK2-6, third plate nest-3 to nest-1) | primary | 11:09:58.493 | 11:10:29.196 |
+| 75 | out1 transfer (STACK2-6) | primary | 11:11:09.712 | 11:11:40.230 |
+| 76 | out2 transfer (STACK2-6) | primary | 11:11:41.731 | 11:12:11.249 |
+
+  Row timing as stored: -x1 (row 74) started 1.2 s after the F.A.S.T. transfer (row 73) started and completed 39.6 s before it completed, so the STACK transfer lies wholly inside the F.A.S.T. interval; out1 started 0.9 s after the F.A.S.T. transfer completed. Matching log lines: `FA100056.log` "Running command Transfer" at 18:09:57 local (11:09:57Z); `STACK2-6.log` Transfer lines at 11:08:55Z, 11:09:27Z, 11:09:58Z, 11:11:09Z, 11:11:41Z. `laneStatus` in the snapshot: `laneMode:true`, `halted:false`, `haltReason:null`, `failures:[]`, `runningLanes:[]`, `queueBusy:false`, `overflow:0`. Whether this meets D-05 is judged in 09-12, not here.
+- Comparison against the expected deltas (pre-e2 baseline vs `evidence/20261117T111407Z-e2-after.baseline.txt`, by `diff`):
+
+| Item | pre-e2 | e2-after | Expected | Match |
+|------|--------|----------|----------|-------|
+| `STACK2-6.log` "Running command Transfer" | 20 | 25 | +5 (no GetTransferEstimate) | yes |
+| `STACK2-6.log` "Running command" | 80 | 87 | +5 Transfer, +2 GO-gate reads (GetFailureLatch, GetRobotStates) = +7 | yes |
+| `FA100056.log` "Running command Transfer" | 2 | 3 | +1 | yes |
+| `FA100056.log` "Running command" | 5 | 6 | +1 | yes |
+| Ledger records | 17 | 22 | +5 | yes |
+| Ledger sha256 | `c8c62970...caebdd` | `7a760672d79458d32ab98e76e7bfe3b17392594e16240a0c0c38eb3b124ebc5b` | changed | yes |
+| Listener PIDs | 8081=6872, 11010=7490, 40012=7491, 40001=2320808 | same | equal | yes |
+| Trace folder | 1794670020 | 1794670020 | equal | yes |
+| `galago_core_controller_dirty_lines` | 0 | 0 | 0 | yes |
+| galago-tools HEAD / 0604348 ancestor / tools dirty lines | `034867c` / 0 / 1 | same | unchanged | yes |
+
+  The five new ledger records (all `state=done`, `result.kind=ran`): `...-in1` created 11:08:56Z (updated 11:09:25Z), `...-in2` 11:09:27Z (11:09:56Z), `...-x1` 11:09:58Z (11:10:29Z), `...-out1` 11:11:09Z (11:11:40Z), `...-out2` 11:11:41Z (11:12:11Z). There is no `-x2` record (the return leg was dropped by the amended D-03). In the appended `STACK2-6.log`, the only non-Transfer commands are the two GO-gate reads (`GetFailureLatch` 18:02:59, `GetRobotStates` 18:06:47 local); no ERROR, WARNING, refusal or retry line in either appended log.
+- `logs-since` did not print TRUNCATED-OR-RESTARTED (both copied logs hold 0 such markers: `STACK2-6.log` 2292 lines, `FA100056.log` 2083 lines). The ledger copy `evidence/20261117T111416Z-e2.ledger.json` holds exactly 5 records, keyed by the key base plus `-in1`, `-in2`, `-x1`, `-out1`, `-out2`, none ending in `-x2`.
+- `git status --porcelain -- controller` is empty after the capture.
+- End state per the operator: extra (third) plate on nest-1, plate 1 on nest-3; plate 2 on nest-2 not reported. The rig is restored by hand after "capture done" and that restore is not D-05 evidence.
+
+Capture status: the post-run capture is complete and every count matches the expected deltas; all five STACK keys are done/ran and every row is COMPLETED. The event-2 verdict, D-05 and LIV-01 are judged in 09-12.
 
 ## LIV-01 verdict
 
@@ -1133,3 +1182,7 @@ All files are under `evidence/`, named `<UTC stamp>-<label>.<kind>`.
 | `20261117T110044Z-e2-go-readiness.txt` | event-2 operator readiness attempt 2 ("ready, nothing re-taught"; Transfer replies not pasted; round trip verified from log and ledger, both done / ran) | 09-11 |
 | `20261117T110058Z-pre-e2.baseline.txt`, `20261117T110058Z-pre-e2.queue.json` | pre-e2 baseline (taken after the round trip; Transfers 20 and 2, ledger 17, sha c8c62970...caebdd) and queue snapshot | 09-11 |
 | `20261117T110124Z-e2-import.json` | protocol.import reply (event-2 protocol id 10 in workcell test, id 1) | 09-11 |
+| `20261117T111407Z-e2-after.queue.json` | event-2 post-run queue snapshot (rows 70-76 COMPLETED, laneStatus clean, run stored CREATED) | 09-11 |
+| `20261117T111407Z-e2-after.baseline.txt` | event-2 post-run baseline (Transfers 20 to 25 and 2 to 3, ledger 17 to 22) | 09-11 |
+| `20261117T111409Z-e2.STACK2-6.log`, `20261117T111409Z-e2.FA100056.log` | tool-log lines appended since the pre-e2 baseline (no TRUNCATED-OR-RESTARTED; gitignored, on disk only) | 09-11 |
+| `20261117T111416Z-e2.ledger.json` | the 5 ledger records of key base `LIV01-E2-2026-11-17T11:08:44.895Z-abf060a9` | 09-11 |
