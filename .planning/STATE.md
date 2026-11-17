@@ -5,17 +5,17 @@ milestone_name: Tool-inferred dropdowns + per-tool concurrency lanes
 current_phase: 09
 current_phase_name: Supervised Live Two-Tool Proof
 status: executing
-stopped_at: Phase 9 context gathered
-last_updated: "2026-11-17T04:04:10.764Z"
+stopped_at: Completed 09-01-PLAN.md
+last_updated: "2026-11-17T04:13:06.710Z"
 last_activity: 2026-11-17
-last_activity_desc: Phase 8 complete, transitioned to Phase 9
-state_head: d2764da9d8ab62a3ca614aba9839515e5b61a7bd
+last_activity_desc: Phase 09 execution started
+state_head: 27e142350d2b66e39e8bc5bf6ecef1587276223d
 progress:
   total_phases: 4
   completed_phases: 3
   total_plans: 37
-  completed_plans: 25
-  percent: 68
+  completed_plans: 26
+  percent: 70
 ---
 
 # Project State
@@ -26,16 +26,16 @@ See: .planning/PROJECT.md (updated 2026-11-17)
 
 **Core value:** While an instrument step runs, the operator sees what the instrument is doing and
 decides every recovery action; the web app never acts on its own or pre-selects a physical decision.
-**Current focus:** Phase 9 — Supervised Live Two-Tool Proof
+**Current focus:** Phase 09 — Supervised Live Two-Tool Proof
 
 ## Current Position
 
-Phase: 09 (Supervised Live Two-Tool Proof) — READY TO EXECUTE
-Plan: Not started
+Phase: 09 (Supervised Live Two-Tool Proof) — EXECUTING
+Plan: 2 of 12
 Status: Ready to execute
-Last activity: 2026-11-17 — Phase 8 complete, transitioned to Phase 9
+Last activity: 2026-11-17 — Phase 09 execution started
 
-Progress: [███████░░░] 68% (3 of 4 v1.2 phases)
+Progress: [███████░░░] 70% (3 of 4 v1.2 phases)
 
 ## Performance Metrics
 
@@ -116,6 +116,7 @@ Progress: [███████░░░] 68% (3 of 4 v1.2 phases)
 | Phase 08 P06 | 35 min | 3 tasks | 4 files |
 | Phase 08 P09 | 10min | 3 tasks | 7 files |
 | Phase 08 P10 | 8 min | 2 tasks | 3 files |
+| Phase 09 P01 | 7 min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -217,6 +218,7 @@ Recent decisions affecting current work:
 - [Phase 08]: 08-09: Freeze lanes is a Chakra AlertDialog in LanesPanel (focus on Keep lanes running via leastDestructiveRef); lane UI renders nothing on loading or failed laneStatus reads
 - [Phase 08]: 08-10: drawer lane controls fed by optional protocolCommands prop; run-page drawer passes none (read-only, no flags)
 - [Phase 08]: 08-10: script preview falls back to legacy list when lane summary has no groups; sentences still shown via laneWarnings
+- [Phase 09]: Store protocol 15 unreadable (NOT_FOUND on :3010); 09-01 event/drill protocols authored from GAL-02 template plus runbook rows 2a-2/3a-2; 09-03 must confirm cycle parameters and the operator-typed spare pair
 
 ### Pending Todos
 
@@ -293,9 +295,9 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-17T02:52:18.735Z
-Stopped at: Phase 9 context gathered
-Resume file: .planning/phases/09-supervised-live-two-tool-proof/09-CONTEXT.md
+Last session: 2026-11-17T04:13:06.637Z
+Stopped at: Completed 09-01-PLAN.md
+Resume file: None
 
 ## Operator Next Steps
 
