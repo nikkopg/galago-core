@@ -176,7 +176,42 @@ resolution is recorded.
   2. A simulated-failure drill freezes both lanes, with no automated motion.
   3. PROJECT.md, the lanes todo and (after the live run passes) the galago-tools runbook record the resolution.
 
-**Plans**: TBD
+**Plans**: 12 plans
+Plans:
+**Wave 1** *(code gate, fakes only)*
+- [ ] 09-01-PLAN.md — Tracer: event-1, event-2 and sim-drill lanes protocols, proven offline through the real script executor, validateLanes and the queue with fake tools
+- [ ] 09-02-PLAN.md — D-09 one-send-per-queueId test, D-15 dispatch-span pin with negative control, IN-01 disposition
+
+**Wave 2** *(blocked on Wave 1 completion)*
+- [ ] 09-03-PLAN.md — Evidence tooling (phase9-ctl.sh), 09-LIVE-EVIDENCE.md, operator spare-nest check and the D-02 verdict
+
+**Wave 3**
+- [ ] 09-04-PLAN.md — Lanes-on galago-web deploy: D-09 gate, typed GO with flag persistence choice, rollback anchor, checks
+
+**Wave 4**
+- [ ] 09-05-PLAN.md — Drill rig: sim servers on 40091/40092, operator-configured uat-sim workcell
+
+**Wave 5**
+- [ ] 09-06-PLAN.md — Drill protocol import, drill GO, scenario 1 (stack failure while fast runs)
+
+**Wave 6**
+- [ ] 09-07-PLAN.md — Drill scenarios 2 (fast failure) and 3 (Freeze lanes), teardown, LIV-02 verdict
+
+**Wave 7**
+- [ ] 09-08-PLAN.md — galago-tools runbook findings rows 3a-11 (deploy) and 3a-12 (drill)
+
+**Wave 8** *(needs the D-02 pair-confirmed verdict)*
+- [ ] 09-09-PLAN.md — Live event 1: preparation, typed GO, operator run (STACK estimate overlaps the F.A.S.T. leg)
+
+**Wave 9**
+- [ ] 09-10-PLAN.md — Event 1 D-05 verdict, third plate staged on spare A
+
+**Wave 10**
+- [ ] 09-11-PLAN.md — Live event 2: preparation, one-way typed GO, operator run (third-plate transfer overlaps the F.A.S.T. leg)
+
+**Wave 11**
+- [ ] 09-12-PLAN.md — Event 2 and LIV-01 verdicts, PROJECT.md, lanes todo resolved, runbook rows 3a-13..3a-15 and parallel cycle
+
 **Settle in discuss**: D5, D8.
 
 ## Progress
@@ -188,7 +223,7 @@ resolution is recorded.
 | 6. STACK Dropdowns | 5/5 | Complete    | 2026-11-06 |
 | 7. F.A.S.T. Plate Dropdowns | 10/10 | Complete    | 2026-11-16 |
 | 8. Concurrency Lanes | 10/10 | Complete    | 2026-11-17 |
-| 9. Supervised Live Two-Tool Proof | 0/TBD | Not started | - |
+| 9. Supervised Live Two-Tool Proof | 0/12 | Planned | - |
 
 ## Backlog
 
