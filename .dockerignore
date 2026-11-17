@@ -1,0 +1,5 @@
+# Host build output must not overwrite what the image builds for itself
+# (native modules like better-sqlite3 are compiled for Alpine inside the image).
+controller/node_modules
+controller/.next
+.git
