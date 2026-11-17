@@ -1,7 +1,7 @@
 ---
 phase: 09-supervised-live-two-tool-proof
-verified: 2026-11-17T11:45:00Z
-status: human_needed
+verified: 2026-11-17T12:15:00Z
+status: passed
 score: 5/5 must-haves verified
 covered_files:
   - ".planning/phases/09-supervised-live-two-tool-proof/09-01-PLAN.md"
@@ -35,94 +35,103 @@ covered_files:
   - ".planning/phases/09-supervised-live-two-tool-proof/protocols/09-live-lanes-event2.protocol.json"
   - ".planning/phases/09-supervised-live-two-tool-proof/protocols/09-sim-drill.protocol.json"
   - ".planning/phases/09-supervised-live-two-tool-proof/tools/phase9-ctl.sh"
+  - "controller/test/fixtures/phase9/09-live-lanes-event1.protocol.json"
+  - "controller/test/fixtures/phase9/09-live-lanes-event2.protocol.json"
+  - "controller/test/fixtures/phase9/09-sim-drill.protocol.json"
   - "controller/test/laneOneSend.test.ts"
   - "controller/test/liveLanesProtocol.test.ts"
   - "controller/test/staticScan.test.ts"
-covered_digest: "v3:sha256:902b2a59c301662c5f875f2289c47c6c6cf2af33e95e71bf786fecad9f0255b5"
+covered_digest: "v3:sha256:4f873f701ce468f38f97597c7e7cd6be699f82af756da92b3261af78b619ba7b"
 behavior_unverified: 0
 overrides_applied: 0
-human_verification:
-  - test: "Triage open code-review finding CR-01 (and related WR-01, WR-02): decide fix, accept or defer, and record it in 09-REVIEW-DISPOSITION.md (all 17 findings are still 'open')"
-    expected: "Either the drill protocol's real-tool refusal compares normalized tool keys with a SIM allow-list (and start-sim uses an isolated XDG_STATE_HOME), or the user explicitly accepts the latent risk because protocol id 8 is single-use drill tooling"
-    why_human: "Disposition is a user decision. Evidence shows the drill ran on SIM-STACK/SIM-FAST and real tools were untouched, so the phase goal is met. The guard weakness is latent: a re-run with a name variant (for example STACK_2-6 or FA-100056) would pass the deny-list. The real tool would be addressed only if its instance is still in the process-global tool store."
+re_verification:
+  previous_status: human_needed
+  previous_score: 5/5
+  gaps_closed: []
+  gaps_remaining: []
+  regressions: []
+advisory:
+  - finding: "Protocol id 8 (the sim drill) in the live protocol store still carries the OLD upper-case deny-list guard. Only the on-disk JSON and the test fixture were fixed (4474bc9)."
+    category: other
+    reason: "09-REVIEW-FIX.md says to delete or re-import id 8 before any further drill. No record that this was done, and the store is not observable from the codebase. Does not affect the recorded drill, which ran on SIM-STACK/SIM-FAST with real counters unchanged."
+    evidence_status: "recorded as an action item, not confirmed done"
 ---
 
 # Phase 9: Supervised Live Two-Tool Proof Verification Report
 
 **Phase Goal:** With the user present, a live run and a drill prove the overlap and the lane freeze, and the resolution is recorded.
-**Verified:** 2026-11-17T11:45:00Z
-**Status:** human_needed (goal achieved; one open critical review finding needs a user disposition)
-**Re-verification:** No, initial verification
+**Verified:** 2026-11-17T12:15:00Z
+**Status:** passed
+**Re-verification:** Yes. The prior report was `human_needed` (one item: triage of CR-01, WR-01, WR-02). That item was resolved by the user (09-UAT.md test 1: pass) and the findings were fixed in 4474bc9, 98d0d61, 88a972d and 81e274c. This report regenerates the verdict against the current tree and covers the changed files.
 
-The live events cannot be re-run. Verification is from the recorded raw evidence in `evidence/`, re-parsed independently
-rather than read from the SUMMARY files or the narrative in 09-LIVE-EVIDENCE.md.
+The live events cannot be re-run. Truths 1 to 4 are verified from the recorded raw evidence in `evidence/`, re-parsed independently. The evidence files have no commits after the 09-12 docs commits, so they are unchanged since the prior verification. Truth 5 and the fix commits were checked against the tree.
 
 ## Goal Achievement
 
 ### Observable Truths
 
-Source: ROADMAP success criteria 1 to 3, with the amended D-02, D-03, D-13 and D-18 (user decisions in 09-CONTEXT.md) as the governing wording.
+Source: ROADMAP Phase 9 success criteria 1 to 3, with the amended D-02, D-03, D-13 and D-18 (09-CONTEXT.md) as the governing wording.
 
 | # | Truth | Status | Evidence |
 |---|-------|--------|----------|
-| 1 | A supervised live run shows a STACK step overlapping the F.A.S.T. transfer, with per-lane evidence rows, explicit step keys and the SHAs recorded (LIV-01) | VERIFIED | See "Independent re-derivation" below. Event 2: STACK `-x1` transfer (nest-3 to nest-1) 11:09:58.493 to 11:10:29.196 lies inside the F.A.S.T. row (lane `fast`, FA100056) 11:09:57.309 to 11:11:08.787, a 30.7 s strictly positive overlap. Event 1: STACK `get_transfer_estimate` 10:42:16.623 to .789 inside the F.A.S.T. row 10:42:16.425 to 10:43:28.134. The row data in the raw snapshots matches the evidence file to the millisecond. |
-| 2 | Each STACK step key ran exactly once, as an explicit key, per the ledger (LIV-01, D-05, D-06, D-08) | VERIFIED | `e1.ledger.json`: 4 records (`-in1`, `-in2`, `-out1`, `-out2`), all `state=done`, `result.kind=ran`. `e2.ledger.json`: 5 records (`-in1`, `-in2`, `-x1`, `-out1`, `-out2`), all done/ran, no `-x2` (amended D-03). Baseline diffs: STACK2-6 "Running command Transfer" 14 to 18 and 20 to 25, FA100056 1 to 2 and 2 to 3, ledger 11 to 15 and 17 to 22. Auto-mint "on (not exercised)" and the galago-tools SHAs (`d53da53` tool code, `034867c` docs-only HEAD; `0604348` is an ancestor) are recorded. |
-| 3 | A simulated-failure drill freezes both lanes with no automated motion (LIV-02) | VERIFIED | Raw snapshots re-parsed. S1 (stack row fails while SIM-FAST runs): at halt `halted:true, haltReason:failure`, q51 FAILED, q50 STARTED, q52 CREATED. After SIM-FAST finished, q50 COMPLETED (not aborted), q52 still CREATED. Operator Start, then all COMPLETED and `halted:false`. S2 (fast row fails while stack runs): q55 FAILED, q56 COMPLETED, q57 held CREATED, then re-armed and finished. S3 (Freeze lanes mid-overlap): `haltReason:freeze`, both lanes in `runningLanes`, both rows then COMPLETED, q62 held CREATED, then Start, all COMPLETED. |
-| 4 | No real tool received a command during the drill (LIV-02, D-10) | VERIFIED | `diff` of `pre-drill-go.baseline` against `post-drill-final.baseline`: only label, time, HEAD, sim listeners, FA100056.log line count (status polling, GET /status only, per the evidence record) and the workcell `uat-sim` to `test`. Real listener PIDs (6872, 7490, 7491, 2320808), STACK2-6 "Running command" 52 and Transfer 12, FA100056 4 and 1, ledger sha `5de43c84...` (9 records) are all unchanged. |
-| 5 | PROJECT.md, the lanes todo and (after the live run passed) the galago-tools runbook record the resolution (LIV-03) | VERIFIED | PROJECT.md line 147 Validated bullet "LIV-01..03" with an evidence pointer, line 11 single-flight wording per lane, key-decision rows including deploy decision B (line 252). The todo is at `.planning/todos/completed/scheduler-per-tool-concurrency-lanes.md` with the Resolution table and ticked acceptance boxes; `todos/pending` is empty. galago-tools `034867c` (rows 3a-11, 3a-12) and `69ea3b6` (rows 3a-13..3a-15 plus `### Parallel two-plate cycle (lanes, LIV-01)`, 41 insertions, one file); the parallel-cycle commit came after both events' PASS verdicts. |
+| 1 | A supervised live run shows a STACK step overlapping the F.A.S.T. transfer, with per-lane evidence rows, explicit step keys and the SHAs recorded (LIV-01) | VERIFIED | Re-parsed `20261117T111407Z-e2-after.queue.json` this run: q73 (F.A.S.T., lane fast) started 11:09:57.309, completed 11:11:08.787. q74 (STACK `-x1`) started 11:09:58.493, completed 11:10:29.196. q74 lies inside q73, a 30.7 s overlap. `laneStatus` is `laneMode:true, halted:false, haltReason:null, failures:[], runningLanes:[]`. Event 1 overlap (166 ms read-only estimate by design) from the prior verification. SHAs recorded in 09-LIVE-EVIDENCE.md. |
+| 2 | Each STACK step key ran exactly once, as an explicit key (LIV-01, D-05, D-06, D-08) | VERIFIED | Ledger copies `e1.ledger.json` (4 records) and `e2.ledger.json` (5 records), all done/ran, no `-x2` (amended D-03). Unchanged since the prior verification. |
+| 3 | A simulated-failure drill freezes both lanes with no automated motion (LIV-02) | VERIFIED | 8 drill snapshots (S1 stack-fail, S2 fast-fail, S3 Freeze lanes): halt or freeze latched, later row held `CREATED`, running rows completed and not aborted, only the operator's Start resumed. Unchanged since the prior verification. |
+| 4 | No real tool received a command during the drill (LIV-02, D-10) | VERIFIED | `diff pre-drill-go.baseline post-drill-final.baseline` re-run this run. Differences are label, time, HEAD, sim listeners (now gone), the FA100056.log line count (status polling) and the workcell `uat-sim` to `test`. Real-tool "Running command" counters and ledger sha are not among the differences. |
+| 5 | PROJECT.md, the lanes todo and (after the live run passed) the galago-tools runbook record the resolution (LIV-03) | VERIFIED | PROJECT.md line 147 "LIV-01..03" Validated bullet. `.planning/todos/completed/scheduler-per-tool-concurrency-lanes.md` exists and `todos/pending` is empty. galago-tools runbook commits are recorded in 09-LIVE-EVIDENCE.md (037ade9 records the SHA). |
 
-**Score:** 5/5 truths verified, 0 behavior-unverified. The lane-halt and freeze invariants are behavior-dependent. They are VERIFIED by recorded live behavioral evidence (status transitions in timestamped queue snapshots plus sim-server logs), not by symbol presence.
+**Score:** 5/5 truths verified, 0 behavior-unverified. The halt and freeze invariants are behavior-dependent and are verified by recorded timestamped live status transitions, not by symbol presence.
 
-### Independent re-derivation (spot checks, read-only)
+### Verification of the post-review fix commits (changed since the last verifier run)
 
-| Check | Result |
-|-------|--------|
-| Parsed `20261117T111407Z-e2-after.queue.json`: q73 toolId FA100056, `lane:"fast"`, `laneBarrier:true`; q74 toolId STACK2-6, `step_key ...-x1`, nest-3 to nest-1, no lane (primary) | Matches the evidence file |
-| D-05 rule, event 2 | So=11:09:58.493 >= Sf-1500; Eo=11:10:29.196 <= Ef=11:11:08.787; overlap 30703 ms > 0. PASS |
-| D-05 rule, event 1 | So=10:42:16.623 >= Sf=10:42:16.425; Eo=.789 <= Ef=10:43:28.134; overlap 166 ms > 0. PASS (read-only estimate by design in event 1) |
-| `laneStatus` in both after-snapshots | `laneMode:true, halted:false, haltReason:null, failures:[], runningLanes:[]` |
-| Controller code under test | `git diff --stat d09a047 HEAD -- controller ':!controller/test'` is empty; only three test files changed (+954 lines). No hot-fix during the GO-gated session |
-| `cd controller && npx vitest run` | 50 files, 1415 tests passed |
-| D-15 pin | `staticScan.test.ts` "dispatch span (D-15, IN-01)" exists; `08-REVIEW-DISPOSITION.md` IN-01 recorded `skipped`, "accepted in Phase 9 D-15; pinned by..." |
-| D-09 test | `controller/test/laneOneSend.test.ts` exists and runs green |
+| Commit | Claim | Independent check | Status |
+|--------|-------|-------------------|--------|
+| 4474bc9 CR-01 | Drill compares normalized keys (`stack26`, `fa100056`) and allows only names whose key starts with `sim` | Read the diff of `09-sim-drill.protocol.json`. `toolKey` lowercases and strips non-alphanumerics, `REAL_KEYS` check and `indexOf("sim") !== 0` allow-list both run before the first `galago.*` call, and the `fast_tool` equals `stack_tool` check also uses keys. Tests (d), (d2) in `liveLanesProtocol.test.ts` run green. | VERIFIED |
+| 81e274c WR-04 | Tests load protocols from `controller/test/fixtures/phase9/` | `cmp` shows all three fixtures byte-identical to the `.planning/.../protocols/` copies. The suite no longer depends on the planning path. | VERIFIED |
+| 98d0d61 WR-01 | `start-sim` isolates `XDG_STATE_HOME` so a sim STACK cannot write the real ledger | `bash -n phase9-ctl.sh` passes. Not executed, because it would launch servers. Judgment-tier, per the fix report. | VERIFIED (static) |
+| 88a972d WR-02 | `check-guards` fails closed on unresolved or zero real listeners | `bash -n` passes. Not executed, to avoid touching the live environment. The fix report records negative controls and a clean run. | VERIFIED (static) |
+
+Production code unchanged: `git diff --stat d09a047 HEAD -- controller ':!controller/test'` is empty, so the controller code under live test is the code that exists now. All fix commits touch only tests, fixtures, protocols and the evidence tool.
 
 ### Required Artifacts
 
 | Artifact | Expected | Status | Details |
 |----------|----------|--------|---------|
-| `controller/test/laneOneSend.test.ts` | D-09 one send per queueId under lanes | VERIFIED | Exists, 97 lines, passes |
-| `controller/test/staticScan.test.ts` (dispatch span) | D-15 pin | VERIFIED | Exists, passes. WR-03 notes the pin stops before `claimEligible` and does not pin the callee (warning) |
-| `controller/test/liveLanesProtocol.test.ts` | Offline proof of the three live protocols | VERIFIED | 786 lines, passes. WR-04 notes a fragile path into `.planning/` (warning) |
-| `protocols/09-live-lanes-event1/event2/09-sim-drill.protocol.json` | Live and drill protocols | VERIFIED | Imported (ids 9, 10, 8) and executed live; row shapes in the snapshots match |
-| `tools/phase9-ctl.sh` | Read-only evidence tooling | VERIFIED | Produced all baselines and snapshots used above |
-| `09-LIVE-EVIDENCE.md` + `evidence/` | Primary record | VERIFIED | Raw files agree with the narrative on every number I re-derived |
-| PROJECT.md, completed lanes todo, runbook rows 3a-11..3a-15 | LIV-03 records | VERIFIED | See truth 5 |
+| `controller/test/laneOneSend.test.ts` | D-09 one send per queueId under lanes | VERIFIED | 2 tests pass |
+| `controller/test/staticScan.test.ts` (dispatch span) | D-15 pin | VERIFIED | 103 tests pass. WR-03 (pin ends before `claimEligible`) is still open, advisory |
+| `controller/test/liveLanesProtocol.test.ts` | Offline proof of the three live protocols | VERIFIED | 32 tests pass, loading from fixtures |
+| `controller/test/fixtures/phase9/*.protocol.json` | Tested copies of the protocols | VERIFIED | Byte-identical to the protocol copies in the phase directory |
+| `protocols/09-*.protocol.json` | Live and drill protocols | VERIFIED | Event protocols imported (ids 9, 10) and executed live. The drill protocol on disk now has the CR-01 guard |
+| `tools/phase9-ctl.sh` | Read-only evidence tooling | VERIFIED | Syntax OK, produced all baselines and snapshots |
+| `09-LIVE-EVIDENCE.md` + `evidence/` | Primary record | VERIFIED | Raw snapshot values re-derived above match |
+| PROJECT.md, completed lanes todo, runbook rows | LIV-03 records | VERIFIED | See truth 5 |
 
 ### Key Link Verification
 
 | From | To | Via | Status | Details |
 |------|----|-----|--------|---------|
-| F.A.S.T. row (lane fast, laneBarrier) | out1 (laneBarrier) | lane barrier | WIRED | Both events: out1 started 0.7 s (event 1) and 0.9 s (event 2) after the F.A.S.T. row completed |
-| in2 completion | `-x1` start | primary-lane serialization | WIRED | Event 2: x1 started 1501 ms after in2 completed |
-| Halt latch | later row dispatch | no-dispatch-after-halt | WIRED | Drill snapshots: the later row stayed CREATED through the halt and the freeze; only the operator's Start re-armed |
-| Phase 9 evidence | requirement records | REQUIREMENTS.md | WIRED | LIV-01, LIV-02, LIV-03 are `[x]` and "Complete" |
+| F.A.S.T. row (lane fast, barrier) | out1 (barrier) | lane barrier | WIRED | out1 (q75) started 11:11:09.712, 0.9 s after q73 completed 11:11:08.787 |
+| in2 completion | `-x1` start | primary-lane serialization | WIRED | q72 completed 11:09:56.992, q74 started 11:09:58.493, so 1.5 s later |
+| Halt latch | later row dispatch | no-dispatch-after-halt | WIRED | Drill snapshots: the later row stayed `CREATED` through halt and freeze |
+| Phase 9 evidence | requirement records | REQUIREMENTS.md | WIRED | LIV-01, LIV-02, LIV-03 `[x]` (lines 136 to 142) and "Complete" in the traceability table (lines 217 to 219) |
 
 ### Data-Flow Trace (Level 4)
 
-Not applicable. The phase ships no rendering component. The evidence rows come from the live queue store via the API.
+Not applicable. The phase ships no rendering component. Evidence rows come from the live queue store through the API.
 
 ### Behavioral Spot-Checks
 
 | Behavior | Command | Result | Status |
 |----------|---------|--------|--------|
-| Controller suite | `cd controller && npx vitest run` (once) | 1415 passed, 50 files | PASS |
-| Overlap windows from raw rows | Python parse of the two after-snapshots | containment and positive overlap hold | PASS |
-| Drill transitions from raw rows | Python parse of 8 drill snapshots | halt, hold, resume transitions as claimed | PASS |
-| Ledger records | Parse of the two ledger copies | 4 and 5 records, all done/ran, no `-x2` | PASS |
+| Phase 9 test files | `npx vitest run test/laneOneSend.test.ts test/liveLanesProtocol.test.ts test/staticScan.test.ts` | 3 files, 137 tests passed | PASS |
+| Full controller suite | Not re-run by me. Reported 50 files, 1416 tests passed in the fix report and the orchestrator context | Taken as reported, since no controller production code changed | NOT RE-RUN |
+| Overlap from raw rows | Python parse of the e2 after-snapshot | q74 inside q73, 30.7 s | PASS |
+| Drill baseline diff | `diff` of pre-drill-go and post-drill-final baselines | No real-tool counter change | PASS |
+| Debt markers | `grep TBD/FIXME/XXX` over phase test, protocol and tool files | No matches | PASS |
 
 ### Probe Execution
 
-Step 7c: SKIPPED. The phase's evidence is a recorded live run. The only conventional-probe match would be `phase9-ctl.sh`, which is the evidence tool and was run live, and re-running it would contact the live server (forbidden for this verification).
+Step 7c: SKIPPED. The phase's evidence is a recorded live run. The only conventional probe, `phase9-ctl.sh`, is the evidence tool, and re-running it contacts the live environment.
 
 ### Requirements Coverage
 
@@ -130,60 +139,58 @@ Step 7c: SKIPPED. The phase's evidence is a recorded live run. The only conventi
 |-------------|--------------|-------------|--------|----------|
 | LIV-01 | 09-01, 09-02, 09-03, 09-04, 09-09, 09-10, 09-11, 09-12 | Supervised live two-tool run shows a STACK step overlapping the F.A.S.T. transfer, per-lane rows, explicit keys, SHAs and auto-mint recorded | SATISFIED | Truths 1 and 2 |
 | LIV-02 | 09-01, 09-04, 09-05, 09-06, 09-07, 09-08 | Lane-halt and freeze-lanes shown in a drill freezing both lanes, simulated failure, no automated motion | SATISFIED | Truths 3 and 4 |
-| LIV-03 | 09-12 | PROJECT.md and the lanes todo record the resolution; the runbook gains the parallel cycle only after LIV-01 | SATISFIED | Truth 5 |
+| LIV-03 | 09-12 | PROJECT.md and the lanes todo record the resolution. The runbook gains the parallel cycle only after LIV-01 | SATISFIED | Truth 5 |
 
-All three IDs appear in the PLAN frontmatter and in REQUIREMENTS.md (lines 136 to 142 and the traceability table). No orphaned requirements: REQUIREMENTS.md maps only LIV-01..03 to Phase 9, and every plan claims at least one.
+Each ID appears in the PLAN frontmatter and in REQUIREMENTS.md. REQUIREMENTS.md maps only LIV-01..03 to Phase 9, so there are no orphaned requirements.
 
 ### Prohibitions (ADR-550 D3, B-with-guard)
 
 | Prohibition | Tier | Judgment | Flag |
 |-------------|------|----------|------|
-| Tests MUST NOT move an instrument or contact a tool server (09-02) | test | The harness spies `Tool.executeCommand`; the full suite ran offline with the real tool counters unchanged | enforcement wired; accepted |
-| Queue MUST NOT be restructured to close IN-01 (09-02) | judgment | `git diff d09a047..HEAD -- controller` (non-test) is empty. Non-authoritative LLM judgment: satisfied | unverified-prohibition, human review recommended |
-| Claude MUST NOT press Start, Freeze or recovery, or queue a run (09-06 and others) | judgment | The evidence attributes every Start, Freeze and stop-sim to the operator, and Claude's calls were reads, imports and sim-rig setup under the narrow amended D-18. This is not observable from the code (the operator's actions are inferred from the snapshots and sim logs, as the evidence file admits). Non-authoritative judgment: satisfied | unverified-prohibition, human review recommended |
-| No real tool may receive a command during the drill (09-06, D-10) | judgment | Empirically satisfied (Truth 4). The guard that was meant to enforce it is bypassable by name variants (CR-01) | unverified-prohibition, human review recommended |
+| Tests MUST NOT move an instrument or contact a tool server (09-02) | test | Harness spies `Tool.executeCommand`, suite runs offline. Enforcement is wired | Accepted |
+| Queue MUST NOT be restructured to close IN-01 (09-02) | judgment | `git diff d09a047..HEAD -- controller ':!controller/test'` is empty. Deterministic evidence supports it | Satisfied |
+| Claude MUST NOT press Start, Freeze or recovery, or queue a run (09-06 and others) | judgment | Not observable from code. The evidence attributes every Start, Freeze and stop-sim to the operator, who was present at every GO gate. Non-authoritative judgment: satisfied | Flagged: unverified-prohibition, covered by the user's UAT acceptance |
+| No real tool may receive a command during the drill (09-06, D-10) | judgment | Empirically satisfied (Truth 4). The guard is now hardened against name variants (CR-01 fix, verified above) | Flagged: unverified-prohibition, covered by the user's UAT acceptance |
 
-Autonomous completion therefore reads "complete with 3 flagged prohibitions". These roll into the single human item in the frontmatter, so they do not each need separate action.
-
-### Review Findings Assessment (09-REVIEW.md, 09-REVIEW-DISPOSITION.md: 17 findings, all open)
-
-| Finding | Undermines the phase goal? | Handling |
-|---------|----------------------------|----------|
-| CR-01 critical: sim drill real-tool refusal is a case-insensitive deny-list, bypassable via normalized names (`STACK_2-6`, `FA-100056`, `stack 2 6`) | No for this phase's result: the drill ran with `stack_tool=SIM-STACK` and `fast_tool=SIM-FAST` (evidence), and the real counters, PIDs and ledger sha are unchanged across the drill. It is a latent safety defect in a shipped artifact (protocol id 8 remains in the store), and it makes the evidence-file statement "Real-name refusal checked" an overstatement: it checked exact names only. | Human item (disposition). Not a gap, because no phase truth fails and the drill was not defeated. |
-| WR-01 start-sim shares the real STACK ledger dir and relies on Configure for simulation; WR-02 check-guards can print GUARDS OK with zero listeners checked | No. The sims were verified `SIMULATED` through `tool.status` and the real ledger sha did not change. These weaken the safeguards for reuse. | Fold into the CR-01 triage |
-| WR-03 D-15 pin does not cover `claimEligible` | No. D-15 is satisfied as specified (pin and negative control exist). The pin is shallower than ideal. | Warning only, non-blocking |
-| WR-04 test depends on a `.planning/` path | No for now (suite green). It will break if the phase is archived with `/gsd-cleanup` or the tests run inside the container. | Warning, fix before archiving the phase |
-| WR-05 .dockerignore, WR-06 event protocols lack tray and plate cross-checks | No. WR-06 was not triggered, since the operator-typed values were verified by the operator at the GO gates. | Warning only |
-| IN-01..IN-10 | No | Informational |
+The two flagged judgment items are the same ones the prior report rolled into its single human item. The user has since resolved that item (09-UAT.md test 1: pass), so no human item remains open. Autonomous completion reads "complete with 2 flagged judgment-tier prohibitions, user-reviewed".
 
 ### Anti-Patterns Found
 
 | File | Line | Pattern | Severity | Impact |
 |------|------|---------|----------|--------|
-| Phase 9 files (`laneOneSend`, `liveLanesProtocol`, `staticScan` tests, three protocols, `phase9-ctl.sh`) | n/a | grep for `TBD`, `FIXME`, `XXX` | Info | No matches. No debt-marker blocker |
+| Phase 9 tests, fixtures, protocols, `phase9-ctl.sh` | n/a | `TBD`, `FIXME`, `XXX` | Info | No matches, so no debt-marker blocker |
+
+### Review Findings Status (09-REVIEW-DISPOSITION.md: 4 fixed, 13 open)
+
+| Finding | State | Effect on the goal |
+|---------|-------|--------------------|
+| CR-01, WR-01, WR-02, WR-04 | fixed (4474bc9, 98d0d61, 88a972d, 81e274c), verified above | None |
+| WR-03 (D-15 pin stops before `claimEligible`), WR-05 (.dockerignore), WR-06 (no tray and plate cross-check in event protocols) | open | None. WR-06 was not triggered, because the operator verified the values at the GO gates |
+| IN-01 to IN-10 | open | None, informational |
+
+Open items are advisory only. None undermines a phase truth.
+
+### Security
+
+09-SECURITY.md (87d2802): `status: verified`, `threats_open: 0` (59 threats), as recorded in its frontmatter.
 
 ### Human Verification Required
 
-#### 1. Disposition of CR-01 (and WR-01, WR-02)
+None. The prior human item (disposition of CR-01, WR-01, WR-02) was resolved by the user in 09-UAT.md (test 1: pass, 0 issues).
 
-**Test:** Read 09-REVIEW.md CR-01 and decide: fix (normalized-key allow-list for `stack_tool` and `fast_tool` in `09-sim-drill.protocol.json`, extra test cases, and `XDG_STATE_HOME` isolation in `start-sim`), accept, or defer. Record the choice in 09-REVIEW-DISPOSITION.md.
-**Expected:** A recorded disposition. Until it is fixed, do not re-run the drill protocol (id 8) on a rig where the real tools may be in the global tool store.
-**Why human:** A severity-critical finding with disposition `open` needs a user decision. It is not a phase-goal failure, so it is not a gap.
+### Advisory (carried forward, not blocking)
 
-### Observations (not gaps, carried forward by the phase itself)
-
-- The stored run record stays `CREATED` after every row completes (seen on all drill and live runs, and also on the two pre-lanes stale runs). Judging needed row status and `laneStatus`. The phase documents this as a follow-up. It is worth tracking as a later-phase item because a run-level "complete" read gives a wrong answer.
-- Event 1's overlap is a 166 ms read-only estimate by design (D-01), and event 2 is the moving 30.7 s overlap, so LIV-01's "overlap" claim rests on event 2.
-- The evidence is partly operator-reported: plate positions (no tool read exists), the Freeze press time, and the "restore after capture" ordering. The evidence file states this plainly. The D-05 clauses themselves rest on machine data (rows, logs, ledger).
-- Event-1 and event-2 GO-gate checklist items 3 to 7 were answered by one typed "go". This is recorded honestly. It is accepted by the phase's own plan.
-- D-02, D-03 and D-13 were amended by the user mid-phase. Verification is against the amended wording, and the amendments are recorded in 09-CONTEXT.md and applied consistently in the events (nest-3 to nest-1, no `-x2`, `galago-web-dev`).
-- The deploy deviated from the original D-13 (dev container, no rollback image anchor), by user decision "B". The rollback path is a flag-off recreate. This is recorded.
+- Protocol id 8 in the live protocol store still holds the old guard until it is deleted or re-imported from the updated JSON. The fix report flags this as an action, and nothing in the repository confirms it was done. Do not re-run the drill from the store copy until it is replaced.
+- The stored run record stays `CREATED` after all rows complete (seen on every drill and live run). A run-level "complete" read gives a wrong answer, so judge by row status and `laneStatus`. This is a follow-up for a later phase.
+- Event 1's overlap is a 166 ms read-only estimate by design, so the LIV-01 overlap claim rests on event 2's 30.7 s window.
+- Some evidence is operator-reported (plate positions, Freeze press time), as the evidence file states plainly. The D-05 clauses rest on machine data.
+- D-02, D-03 and D-13 were amended by the user mid-phase and the deploy used decision "B" (dev container, flag-off recreate as the rollback). Verification is against the amended wording.
 
 ### Gaps Summary
 
-No gaps. All three requirements and all five truths hold against the raw recorded evidence, the controller suite is green, the controller production code is unchanged since Phase 8, and the LIV-03 records exist in galago-core and galago-tools. The status is `human_needed` solely because the open critical code-review finding CR-01 (and the three judgment-tier prohibitions, which depend on the same guard) needs a user disposition. The phase goal itself is achieved.
+No gaps. All five truths and all three requirements hold against the raw recorded evidence and the current tree. The post-review fixes are present, correct on inspection, and covered by passing tests, with no controller production code change since Phase 8. The prior `human_needed` item was resolved by the user.
 
 ---
 
-_Verified: 2026-11-17T11:45:00Z_
+_Verified: 2026-11-17T12:15:00Z_
 _Verifier: Claude (gsd-verifier)_
