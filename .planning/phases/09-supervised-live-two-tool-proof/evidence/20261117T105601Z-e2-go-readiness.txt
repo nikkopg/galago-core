@@ -1,0 +1,27 @@
+09-11 Task 1 operator readiness record (event 2, latch / arm / nest-3 -> nest-1 -> nest-3 round trip)
+Saved by Claude 2026-11-17T10:56:01Z. No credential appears in this file.
+
+OPERATOR REPLY (as relayed by the orchestrator, verbatim) at 2026-11-17T10:55:17Z:
+{"reason":null,"latched":false,"guid":null,"kind":"latchStatus","resultKind":null,"explanation":null}
+{"robots":[{"state":"idle","robotName":"stack2-6"}],"kind":"robotStates"}
+{"hasLabware":false,"kind":"labwarePresence","robotName":"stack2-6"}
+
+ready
+
+NOT PASTED by the operator: the two Transfer replies (steps 4 and 5). NOT ANSWERED: whether anything was
+re-taught or moved on the tool page since event 1.
+
+CLAUDE'S READ-ONLY CHECK AT 2026-11-17T10:55:43Z to 10:55:52Z (local files, nothing sent to any tool):
+- The three pasted JSON lines are byte-identical to the 10:51:44Z reply in 20261117T105220Z-e2-readiness.txt
+  (the 09-10 readiness paste). They carry no new information and look like a re-paste of that earlier reply.
+- STACK2-6.log: 7359 lines, "Running command Transfer" 18, "Running command" 73. All equal to
+  20261117T105220Z-post-e2-readiness.baseline.txt. File mtime 17:51:25 local (10:51:25Z), 4 minutes before
+  the reply. The last line is "response_closed.complete" at 17:51:25. No line was written after the 09-10
+  baseline, so the operator's reads for this step, and any Transfer, never reached STACK2-6.
+- Ledger stack-ledger.json: 15 records, sha256 ec2dd2781064c5753ea5e7c1ec1e33643127d25c94654b6bf34f345a1be46d1d,
+  mtime 17:44:28 local (10:44:28Z). Equal to the post-e2-readiness baseline. No new record.
+- Listener PIDs 8081, 11010, 40012, 40001 still listening (unchanged set).
+
+RESULT: the nest-3 -> nest-1 -> nest-3 round trip did NOT happen (no Transfer line, no ledger record after the
+10:52:20Z baseline). Per 09-11 Task 1 verification step 4 the plan stops here. The pre-e2 baseline is not taken
+(it must come after the round trip), the event-2 protocol is not imported and no GO is offered.

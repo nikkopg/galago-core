@@ -1003,7 +1003,26 @@ no. The readiness step passes; nothing moved and nothing was written since event
 
 ## Live event 2, row 3a-14
 
-_Pending (09-11). D-02 decided (amended, above)._
+### Operator readiness attempt 1 (09-11 Task 1), 2026-11-17: round trip NOT done, plan stopped
+
+Operator reply at 10:55:17Z (verbatim in `evidence/20261117T105601Z-e2-go-readiness.txt`): the three reads (`latched:false`, `stack2-6` `idle`,
+`hasLabware:false`) and the word "ready". The two Transfer replies (steps 4 and 5) were not pasted and the re-teach question was not answered.
+
+Claude's read-only check of local files at 10:55:43Z to 10:55:52Z found the round trip did not happen:
+
+| Value | post-e2-readiness (10:52:20Z) | now | Result |
+|-------|-------------------------------|-----|--------|
+| `STACK2-6.log` lines / "Running command" / "Running command Transfer" | 7359 / 73 / 18 | 7359 / 73 / 18 | equal; file mtime 10:51:25Z |
+| ledger sha256, record count | `ec2dd278...6d1d`, 15 | same, 15 | equal; mtime 10:44:28Z |
+| listener PIDs | 6872 / 7490 / 7491 / 2320808 | same set listening | equal |
+
+The three pasted JSON lines are byte-identical to the 10:51:44Z reply in `evidence/20261117T105220Z-e2-readiness.txt`, so they look like a
+re-paste of the 09-10 reads. No new line in `STACK2-6.log` and no new ledger record exist, so neither Transfer (nest-3 to nest-1, nest-1 to nest-3)
+reached the tool. Per 09-11 Task 1 verification step 4 nothing further was done: no pre-e2 baseline (it must come after the round trip), no
+protocol import, no GO offered. Claude sent nothing to any tool (D-18). An earlier "go" typed by the operator before this step was shown was
+rejected by the orchestrator and is not an event-2 GO.
+
+_Pending: the round trip, the pre-e2 baseline, the import and the GO (09-11)._
 
 ## LIV-01 verdict
 
@@ -1055,3 +1074,4 @@ All files are under `evidence/`, named `<UTC stamp>-<label>.<kind>`.
 | `20261117T104544Z-e1.ledger.json` | the 4 ledger records of key base `LIV01-E1-2026-11-17T10:40:52.652Z-5f3509d4` | 09-09 |
 | `20261117T105220Z-e2-readiness.txt` | event-2 operator readiness reply (latched false, idle, hasLabware false, "third plate ready"; steps 1 and 2 not described in words) | 09-10 |
 | `20261117T105220Z-post-e2-readiness.baseline.txt` | baseline after the readiness reads (Transfers 18 and 2, ledger sha and PIDs equal e1-after) | 09-10 |
+| `20261117T105601Z-e2-go-readiness.txt` | event-2 operator readiness attempt 1 (reads re-pasted, no Transfer pasted; log and ledger show no round trip) | 09-11 |
