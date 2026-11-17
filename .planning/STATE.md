@@ -3,19 +3,18 @@ gsd_state_version: "1.0"
 milestone: v1.2
 milestone_name: Tool-inferred dropdowns + per-tool concurrency lanes
 current_phase: 09
-current_phase_name: Supervised Live Two-Tool Proof
-status: verifying
-stopped_at: Completed 09-12-PLAN.md
-last_updated: "2026-11-17T11:21:26.530Z"
+status: completed
+stopped_at: Phase 09 complete — all phases complete
+last_updated: "2026-11-17T12:11:29.773Z"
 last_activity: 2026-11-17
-last_activity_desc: Phase 09 execution started
-state_head: 8d55efee94132fa1f8362776cd10b28ac343fabf
+last_activity_desc: Phase 09 complete
+state_head: b7e574a116fbcea455a5c66b42040bb2797abcbc
 progress:
   total_phases: 4
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 37
   completed_plans: 37
-  percent: 75
+  percent: 100
 ---
 
 # Project State
@@ -26,21 +25,21 @@ See: .planning/PROJECT.md (updated 2026-11-17)
 
 **Core value:** While an instrument step runs, the operator sees what the instrument is doing and
 decides every recovery action; the web app never acts on its own or pre-selects a physical decision.
-**Current focus:** Phase 09 — Supervised Live Two-Tool Proof
+**Current focus:** Milestone v1.2 complete — ready to close (/gsd-complete-milestone v1.2)
 
 ## Current Position
 
-Phase: 09 (Supervised Live Two-Tool Proof) — EXECUTING
-Plan: 12 of 12
-Status: Phase complete — ready for verification
-Last activity: 2026-11-17 — Phase 09 execution started
+Phase: 09
+Plan: Not started
+Status: All phases complete
+Last activity: 2026-11-17 — Phase 09 complete
 
-Progress: [████████░░] 75% (3 of 4 v1.2 phases)
+Progress: [██████████] 100% (4 of 4 v1.2 phases, 37/37 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 54
+- Total plans completed: 66
 - Average duration: -
 - Total execution time: 0 hours
 
@@ -56,6 +55,7 @@ Progress: [████████░░] 75% (3 of 4 v1.2 phases)
 | 06 | 5 | - | - |
 | 07 | 10 | - | - |
 | 08 | 10 | - | - |
+| 09 | 12 | - | - |
 
 **Recent Trend:**
 - Last 5 plans: none yet
@@ -301,7 +301,12 @@ None. (The F.A.S.T. plate-list todo shipped in Phase 7, PLT-01..09.)
 - [Phase 8 UAT]: the Gantt chart's default Minutes View makes overlapping lane bars thin slivers; the
   per-lane timestamps on run cards are clearer. Backups `controller/data/{app,queue}.db.bak-pre-uat08`
   were left from the simulated-rig UAT.
-- 09-04 preconditions: STACK failure latch cleared and arm idle (operator-confirmed live), real workcell reselected (currently test), plates on nest-1/nest-2/nest-3 confirmed at the GO gate
+- [Phase 9]: `09-REVIEW-DISPOSITION.md` keeps WR-03, WR-05, WR-06 and IN-01..IN-10 open (advisory; CR-01,
+  WR-01, WR-02, WR-04 fixed, UAT-accepted 2026-11-17). WR-05: root `.dockerignore` omits `.env`, the live
+  SQLite store and logs.
+- [Phase 9]: the sim drill copy in the live protocol store (id 8) may still carry the pre-CR-01 deny-list
+  guard; delete or re-import it from `09-sim-drill.protocol.json` before any re-run of the drill.
+- [Phase 9]: the stored run status stays CREATED in lanes mode after all rows complete (follow-up, row 3a-14).
 
 ### Quick Tasks Completed
 
@@ -322,11 +327,11 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-17T11:21:22.295Z
-Stopped at: Completed 09-12-PLAN.md
+Last session: 2026-11-17T12:15:00Z
+Stopped at: Phase 09 complete (UAT 1/1, verification passed, threats_open 0) — milestone v1.2 ready to close
 Resume file: None
 
 ## Operator Next Steps
 
-- Phase 8 (Concurrency Lanes) is next: /gsd-discuss-phase 8 then /gsd-plan-phase 8
+- Milestone v1.2 is complete: /gsd-complete-milestone v1.2
 - /gsd-secure-phase 6 (security enforcement on, no SECURITY.md yet)

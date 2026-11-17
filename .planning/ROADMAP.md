@@ -48,7 +48,7 @@ galago-tools gate without blocking Phases 8-9.
   well block is drag-selected on a plate grid; plate parts gated on galago-tools shipping `get_plates` (PLT-01..09).
 - [x] **Phase 8: Concurrency Lanes** - Behind a default-off flag, one run drives two tool servers at once, (completed 2026-11-17)
   with lane authoring, per-lane run page and failure freeze (LAN-01..09, LUI-01..06).
-- [ ] **Phase 9: Supervised Live Two-Tool Proof** - A supervised run shows STACK overlapping the F.A.S.T.
+- [x] **Phase 9: Supervised Live Two-Tool Proof** - A supervised run shows STACK overlapping the F.A.S.T. (completed 2026-11-17)
   transfer and a drill shows the freeze (LIV-01..03).
 
 ## Phase Details
@@ -176,7 +176,7 @@ resolution is recorded.
   2. A simulated-failure drill freezes both lanes, with no automated motion.
   3. PROJECT.md, the lanes todo and (after the live run passes) the galago-tools runbook record the resolution.
 
-**Plans**: 12/12 plans executed
+**Plans**: 12/12 plans complete
 Plans:
 **Wave 1** *(code gate, fakes only)*
 - [x] 09-01-PLAN.md — Tracer: event-1, event-2 and sim-drill lanes protocols, proven offline through the real script executor, validateLanes and the queue with fake tools
@@ -223,7 +223,7 @@ Plans:
 | 6. STACK Dropdowns | 5/5 | Complete    | 2026-11-06 |
 | 7. F.A.S.T. Plate Dropdowns | 10/10 | Complete    | 2026-11-16 |
 | 8. Concurrency Lanes | 10/10 | Complete    | 2026-11-17 |
-| 9. Supervised Live Two-Tool Proof | 12/12 | In Progress | - |
+| 9. Supervised Live Two-Tool Proof | 12/12 | Complete    | 2026-11-17 |
 
 ## Backlog
 
