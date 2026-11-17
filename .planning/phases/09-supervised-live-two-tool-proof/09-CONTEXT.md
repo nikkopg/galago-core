@@ -124,6 +124,20 @@ change, any change to the tool servers' own discipline, upstream PRs.
   ok, the store still holds STACK2-6 + FA100056. Requires a typed GO. — **Reversibility:** costly —
   rollback is re-tagging the anchor or a flag-off restart; both need a container recreate during which
   no run may be in flight. The flag **stays on** after the proof (no flip back).
+  - **Amendment (2026-11-17, user decision "B", recorded in 09-04):** no production `galago-web`
+    container or `galago-core-galago-web` image exists on this host (found by the 09-04 pre-flight), so
+    the D-13 production rebuild cannot be done as written. The deploy target is the existing dev
+    container **`galago-web-dev`** (image `galago-core-galago-web-dev`, id `a331fa4d812a`,
+    `docker-compose.dev.yml`, `./controller` bind-mounted to `/app`, store `controller/data/app.db`,
+    port 3010), recreated with `GALAGO_PARALLEL_LANES=1`. No image build, no `rollback-pre-lanes` tag.
+    Rollback anchor = git HEAD (SHA recorded in 09-LIVE-EVIDENCE.md, "Decision B") + the unchanged dev
+    image id `a331fa4d812a` + the flag-off recreate command (recorded there). Because the code is
+    bind-mounted, the flag is the only difference between lanes off and on. Everywhere plans 09-05 to
+    09-12 say `galago-web` (container name, `GAL07_WEB_CONTAINER`, `docker exec galago-web ...`) they mean
+    **`galago-web-dev`**; the "new image differs from the anchor" and "running image equals `:latest`"
+    checks do not apply (the dev image id must stay `a331fa4d812a`). Still requires a typed GO.
+    TOOLBOX_PORT is not passed by `docker-compose.dev.yml`; see the evidence file for the prepared,
+    unapplied one-line compose edit and why it is optional.
 - **D-14:** **Typed-GO discipline (runbook D-10):** pre-flight `PREFLIGHT OK`, then baselines (STACK2-6.log
   attempt-line count, ledger state, listener PIDs, `GetFailureLatch` latched:false), then the operator's
   literal typed GO with a UTC timestamp, before each live event (deploy, event 1, event 2). The drill

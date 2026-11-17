@@ -242,6 +242,90 @@ on port 3010, which the dev container holds, against a different store. That is 
 so nothing was tagged, built, started or stopped and no GO was requested. Returned to the user (CONTEXT
 domain note: a defect found at deploy stops the work).
 
+### Decision B (user, 2026-11-17): deploy by recreating `galago-web-dev` with lanes on
+
+The user chose option B, verbatim reply "B": turn lanes on in the existing dev container by recreating
+`galago-web-dev` with `GALAGO_PARALLEL_LANES=1` through `docker-compose.dev.yml`. Same store, same
+workcells and protocols, no build, no `rollback-pre-lanes` image anchor. Recorded as an Amendment to D-13
+in `09-CONTEXT.md`. Plans 09-05 to 09-12 read `galago-web-dev` wherever they say `galago-web`
+(`GAL07_WEB_CONTAINER=galago-web-dev`, `docker exec galago-web-dev ...`). The image checks of the old
+Task 3 (new image differs, equals `:latest`) are replaced by "dev image id unchanged".
+
+Rollback anchor (nothing is tagged because nothing is built):
+
+| Item | Value |
+|------|-------|
+| Code | git HEAD `c548849` at the time of this decision (controller tree identical to `63d61e4`; `git diff --quiet d09a047 HEAD -- controller ':!controller/test'` exit 0, so no production change since Phase 8). Code is bind-mounted, so lanes off and on run the same files; only the flag differs |
+| Image | `galago-core-galago-web-dev` id `a331fa4d812aee4c152fc5fddcbb6a09b2ab23663aaa0d6aad8c8f14d01f6a0e`, expected unchanged after the recreate (`--no-build`) |
+| Container before | `galago-web-dev`, id `18b8638fc1c8`, up since 2026-11-16T22:51:51Z, env `GALAGO_PARALLEL_LANES=` (empty), restart policy `no` |
+| Mounts | bind `./controller` to `/app`; anonymous volume at `/app/node_modules` (compose reuses it on recreate; the dry run below planned a plain recreate) |
+| Compose project | `galago-core`, config `docker-compose.dev.yml` in the repo root |
+| Root `.env` | absent (gitignored by `.gitignore:45` if ever created) |
+
+Read-only prep done (no container stopped or recreated):
+
+- `GALAGO_PARALLEL_LANES=1 docker compose -f docker-compose.dev.yml config` resolves
+  `environment.GALAGO_PARALLEL_LANES: "1"`, everything else unchanged. The compose file already passes the
+  flag through (`${GALAGO_PARALLEL_LANES:-}`), so no compose edit is needed to turn lanes on.
+- `GALAGO_PARALLEL_LANES=1 docker compose -f docker-compose.dev.yml up -d --no-build --dry-run` planned
+  exactly `Container galago-web-dev Recreate / Recreated / Started`; afterwards `docker ps` still showed
+  `galago-web-dev` id `18b8638fc1c8` up (dry run changed nothing).
+- `TOOLBOX_PORT`: `docker-compose.dev.yml` has no `TOOLBOX_PORT` line (only the production compose does),
+  so it cannot be passed to the dev container by an env override. `controller/server/tools.ts`
+  (`toolBoxConfig`) reads `Number(process.env.TOOLBOX_PORT) || 1010` with `ip: "localhost"`, which inside a
+  bridge-network container is the container itself, not the host Tool Box on :11010. The dev container has
+  run all session without it, and the proof uses only STACK2-6 and FA100056. Recommendation: do not add
+  it. Prepared, NOT applied, if the user insists: add `- TOOLBOX_PORT=${TOOLBOX_PORT:-1010}` under
+  `environment:` in `docker-compose.dev.yml` (after `- PORT=3010`), commit it by explicit path, and run
+  the recreate with `TOOLBOX_PORT=11010` as well.
+- Dev-mode caveat: `./controller` is bind-mounted into a `next dev` server, so any edit under
+  `controller/` by anyone hot-reloads the live server. Keep `git status --porcelain -- controller` empty
+  during the proof and re-check it at every baseline.
+- Persistence: the env override applies to this recreate only. A later plain
+  `docker compose -f docker-compose.dev.yml up` (or a host restart followed by compose) without the variable
+  starts the container with the flag off. D-13 says the flag stays on after the proof, so the GO offers an
+  optional gitignored root `.env` with the single line `GALAGO_PARALLEL_LANES=1` (compose reads it
+  automatically). Default is no `.env` (one-off).
+- Two runs sit in `CREATED` (6 `COMPLETED` command rows) in the store from earlier work. They are not
+  RUNNING and the recreate does not start them; nobody should press Start on them.
+
+Exact commands (from `/home/formulatrix/data/nikko/galago-core`; none has been run):
+
+```bash
+# DEPLOY: recreate galago-web-dev with lanes on (no build, image id stays a331fa4d812a)
+GALAGO_PARALLEL_LANES=1 docker compose -f docker-compose.dev.yml up -d --no-build galago-web-dev
+
+# ROLLBACK: recreate with the flag off (also remove GALAGO_PARALLEL_LANES from a root .env if one was written)
+env -u GALAGO_PARALLEL_LANES docker compose -f docker-compose.dev.yml up -d --no-build galago-web-dev
+# rollback check: docker exec galago-web-dev printenv GALAGO_PARALLEL_LANES   (prints an empty line)
+#                 laneStatus shows "laneMode":false
+```
+
+Post-deploy verification, run after GO in this order (any failure: stop, leave the container as it is,
+return to the user, never hot-fix):
+
+1. `docker inspect galago-web-dev --format '{{.Image}}'` is still `sha256:a331fa4d812a...`; the container id
+   differs from `18b8638fc1c8`; `docker exec galago-web-dev printenv GALAGO_PARALLEL_LANES` prints `1`.
+2. Wait for the Next dev server (poll `curl -fsS localhost:3010/api/health` up to about 2 minutes; the first
+   requests compile on demand), then `/api/health` is `{"status":"ok"}`.
+3. `curl -fsS localhost:3010/api/trpc/commandQueue.laneStatus` shows `"laneMode":true` and `"halted":false`
+   (before the recreate it showed `laneMode:false`).
+4. `GET /api/tools` lists `STACK2-6` and `FA100056` (workcell-scoped: needs the real workcell selected) and
+   `/api/settings/workcell` is the real workcell.
+5. Pre-flight, both forms, last line exactly `PREFLIGHT OK`:
+   `cd ~/data/nikko/galago-tools && GAL07_WEB_CONTAINER=galago-web-dev bash docs/runbooks/gal-07-live-check.sh | tail -1`
+   and the same with `GAL07_REQUIRE_STACK_ENV=1`.
+6. `bash .planning/phases/09-supervised-live-two-tool-proof/tools/phase9-ctl.sh baseline post-deploy` against
+   `20261117T051917Z-pre-deploy.baseline.txt`: listener PIDs unchanged (8081 `6872`, 11010 `7490`,
+   40012 `7491`, 40001 `2320808`); `STACK2-6.log` still 12 "Running command Transfer"; ledger sha256 still
+   `5de43c84...670b` (9 records); `FA100056.log` Transfer count unchanged; `/api/runs` count 0 (no run
+   RUNNING); `git status --porcelain -- controller` empty.
+7. Record in this section: GO time (UTC), HEAD, container ids before and after, the flag-persistence choice,
+   and every result above (data for runbook row 3a-11).
+
+Status: awaiting the typed GO (blocking-human, never auto-approved). Nothing was stopped, recreated, built
+or tagged by 09-04 so far.
+
 ## Freeze drill (LIV-02), row 3a-12
 
 ### Scenario 1
