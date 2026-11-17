@@ -5,16 +5,16 @@ milestone_name: Tool-inferred dropdowns + per-tool concurrency lanes
 current_phase: 09
 current_phase_name: Supervised Live Two-Tool Proof
 status: executing
-stopped_at: Completed 09-03-PLAN.md
-last_updated: "2026-11-17T05:15:57.952Z"
+stopped_at: Completed 09-04-PLAN.md
+last_updated: "2026-11-17T08:34:51.847Z"
 last_activity: 2026-11-17
 last_activity_desc: Phase 09 execution started
-state_head: e563f3b777fe70842112852cbec763fb9c6e242f
+state_head: 3bd5f97e6b2eedd4018e3c35fc19131501cf8bcb
 progress:
   total_phases: 4
   completed_phases: 3
   total_plans: 37
-  completed_plans: 28
+  completed_plans: 29
   percent: 75
 ---
 
@@ -31,7 +31,7 @@ decides every recovery action; the web app never acts on its own or pre-selects 
 ## Current Position
 
 Phase: 09 (Supervised Live Two-Tool Proof) — EXECUTING
-Plan: 4 of 12
+Plan: 5 of 12
 Status: Ready to execute
 Last activity: 2026-11-17 — Phase 09 execution started
 
@@ -119,6 +119,7 @@ Progress: [████████░░] 75% (3 of 4 v1.2 phases)
 | Phase 09 P01 | 7 min | 3 tasks | 5 files |
 | Phase 09 P02 | 6 min | 2 tasks | 3 files |
 | Phase 09 P03 | 58 min | 3 tasks | 11 files |
+| Phase 09 P04 | multi-session | 3 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -226,6 +227,7 @@ Recent decisions affecting current work:
 - [Phase 09]: D-02 amended by the user (2026-11-17): third plate starts on nest-3, x1 nest-3 to nest-1 during the F.A.S.T. leg, out1 tray1/5 to nest-3, out2 unchanged
 - [Phase 09]: D-03 dropped by the user: no -x2 return leg; operator restores the rig by hand after event 2
 - [Phase 09]: Protocol params keep spare_a_* (overlap source) and spare_b_* (overlap destination) names; out1_dest_* required with no default
+- [Phase 09]: D-13 amended (decision B): lanes enabled by recreating galago-web-dev with GALAGO_PARALLEL_LANES=1 plus gitignored root env file; no production container/image exists, no rollback-pre-lanes anchor
 
 ### Pending Todos
 
@@ -303,8 +305,8 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-17T05:15:57.881Z
-Stopped at: Completed 09-03-PLAN.md
+Last session: 2026-11-17T08:34:51.764Z
+Stopped at: Completed 09-04-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
