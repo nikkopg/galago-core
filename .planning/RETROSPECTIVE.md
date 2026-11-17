@@ -88,6 +88,50 @@
 
 ---
 
+## Milestone: v1.2 — Tool-inferred dropdowns + per-tool concurrency lanes
+
+**Shipped:** 2026-11-17
+**Phases:** 4 | **Plans:** 37
+
+### What Was Built
+- STACK dropdowns: a queue-free, deadline-bounded `Tool.readOptions` behind a closed `tool.options` source registry (capped, 15 s cached, deduped, failure-evicted), a React-free device → deck → nest cascade with `applyChange` as the only patch producer, and `OptionsSelect` in the tool page, AddToolCommandModal and the edit-mode drawer
+- F.A.S.T. plate dropdowns from the frozen `get_plates` (`d53da53`), deck selects, a "Reuse tips" checkbox, a drag/click well-block picker on a pure `sourcePointerStep` reducer, and an int32 send guard that refuses values the encoder would wrap
+- Per-toolId concurrency lanes behind `GALAGO_PARALLEL_LANES`: barrier eligibility, `claimEligible`, per-lane Start guard, fail-closed lane-halt and confirmed Freeze lanes, run-creation lane validation, Lanes panel, per-lane rows/preview, and drawer lane authoring — flag off byte-identical to a golden transcript
+- Supervised live proof on STACK2-6 + FA100056: a STACK estimate (event 1) and a third-plate STACK transfer (event 2) ran inside the F.A.S.T. transfer window; a sim-rig drill froze both lanes on any failure and on Freeze
+
+### What Worked
+- Golden transcripts captured at the unmodified commit (08-01) turned "flag off is unchanged" into an exact, re-runnable test instead of a review claim
+- Pure, React-free cores (cascade, well picker, drag reducer, lane scheduling, lane UI helpers) carried hundreds of table tests under node vitest and kept the React shells thin
+- Building the shared dropdown layer in Phase 6 made Phase 7 a reuse job; ordering lanes independently of Phase 7 kept the galago-tools `get_plates` gate from blocking 8-9
+- Simulated STACK/F.A.S.T. servers in an isolated workcell let the drill and UAT exercise failure paths with the real tools provably untouched (PIDs, counts, ledger sha)
+- Every live event ran under a typed go with operator-only control and pre/post count deltas, so each PASS rests on raw numbers in 09-LIVE-EVIDENCE.md
+
+### What Was Inefficient
+- For the third milestone in a row, later phases staled earlier verifications (6, 7), and no milestone audit was run — closed as override_closeout again
+- Code review found correctness gaps after verification passed (07 CR-01 int32 wrap, WR-01 drag; 08 WR-02/03/06), costing gap-closure plans 07-09/07-10
+- Phase 9 grew to 12 plans: the spare-nest check found one nest, not a pair, forcing D-02/D-03 amendments and protocol rebuilds mid-phase
+- The lanes-mode run record staying `CREATED` surfaced only in live event 2 — no offline test asserted the stored run status under lanes
+
+### Patterns Established
+- Instrument-fed dropdowns: born empty, never preselect, typed fallback on any failure reason, saved values never rewritten by refresh/hydrate
+- Default-off server flags for behaviour that changes dispatch on real instruments, pinned by a golden fixture of the off path
+- Lane-halt is its own latch, not a queue state; only an accepted operator Start clears it
+- Live proof as numbered events, each with its own typed go, pre-flight readiness read, and delta-checked evidence; sim rigs on 40091/40092 with placeholder hosts
+- Pin dispatch spans and send counts with negative controls (staticScan region pin, laneOneSend tally) instead of refactoring the queue
+
+### Key Lessons
+1. Run `/gsd-audit-milestone` and re-verify early phases before the final phase closes — three override closes in a row means the verify-after-edit loop needs to be scheduled, not remembered.
+2. Run code review before verification is marked passed; the int32-wrap bug was a physical-safety defect that verification alone did not catch.
+3. Check physical rig assumptions (spare nests, plate positions) during discuss, not mid-execution — they reshape live-proof plans.
+4. Assert persisted run status in the lane-engine offline tests; the live rig should confirm, not discover.
+
+### Cost Observations
+- Model mix: not tracked
+- Sessions: not tracked
+- Notable: 282 commits over 13 days (2026-11-05 → 2026-11-17), 37 plans / 85 tasks; suite grew 608 → ~1,416 tests; 81 code files, +19.7k lines
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -96,6 +140,7 @@
 |-----------|----------|--------|------------|
 | v1 | — | 2 | First GSD milestone; tracer-first plans; quick tasks for post-phase fixes |
 | v1.1 | — | 3 | Research scoped to root-cause docs; RED-first TDD records; static-scan fencing of safety invariants; headless-Chrome UAT harness |
+| v1.2 | — | 4 | Golden-transcript flag-off proof; pure React-free cores; sim-rig drills; numbered supervised live events with delta-checked evidence |
 
 ### Cumulative Quality
 
@@ -103,9 +148,10 @@
 |-----------|-------|----------|-------------------|
 | v1 | 244 | — | Vitest 2.1.9 + vite-tsconfig-paths (dev only) |
 | v1.1 | 608 | — | None (ts-proto codegen pinned via scratch venv, no new runtime deps) |
+| v1.2 | ~1,416 | — | None (no new npm dependency; submodule re-pins only) |
 
 ### Top Lessons (Verified Across Milestones)
 
-1. Post-phase edits stale earlier phases' verifications in BOTH milestones — re-run the full suite at HEAD and record it as override evidence before closing.
+1. Post-phase edits stale earlier phases' verifications in ALL THREE milestones (v1, v1.1, v1.2) — re-run the full suite at HEAD and record it as override evidence before closing.
 2. Hand-maintained SUMMARY frontmatter broke the close-time cross-check in BOTH milestones — generate it from PLAN frontmatter at execution time.
 3. Static scans pin structure, only a browser proves layout — the Phase 5 headless-Chrome harness is the reusable answer.
