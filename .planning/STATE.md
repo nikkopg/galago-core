@@ -2,19 +2,19 @@
 gsd_state_version: "1.0"
 milestone: v1.2
 milestone_name: Tool-inferred dropdowns + per-tool concurrency lanes
-current_phase: 09
-status: completed
+status: Awaiting next milestone
 stopped_at: Phase 09 complete — all phases complete
-last_updated: "2026-11-17T12:11:29.773Z"
+last_updated: "2026-11-17T12:15:49.564Z"
 last_activity: 2026-11-17
-last_activity_desc: Phase 09 complete
-state_head: b7e574a116fbcea455a5c66b42040bb2797abcbc
+last_activity_desc: Milestone v1.2 completed and archived
+state_head: fc51053589caaaadd093488e83613744d1ca8a07
 progress:
   total_phases: 4
   completed_phases: 4
   total_plans: 37
   completed_plans: 37
   percent: 100
+current_phase: 09
 ---
 
 # Project State
@@ -25,16 +25,14 @@ See: .planning/PROJECT.md (updated 2026-11-17)
 
 **Core value:** While an instrument step runs, the operator sees what the instrument is doing and
 decides every recovery action; the web app never acts on its own or pre-selects a physical decision.
-**Current focus:** Milestone v1.2 complete — ready to close (/gsd-complete-milestone v1.2)
+**Current focus:** Planning next milestone (v1.2 shipped 2026-11-17; start with /gsd-new-milestone)
 
 ## Current Position
 
-Phase: 09
-Plan: Not started
-Status: All phases complete
-Last activity: 2026-11-17 — Phase 09 complete
-
-Progress: [██████████] 100% (4 of 4 v1.2 phases, 37/37 plans)
+Phase: Milestone v1.2 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-11-17 — Milestone v1.2 completed and archived
 
 ## Performance Metrics
 
@@ -312,7 +310,6 @@ None. (The F.A.S.T. plate-list todo shipped in Phase 7, PLT-01..09.)
 
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
-| 261104-or1 | Remove per-command expected_tray_id from F.A.S.T. Transfer | 2026-11-04 | d85f992 | [261104-or1-remove-per-command-expected-tray-id-from](./quick/261104-or1-remove-per-command-expected-tray-id-from/) |
 
 ## Deferred Items
 
@@ -320,6 +317,9 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 | Category | Item | Status | Deferred At | Milestone |
 |----------|------|--------|-------------|-----------|
+| verification_override | Phase 06 VERIFICATION.md stale (Phase 8/9 edits) | stale | 2026-11-17 | v1.2 |
+| verification_override | Phase 07 VERIFICATION.md stale (Phase 8/9 edits) | stale | 2026-11-17 | v1.2 |
+| verification_override | v1.2-MILESTONE-AUDIT.md not run | missing | 2026-11-17 | v1.2 |
 | debug_sessions | run-create-operator-only-500 | diagnosed | 2026-11-02 | v1.1 |
 | debug_sessions | step-card-error-overflow | diagnosed | 2026-11-02 | v1.1 |
 | todos | 2026-10-15-evaluate-whether-expected-tray-id-is-still-needed.md | (presence-only) | 2026-10-16 | v1 |
@@ -333,5 +333,4 @@ Resume file: None
 
 ## Operator Next Steps
 
-- Milestone v1.2 is complete: /gsd-complete-milestone v1.2
-- /gsd-secure-phase 6 (security enforcement on, no SECURITY.md yet)
+- Start the next milestone with /gsd-new-milestone

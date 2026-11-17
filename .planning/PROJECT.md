@@ -9,8 +9,12 @@ operator control a running instrument step live — and, since v1.1, STACK tool 
 the frozen `stack.proto`, born-empty STACK command forms, operator-only STACK error
 acknowledgement, and the queue's single-flight Start guard with full tool-error visibility (single-flight per lane when
 `GALAGO_PARALLEL_LANES=1`: at most one step per tool server in flight, any failure or Freeze lanes stops
-new dispatch on every lane and only the operator's Start re-arms; unchanged with the flag off). The
-F.A.S.T. and STACK tool servers it controls are planned in the galago-tools fork's own GSD project.
+new dispatch on every lane and only the operator's Start re-arms; unchanged with the flag off). Since
+v1.2 the STACK and F.A.S.T. command forms offer dropdowns of the values the instruments themselves
+report (robots, device → deck → nest, labware and transfer profiles, registered plates, a well-block
+picker), and one run can drive two tool servers at once on per-tool concurrency lanes, proven live
+on STACK2-6 + FA100056. The F.A.S.T. and STACK tool servers it controls are planned in the
+galago-tools fork's own GSD project.
 
 ## Core Value
 
@@ -20,7 +24,18 @@ and never pre-selects a physical decision for the operator.
 
 ## Current State
 
-**Shipped:** v1.1 STACK tool support — 2026-11-02 (Phases 3-5, 18 plans; tag `v1.1`). galago-core sends
+**Shipped:** v1.2 Tool-inferred dropdowns + per-tool concurrency lanes — 2026-11-17 (Phases 6-9,
+37 plans, 85 tasks; tag `v1.2`). STACK `transfer` / `get_transfer_estimate` / `get_labware_presence`
+and F.A.S.T. Transfer fields are born-empty dropdowns read live from the instruments (bounded,
+cached, never queued; typed fallback when unreachable; saved values never rewritten), out-of-range
+int32 values are refused before any gRPC send, and `GALAGO_PARALLEL_LANES=1` lets one run drive two
+tool servers at once with a fail-closed lane-halt (flag off is byte-identical to the sequential
+queue). Live proof on the real rig: a STACK estimate and a third-plate STACK transfer each ran inside
+the F.A.S.T. transfer window, and the sim drill froze both lanes. Closed as `override_closeout`: no
+v1.2 milestone audit, and Phase 6/7 verification reports went stale after Phase 8/9 edits. Archive:
+`milestones/v1.2-ROADMAP.md`, `milestones/v1.2-REQUIREMENTS.md`, `milestones/v1.2-phases/`.
+
+**Shipped earlier:** v1.1 STACK tool support — 2026-11-02 (Phases 3-5, 18 plans; tag `v1.1`). galago-core sends
 every STACK command from born-empty tool-page forms (codegen from the frozen `stack.proto` commit
 `bcbbf8e`), shows every STACK error as an error (re-arming banner, step-card stored error, real
 code names, skipped failures never plain success), a Start can never dispatch a row already in
@@ -59,7 +74,8 @@ via `/gsd-quick`, never here.
 
 </details>
 
-## Current Milestone: v1.2 Tool-inferred dropdowns + per-tool concurrency lanes
+<details>
+<summary>Milestone v1.2 scope (shipped) — goal, target features, carried items</summary>
 
 **Goal:** The operator picks STACK and F.A.S.T. command values from lists the instruments themselves
 report, instead of typing names and ids from memory; and one run can drive two tool servers at once
@@ -82,6 +98,12 @@ operator-decides-recovery guarantee.
   Source: `.planning/todos/pending/scheduler-per-tool-concurrency-lanes.md`.
 
 **Shape:** STACK dropdowns → F.A.S.T. plates → lanes (internals → protocol/run page → live proof).
+
+**Carried, not in v1.2 scope:** the stored run record stays `CREATED` in lanes mode (found in live
+event 2; rows and laneStatus are correct); Phase 6 has no SECURITY.md; Phase 6/7 VERIFICATION.md
+digests are stale after Phase 8/9 edits; v1.1 audit tech debt (Phase-4 WR-01..WR-05 and others).
+
+</details>
 
 ## Requirements
 
@@ -149,11 +171,17 @@ operator-decides-recovery guarantee.
   a third-plate STACK transfer nest-3 to nest-1 (event 2) overlapped the F.A.S.T. liquid leg with
   per-lane rows, explicit per-run step keys and one ledger record per key; the sim drill froze both
   lanes on a failure in either lane and on Freeze lanes, nothing aborted — Phase 9 (evidence
-  `.planning/phases/09-supervised-live-two-tool-proof/09-LIVE-EVIDENCE.md`, 2026-11-17)
+  `.planning/milestones/v1.2-phases/09-supervised-live-two-tool-proof/09-LIVE-EVIDENCE.md`, 2026-11-17)
 
 ### Active
 
-(Detailed REQ-IDs in `.planning/REQUIREMENTS.md`.)
+(None yet — the next milestone's requirements are defined by `/gsd-new-milestone`.)
+
+Candidates carried from v1.2:
+- [ ] Lanes-mode run record reaches its real final status (today it stays `CREATED` while every row
+  and laneStatus is correct)
+- [ ] Re-verify Phases 6 and 7 (stale digests) and run `/gsd-secure-phase 6`
+- [ ] Decide whether `GALAGO_PARALLEL_LANES` becomes the default once the run-status gap is fixed
 
 ### Out of Scope
 
@@ -183,7 +211,7 @@ operator-decides-recovery guarantee.
 - **Build:** `.dockerignore` keeps host `controller/node_modules` out of the image (host-built
   native modules broke `better-sqlite3`).
 - **Gate:** `tsc --noEmit` in `controller/` (0 errors) plus the Vitest unit suite
-  (`npm run test:unit`, 608 tests / 28 files at v1.1 close); `bin/make test` runs both, with
+  (`npm run test:unit`, 608 tests at v1.1 close; ~1,416 at the v1.2 Phase 9 gate); `bin/make test` runs both, with
   `prettier --check`. `test/staticScan.test.ts` pins the UI-08 invariants (single send path, no
   timers, no state checks) plus the v1.1 safety scans (operator-only refusals, born-empty fields,
   one bounded raw display).
@@ -269,4 +297,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-11-17 after Phase 9*
+*Last updated: 2026-11-17 after v1.2 milestone*
