@@ -31,7 +31,7 @@ in this file or under `evidence/` (runbook credential rule).
 | galago-tools SHA re-verified at each baseline | pre-spare-check: `d53da53` (above); events 1 and 2 baselines: `034867c` (docs-only descendant, tool code unchanged since `d53da53`) | |
 | Runbook rows 3a-11 / 3a-12 commit (galago-tools, branch `feat/stack-tool`) | `034867ca8aec9cb5ed83140306ebd89bf61b9ae7` (`034867c`), `docs(gal-07): findings 3a-11 lanes-on deploy and 3a-12 lanes drill (galago-core Phase 9)`; `git show --name-only` lists only `docs/runbooks/gal-07-live-handoff.md` (5 insertions, 1 deletion); `TestRunbookContent` 5 tests OK before and after; "Reply: literal go" count 3; no credential or Bearer value in the rows (09-08) | `git -C ~/data/nikko/galago-tools show --stat HEAD` |
 | galago-core `vendor/galago-tools` pin after that commit | unchanged: `git diff --quiet HEAD -- vendor/galago-tools` exit 0 and `git submodule status vendor/galago-tools` still `d53da5384f9f...` (`v2-4-gd53da53`). No re-pin (D-17). The commit is docs only, so the deployed galago-tools code is unchanged and no galago-tools redeploy happened (D-07). The galago-tools working tree's other changes (deletions under `.planning/phases/04-*`, `.planning/state.json`, untracked `tools/fast-mcp-locks/`) are the user's and were not staged | 09-08 Task 2 |
-| Runbook SHA (galago-tools) after rows 3a-13..3a-15 | _pending (09-12)_ | |
+| Runbook SHA (galago-tools) after rows 3a-13..3a-15 | `69ea3b6c010bd5651d8f54b6bce0b8f58f0ebcbf` (`69ea3b6`), `docs(gal-07): lanes parallel two-plate cycle after LIV-01, findings 3a-13..3a-15 (galago-core Phase 9)`; branch `feat/stack-tool`; `git show --name-only` lists only `docs/runbooks/gal-07-live-handoff.md` (41 insertions) | 09-12 Task 3 |
 
 ## D-05 overlap rule
 
@@ -1265,7 +1265,17 @@ LIV-01 holds only if Event 1 and Event 2 both pass: Event 1 verdict PASS (09-10,
 
 ## LIV-03 records, row 3a-15
 
-_Pending (09-12)._
+Recorded after the LIV-01 verdict PASS (above), 2026-11-17.
+
+| Record | Where | Result |
+|--------|-------|--------|
+| PROJECT.md | `.planning/PROJECT.md`: the Active item "Per-toolId concurrency lanes proven live on two tools" removed; Validated bullet "LIV-01..03" with a pointer to this file; single-flight wording now per lane with `GALAGO_PARALLEL_LANES=1`; four Phase 9 Key Decisions rows (D5, D8, IN-01, deploy decision B) | done (commit `3f1ad72`) |
+| Lanes todo | resolution note mapping the four acceptance items to evidence, boxes ticked, moved with `git mv` to `.planning/todos/completed/scheduler-per-tool-concurrency-lanes.md` | done (commit `3f1ad72`) |
+| Runbook rows and parallel cycle | galago-tools `docs/runbooks/gal-07-live-handoff.md`: rows 3a-13 (event 1), 3a-14 (event 2), 3a-15, and the subsection `### Parallel two-plate cycle (lanes, LIV-01)` inside Part 3 before `## Recovery drill (D-11)`; added only after LIV-01 PASS | done; galago-tools commit `69ea3b6c010bd5651d8f54b6bce0b8f58f0ebcbf` (`69ea3b6`) on `feat/stack-tool`, only that file |
+
+Checks: `TestRunbookContent` 5 tests OK before and after; "Reply: literal go" count 3; Bearer grep prints 0; `git diff --quiet HEAD -- vendor/galago-tools` exit 0 and `git submodule status vendor/galago-tools` still `d53da5384f9f...`: no re-pin, no galago-tools redeploy, no upstream PR. The other changes in the galago-tools working tree (deletions under `.planning/phases/04-*` and the like) are the user's and were not staged.
+
+Follow-ups carried (not clauses): lanes-mode run records stay `CREATED` after every row completes; `FA100056.log` growth from the web UI's `GET /status` polling; nest-3 to nest-1 reliability (the readiness round trip stays a gate).
 
 ## Raw evidence index
 
