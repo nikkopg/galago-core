@@ -27,8 +27,8 @@ in this file or under `evidence/` (runbook credential rule).
 | `FA100056.log` | 139686 lines, 4 "Running command", 1 "Running command Transfer" | baseline file |
 | Ledger | `~/.local/state/galago-tools/stack/stack-ledger.json`, sha256 `94892d6fdb184022ef3f453ef57f800dd4fab9703ccc75167cf4ec9b911ef68c`, 4 records (all `done`/`ran`, 2026-11-16 11:21Z to 11:25Z) | baseline file |
 | Image IDs (running, rollback anchor, new) | dev image `a331fa4d812a...` before and after (no build, no anchor); container `18b8638fc1c8` to `855c334135eb` (09-04, Deploy section) | Deploy section |
-| galago-core HEAD at each event | deploy: `486cf09` (09-04); drill: `2de6b0b` at the pre-drill-go baseline (09-06); event 1: _pending_; event 2: _pending_ | |
-| galago-tools SHA re-verified at each baseline | pre-spare-check: `d53da53` (above); others: _pending_ | |
+| galago-core HEAD at each event | deploy: `486cf09` (09-04); drill: `2de6b0b` at the pre-drill-go baseline (09-06); event 1: `9201bd3` (pre-e1 baseline) and `18e183a` (e1-after); event 2: `356d7c6` (pre-e2) and `03a23e9` (e2-after), no `controller/` commit after `9201bd3` (09-12) | |
+| galago-tools SHA re-verified at each baseline | pre-spare-check: `d53da53` (above); events 1 and 2 baselines: `034867c` (docs-only descendant, tool code unchanged since `d53da53`) | |
 | Runbook rows 3a-11 / 3a-12 commit (galago-tools, branch `feat/stack-tool`) | `034867ca8aec9cb5ed83140306ebd89bf61b9ae7` (`034867c`), `docs(gal-07): findings 3a-11 lanes-on deploy and 3a-12 lanes drill (galago-core Phase 9)`; `git show --name-only` lists only `docs/runbooks/gal-07-live-handoff.md` (5 insertions, 1 deletion); `TestRunbookContent` 5 tests OK before and after; "Reply: literal go" count 3; no credential or Bearer value in the rows (09-08) | `git -C ~/data/nikko/galago-tools show --stat HEAD` |
 | galago-core `vendor/galago-tools` pin after that commit | unchanged: `git diff --quiet HEAD -- vendor/galago-tools` exit 0 and `git submodule status vendor/galago-tools` still `d53da5384f9f...` (`v2-4-gd53da53`). No re-pin (D-17). The commit is docs only, so the deployed galago-tools code is unchanged and no galago-tools redeploy happened (D-07). The galago-tools working tree's other changes (deletions under `.planning/phases/04-*`, `.planning/state.json`, untracked `tools/fast-mcp-locks/`) are the user's and were not staged | 09-08 Task 2 |
 | Runbook SHA (galago-tools) after rows 3a-13..3a-15 | _pending (09-12)_ | |
@@ -1128,9 +1128,140 @@ Orchestrator read at 11:13:42Z: `laneStatus` `laneMode:true`, `halted:false`, `h
 
 Capture status: the post-run capture is complete and every count matches the expected deltas; all five STACK keys are done/ran and every row is COMPLETED. The event-2 verdict, D-05 and LIV-01 are judged in 09-12.
 
+### Operator end-state confirmation (relayed by the orchestrator, after the run reply)
+
+Asked by the orchestrator whether plate 2 sat on nest-2 (the run reply of 11:13:42Z had not mentioned it), the operator answered "yes plate 2 on nest-2"
+after 11:13:42Z and before the capture was finished. Recorded as **operator-confirmed** (by eye; no tool read backs plate positions). The orchestrator
+then told the operator "capture done" (after the capture commit `f35b22e`, 2026-11-17T11:14:25Z; the message time itself was not logged), so the hand
+restore of the rig happened after the capture and is not D-05 evidence. End state as reported: third plate on nest-1, plate 1 on nest-3, plate 2 on nest-2.
+
+### Event-2 analysis against D-05 (09-12 Task 1), 2026-11-17
+
+Judged by Claude from the copied files only (`evidence/20261117T111407Z-e2-after.queue.json`, `...-e2.STACK2-6.log`, `...-e2.FA100056.log`,
+`...-e2.ledger.json`, the pre-e2 and e2-after baselines). Claude sent nothing to any tool (D-18). The operator reported "event 2 done" at 11:13:42Z
+with no failure. Method as in the event-1 analysis (the rows come from a script over the snapshot JSON: raw ms are epoch ms parsed from `startedAt` /
+`completedAt`; the lane is the row's `advancedParameters.lane`, absent meaning the primary lane).
+
+**1. Per-lane rows** (run `1596f9bcf081e7000`, batch label LIV01-E2, key base `LIV01-E2-2026-11-17T11:08:44.895Z-abf060a9`, queueId order inside each
+lane; no two rows share a timestamp except that q70 started and completed 1 ms apart, so nothing needed re-ordering). All 7 rows `COMPLETED`.
+
+Primary lane (STACK2-6 and Tool Box note):
+
+| queueId | Command | step_key suffix | Status | startedAt (raw ms) | startedAt (ISO UTC) | completedAt (raw ms) | completedAt (ISO UTC) |
+|---------|---------|-----------------|--------|--------------------|---------------------|----------------------|-----------------------|
+| 70 | Tool Box note (key base) | none | COMPLETED | 1794913734283 | 2026-11-17T11:08:54.283Z | 1794913734284 | 2026-11-17T11:08:54.284Z |
+| 71 | STACK transfer nest-1/deck1/A1 to fa100056 tray1/5 | `-in1` | COMPLETED | 1794913735785 | 2026-11-17T11:08:55.785Z | 1794913765556 | 2026-11-17T11:09:25.556Z |
+| 72 | STACK transfer nest-2/deck`/A1 to fa100056 tray1/6 | `-in2` | COMPLETED | 1794913767057 | 2026-11-17T11:09:27.057Z | 1794913796992 | 2026-11-17T11:09:56.992Z |
+| 74 | STACK transfer nest-3/deck1/A1 to nest-1/deck1/A1 (third plate, overlap) | `-x1` | COMPLETED | 1794913798493 | 2026-11-17T11:09:58.493Z | 1794913829196 | 2026-11-17T11:10:29.196Z |
+| 75 | STACK transfer fa100056 tray1/5 to nest-3/deck1/A1 (`laneBarrier`) | `-out1` | COMPLETED | 1794913869712 | 2026-11-17T11:11:09.712Z | 1794913900230 | 2026-11-17T11:11:40.230Z |
+| 76 | STACK transfer fa100056 tray1/6 to nest-2/deck`/A1 | `-out2` | COMPLETED | 1794913901731 | 2026-11-17T11:11:41.731Z | 1794913931249 | 2026-11-17T11:12:11.249Z |
+
+Lane `fast` (FA100056):
+
+| queueId | Command | step_key suffix | Status | startedAt (raw ms) | startedAt (ISO UTC) | completedAt (raw ms) | completedAt (ISO UTC) |
+|---------|---------|-----------------|--------|--------------------|---------------------|----------------------|-----------------------|
+| 73 | F.A.S.T. transfer deck 5 to 6, `lane: fast`, `laneBarrier` | none (F.A.S.T. has no step_key) | COMPLETED | 1794913797309 | 2026-11-17T11:09:57.309Z | 1794913868787 | 2026-11-17T11:11:08.787Z |
+
+(Queue order across lanes is by queueId: 73 sits before 74 only by enqueue order; the lanes claim independently.)
+
+**2. D-05 containment clauses** (`So`, `Eo` = row 74; `Sf`, `Ef` = row 73; tolerance 1500 ms; raw ms):
+
+- `So` = 1794913798493, `Eo` = 1794913829196 (the -x1 window is 30703 ms).
+- `Sf` = 1794913797309, `Ef` = 1794913868787 (the F.A.S.T. window is 71478 ms).
+
+| Clause | Computation | Result |
+|--------|-------------|--------|
+| `So >= Sf - 1500` | 1794913798493 >= 1794913795809 (margin 2684 ms; in fact `So - Sf` = +1184 ms, -x1 started after the F.A.S.T. row, so the tolerance was not needed) | **holds** |
+| `Eo <= Ef` | 1794913829196 <= 1794913868787 (-x1 finished 39591 ms before the F.A.S.T. row) | **holds** |
+| `min(Eo, Ef) - max(So, Sf) > 0` | min = 1794913829196 (`Eo`), max = 1794913798493 (`So`), difference = 30703 ms, strictly positive | **holds** (not a touch: neither `Eo = Sf` nor `So = Ef`) |
+
+The -x1 window lies wholly inside the F.A.S.T. window `[Sf, Ef]` and its full 30.7 s duration overlaps it (a moving overlap, unlike event 1's 166 ms read).
+
+**3. Tool logs** (log lines are local UTC+7, converted to UTC; the log lines' own times; the F.A.S.T. HTTP `Date` header is NOT used (instrument clock); the web UI's
+`GET /status` polls are not counted as run progress):
+
+| Log line | Local | UTC |
+|----------|-------|-----|
+| `FA100056.log` "Running command Transfer" (line 1228) and its `POST .../protocol/run` 200 (line 1265) | 2026-11-17 18:09:57 | 11:09:57 |
+| `STACK2-6.log` "Running command Transfer" for -x1 (line 921), then `POST /api/v2/transfer/estimation` and `POST /api/v2/transfer` 200 | 18:09:58 | 11:09:58 |
+| `STACK2-6.log` -x1 `ExecuteCommand Response: response: SUCCESS` (line 1373) | 18:10:29 | 11:10:29 |
+| F.A.S.T. row `completedAt` (row 73) | | 11:11:08.787 |
+| `FA100056.log` "fast run progress" lines (the executor's own progress of this run: 0% at 18:09:57, 6% at 18:10:26, 12% at 18:10:28, 85% at 18:10:50, 100% (idle) at 18:11:08) | | 11:09:57 to 11:11:08 |
+
+- The -x1 Transfer line (11:09:58) lies after the F.A.S.T. Transfer line (11:09:57) in a different second, and before the F.A.S.T. row's `completedAt` (11:11:08.787), about
+  70 s before it. The F.A.S.T. server's own run progress lines (0%, 6% at 18:10:26, 12% at 18:10:28 ... 100% at 18:11:08) continue past the -x1 start and span the whole -x1 execution
+  (11:09:58 to 11:10:29). Both tool logs show their attempt in the same window. Here the log seconds do order the two lines (57 then 58), consistent with the rows (+1184 ms).
+- Counts, "Running command" counts only (pre-e2 baseline to e2-after baseline, `diff`): `STACK2-6.log` "Running command Transfer" 20 to 25 (+5, as expected; the appended log holds exactly five
+  Transfer lines at 18:08:55, 18:09:27, 18:09:58, 18:11:09, 18:11:41 and no GetTransferEstimate); `FA100056.log` "Running command Transfer" 2 to 3 (+1, as expected). "Running command" totals: `STACK2-6.log`
+  80 to 87 (+7: 5 Transfer, 2 GO-gate reads), `FA100056.log` 5 to 6. Total line counts were not used (UI polling).
+- The only error-pattern hit in the appended text is the line `Running command GetFailureLatch` (the GO-gate read, matched by the word "latch"); no ERROR, WARNING, refusal or retry line in either appended log; no `TRUNCATED-OR-RESTARTED` marker.
+
+**4. Ledger** (`evidence/20261117T111416Z-e2.ledger.json`, one JSON object, exactly 5 records, no other key and none ending `-x2`; the verify script printed 5 / no-x2):
+
+| Key (base `LIV01-E2-2026-11-17T11:08:44.895Z-abf060a9`) | state | result.kind | createdAt | updatedAt |
+|-----|-------|-------------|-----------|-----------|
+| `...-in1` | done | ran | 2026-11-17T11:08:56.038771+00:00 | 2026-11-17T11:09:25.513382+00:00 |
+| `...-in2` | done | ran | 2026-11-17T11:09:27.236986+00:00 | 2026-11-17T11:09:56.941476+00:00 |
+| `...-x1` | done | ran | 2026-11-17T11:09:58.662095+00:00 | 2026-11-17T11:10:29.128444+00:00 |
+| `...-out1` | done | ran | 2026-11-17T11:11:09.917045+00:00 | 2026-11-17T11:11:40.178876+00:00 |
+| `...-out2` | done | ran | 2026-11-17T11:11:41.949662+00:00 | 2026-11-17T11:12:11.197936+00:00 |
+
+The ledger record count went from 17 (pre-e2) to 22 (e2-after), +5, sha256 `c8c62970...caebdd` to `7a760672d79458d32ab98e76e7bfe3b17392594e16240a0c0c38eb3b124ebc5b`. Per-key one-shot is
+claimed for these five explicit keys only (D-08); auto-mint: on (not exercised), all five keys explicit (D-07). The -x1 ledger record (11:09:58.662Z) sits inside its row window.
+
+**5. Amended order checks from the rows** (D-02 amended, D-03 dropped, D-04), raw ms:
+
+| Check | Computation | Result |
+|-------|-------------|--------|
+| -x1 started after in2 (and so in1) COMPLETED | `-x1` startedAt 1794913798493 - in2 completedAt 1794913796992 = +1501 ms (in2 started 1501 ms after in1 completed: same lane loop gap); in1 completed 1794913765556 < in2 started 1794913767057 | **holds** |
+| out1 started after both -x1 and the F.A.S.T. row COMPLETED | out1 startedAt 1794913869712 >= max(-x1 completedAt 1794913829196, F.A.S.T. completedAt 1794913868787) = 1794913868787; margin +925 ms (-x1 finished 40516 ms before out1; the barrier held on the F.A.S.T. row) | **holds** |
+| out2 started after out1 COMPLETED | out2 startedAt 1794913901731 - out1 completedAt 1794913900230 = +1501 ms | **holds** |
+| no -x2 row | no row of run `1596f9bcf081e7000` has a step_key ending `-x2`; the run has exactly 7 rows | **holds** |
+| every row COMPLETED, `laneStatus` halted false | 7 of 7 `COMPLETED`; the whole queue is 35 rows, all `COMPLETED`, none CREATED or STARTED; `laneStatus` `laneMode:true`, `halted:false`, `haltReason:null`, `failures:[]`, `runningLanes:[]`, `queueBusy:false`, `overflow:0` | **holds** |
+| End state (D-02 amended, D-03 dropped) | operator: "event 2 done, extra plate on nest-1, plate 1 on nest-3" at 11:13:42Z, then "yes plate 2 on nest-2" (operator-confirmed, above): third plate on nest-1, plate 1 on nest-3, plate 2 on nest-2 | **holds** (operator word; not a tool read) |
+
+Stored run record: `1596f9bcf081e7000` reads `CREATED` as read (all 7 run records in `getAllRuns` read `CREATED`), which is the known lanes-mode finding (09-07, above): recorded as read, a follow-up, not a failed clause.
+Code state: `git status --porcelain -- controller` is empty and there is no commit touching `controller/` after `9201bd3` (the event-1 pre baseline HEAD), so no hot-reload edit touched the bind-mounted dev server (D-13 amended).
+Listener PIDs 8081 `6872`, 11010 `7490`, 40012 `7491`, 40001 `2320808` and the trace folder `1794670020` equal the pre-e2 baseline.
+
+| D-05 element | Result |
+|--------------|--------|
+| Row containment (three clauses) | holds, with numbers above (30703 ms strictly positive intersection) |
+| Adjacency (touch is not an overlap) | not a touch |
+| Both logs in one wall-clock window, +5 / +1 "Running command Transfer" | holds |
+| Five ledger records, done / ran, explicit keys, no -x2 and no other record | holds |
+| Amended order (-x1 after in2, out1 after -x1 and the F.A.S.T. row, out2 after out1, no -x2 row) | holds |
+| Rows COMPLETED, `laneStatus` halted false | holds (stored run `CREATED` recorded as read) |
+| End state (operator) | holds (operator-reported and operator-confirmed) |
+
+Event 2 verdict: PASS
+
+Event 2 meets D-05 under the amended design from the raw rows, logs and ledger. A moving STACK transfer (third plate nest-3 to nest-1) ran for its whole 30.7 s inside the F.A.S.T. liquid leg on the other lane.
+
 ## LIV-01 verdict
 
-_Pending (09-12)._
+LIV-01 verdict: PASS
+
+LIV-01 holds only if Event 1 and Event 2 both pass: Event 1 verdict PASS (09-10, estimate overlap, above) and Event 2 verdict PASS (09-12, moving overlap, above).
+
+| Item | Event 1 | Event 2 |
+|------|---------|---------|
+| Run id / label | `1596ecfad681e7000` / LIV01-E1 | `1596f9bcf081e7000` / LIV01-E2 |
+| Explicit step keys (D-06) | 4: `LIV01-E1-2026-11-17T10:40:52.652Z-5f3509d4` + `-in1`, `-in2`, `-out1`, `-out2` | 5: `LIV01-E2-2026-11-17T11:08:44.895Z-abf060a9` + `-in1`, `-in2`, `-x1`, `-out1`, `-out2` |
+| Overlap step | `get_transfer_estimate` nest-3 to nest-1 (166 ms, inside the F.A.S.T. row) | transfer nest-3 to nest-1 (30703 ms, inside the F.A.S.T. row) |
+| F.A.S.T. window | 71709 ms | 71478 ms |
+| STACK "Running command Transfer" / F.A.S.T. | +4 / +1 | +5 / +1 |
+| Ledger | +4 records, done / ran | +5 records, done / ran, no `-x2` |
+| galago-core HEAD | `9201bd30825cb73b2b950c9a452c2ce68f14a192` (pre-e1 baseline); `18e183a176a76fd953fdc24c1808bca841a03997` (e1-after baseline) | `356d7c67c972415f30628ad7592703f162b4b0d7` (pre-e2 baseline); `03a23e99414850012bc35b6cda50c5c24603c605` (e2-after baseline) |
+| Verdict | PASS | PASS |
+
+- **Code under test:** no `controller/` commit after `9201bd3` and `git status --porcelain -- controller` empty at both events; the last controller-touching commit is `58a1d2f` (09-03, tests and protocols), the production controller change last made at `d09a047`.
+- **Deployment (D-13 amended, decision B):** container `galago-web-dev` (id `855c334135eb3f1e57bc234a811df5b77b464a4e661ba597a4f33876e04a7d47`, running), image `sha256:a331fa4d812aee4c152fc5fddcbb6a09b2ab23663aaa0d6aad8c8f14d01f6a0e` (`a331fa4d812a`, unchanged since before the deploy), `GALAGO_PARALLEL_LANES=1` (read by `docker exec galago-web-dev printenv` during 09-12), `laneMode:true` in every snapshot. No production container exists on forb01.
+- **galago-tools:** HEAD `034867ca8aec9cb5ed83140306ebd89bf61b9ae7` on `feat/stack-tool`; the only change since `d53da53` is `docs/runbooks/gal-07-live-handoff.md` (1 file, docs only; `git diff --stat d53da53 HEAD`), so the tool code is unchanged since `d53da53`; `0604348` is an ancestor of HEAD.
+- **auto-mint: on (not exercised).** All nine step keys of the two runs were explicit. The readiness round trips before each event (nest-3 to nest-1 to nest-3, done / ran; event 1 at 10:29:45Z and 10:30:31Z, event 2 at 10:57:53Z and 10:58:39Z) were operator tool-page moves with auto-minted keys, outside the runs (D-07).
+- **D-08 wording:** per-key one-shot is claimed for the explicit keys of these two runs (four and five ledger records, each key once). The automated one-send guarantee is `controller/test/laneOneSend.test.ts` (D-09); it was not exercised through auto-minted keys here.
+- **Lane-halt (LIV-02, 09-07) PASS** is separate evidence and unchanged (sim drill, three scenarios, nothing aborted).
+- **Findings carried, none a failed clause:** (1) the stored run record stays `CREATED` in lanes mode after every row completes (09-07), so judge row status and `laneStatus`; (2) `FA100056.log` grows continuously from the web UI's `GET /status` polling (event 2's copy holds 2083 appended lines for about 12 minutes, event 1's 1407) even when idle (log-size follow-up; verdicts use "Running command" counts); (3) nest-3 to nest-1 reliability: 3 of 5 operator test moves failed on 2026-11-17 04:40-05:03Z before the readiness round trips succeeded; both event round trips were done / ran.
 
 ## LIV-03 records, row 3a-15
 
