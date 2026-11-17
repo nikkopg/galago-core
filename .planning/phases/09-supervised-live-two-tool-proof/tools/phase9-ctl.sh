@@ -233,7 +233,9 @@ cmd_start_sim() {
   mkdir -p "$STATE"
   stampv="$(stamp)"
   logf="$STATE/sim-$name-$stampv.log"
-  ( cd "$TOOLS_DIR" && setsid nohup "$TOOLS_DIR/.venv/bin/python3" -m "$mod" --port="$port" > "$logf" 2>&1 < /dev/null & )
+  # setsid -f detaches the server fully: a backgrounded `cd && setsid ...` list leaves a waiting bash
+  # parent that keeps the caller's stdout pipe open, so `PID=$(phase9-ctl.sh start-sim ...)` hung.
+  ( cd "$TOOLS_DIR" && setsid -f nohup "$TOOLS_DIR/.venv/bin/python3" -m "$mod" --port="$port" > "$logf" 2>&1 < /dev/null )
   local i pid=""
   for i in $(seq 1 30); do
     pid="$(pids_on_port "$port" | head -1)"
