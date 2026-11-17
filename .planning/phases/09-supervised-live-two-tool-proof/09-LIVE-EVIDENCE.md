@@ -469,7 +469,69 @@ for scenario 1 is a new run (batch label `DRILL-S1`); the Start confirmation mus
 
 ### Scenario 1
 
-_Pending (the operator runs it after the typed go)._
+**Verdict: PASS** (D-11 scenario 1, LIV-02 part 1 of 3). A stack-step failure while the F.A.S.T. step runs halted the lanes; the
+other lane's step finished and was never aborted; the later row was held until the operator's Start; only that Start
+retried the failed row and finished the run. Judged by Claude from the three operator-taken snapshots and the sim server logs
+(all read only). The operator reported "scenario 1 done" at about 2026-11-17T09:42:57Z with no deviations. Claude did not
+queue, start, stop or freeze anything (D-18).
+
+Run: `1596cf7f4d01e7000` (protocol 8, uat-sim), batch label DRILL-S1, queueIds 48 to 52. Row times are the raw
+`startedAt` / `failedAt` / `completedAt` values from the snapshots, UTC. The sim logs are local time (UTC+7) and match them.
+
+| queueId | Row | Lane | Start | End | Final status |
+|---------|-----|------|-------|-----|--------------|
+| 48 | Tool Box note | primary | 09:36:47.955 | 09:36:47.957 | COMPLETED |
+| 49 | SIM-STACK `d-in1` | primary | 09:36:49.458 | 09:37:24.498 | COMPLETED |
+| 50 | SIM-FAST transfer (`laneBarrier`) | fast | 09:37:25.472 | 09:38:45.547 (80.1 s) | COMPLETED |
+| 51 | SIM-STACK `d-x1`, attempt 1 | primary | 09:37:26.000 | FAILED 09:37:35.044 (`1 CANCELLED: Call cancelled`) | FAILED |
+| 51 | SIM-STACK `d-x1`, operator retry | primary | 09:40:02.303 | 09:40:37.331 | COMPLETED |
+| 52 | SIM-STACK `d-out1` (`laneBarrier`) | primary | 09:40:38.831 | 09:41:13.869 | COMPLETED |
+
+Timeline: run created 09:36:28.315 (`createdAt`); first row started 09:36:47.955; `d-x1` started 0.528 s after the SIM-FAST step
+(overlap, inside the 1500 ms loop tolerance of the D-05 rule); sim STACK server stopped by the operator, `d-x1` FAILED 9.04 s
+into its step while SIM-FAST was 9.6 s into its 80 s step; at-halt snapshot 09:37:51Z; SIM-FAST COMPLETED 09:38:45.547;
+halted snapshot 09:38:50Z; sim STACK restarted 09:39:00Z (new pid `101131`) and Configured with `simulated: true` at 09:39:10Z;
+operator Start, `d-x1` retry started 09:40:02.303; `d-out1` started 1.5 s after the retry completed (one loop delay); done
+snapshot 09:42:42Z.
+
+Snapshots (`evidence/`), each judged against the plan's criteria:
+
+| Snapshot | Facts read from it | Criterion |
+|----------|--------------------|-----------|
+| `20261117T093751Z-drill-s1-at-halt.queue.json` (09:37:51Z) | q51 `d-x1` FAILED, `failedAt` 09:37:35.044; q50 SIM-FAST STARTED (`runningLanes` lists it on lane `fast`); q52 `d-out1` CREATED; `laneStatus` `halted:true`, `haltReason:"failure"`, one failure (primary, SIM-STACK, queueId 51, banner true) | met |
+| `20261117T093850Z-drill-s1-halted.queue.json` (09:38:50Z) | q50 SIM-FAST COMPLETED (never ABORTED); q51 still FAILED; q52 `d-out1` still CREATED, though the fast lane had finished 4.5 s earlier; `halted:true`, `haltReason:"failure"`, `runningLanes:[]`, failure still listed | met |
+| `20261117T094242Z-drill-s1-done.queue.json` (09:42:42Z) | q48 to q52 all COMPLETED; `halted:false`, `haltReason:null`, `failures:[]`, `runningLanes:[]`, `queueBusy:false` | met |
+
+One send per queueId, from the sim server logs (`~/.local/state/galago-phase9/`, read only): the first SIM-STACK server
+(`sim-stack-20261117T083904Z.log`) logged "Running command Transfer" at 16:36:49 (`d-in1`) and 16:37:26 (`d-x1` attempt 1, no
+response line: the server was stopped mid-step); SIM-FAST (`sim-fast-20261117T083905Z.log`) logged one Transfer at 16:37:25 and
+its SUCCESS at 16:38:45; the restarted SIM-STACK (`sim-stack-20261117T093900Z.log`) logged Transfers at 16:40:02 (`d-x1` retry)
+and 16:40:38 (`d-out1`), both SUCCESS. That is five sends for four transfer queueIds, the one extra being the operator-retried
+failed row. No Transfer line on either sim server between the failure (09:37:35Z) and the operator's Start (09:40:02Z): no
+auto-retry and no auto-start of `d-out1` during the halt, including the 77 s between SIM-FAST completing and the Start. The
+note row is the Tool Box and sends nothing to a tool.
+
+Real tools untouched (T-09-23): `evidence/20261117T094420Z-post-drill-s1.baseline.txt` (09:44:20Z) against
+`20261117T085943Z-pre-drill-go.baseline.txt`: the only differing lines are label, time, galago-core HEAD and the SIM-STACK
+listener pid (`23042` to `101131`, the operator's restart). Real listener PIDs unchanged: 8081 `6872`, 11010 `7490`, 40012
+`7491`, 40001 `2320808`. `STACK2-6.log` 4508 lines, 12 "Running command Transfer" (52 "Running command"); `FA100056.log` 1
+Transfer (4 "Running command"); ledger sha256 `5de43c84...670b`, 9 records; `galago_core_controller_dirty_lines=0`;
+`laneStatus` `laneMode:true`, `halted:false`, `queueBusy:false`. Sim processes now: SIM-STACK `101131` (port 40091, started
+09:39:00Z), SIM-FAST `23184` (port 40092, unchanged). The workcell is still `uat-sim` with only SIM-STACK and SIM-FAST. Nothing
+latched: `laneStatus` is clean, so no latch is left for scenario 2 (RESEARCH Pitfall 6).
+
+Observations, none a failed criterion:
+
+- A retry overwrites `startedAt` but keeps the old `failedAt` and error: in the done snapshot q51 is COMPLETED with
+  `startedAt` 09:40:02.303 and still carries `failedAt` 09:37:35.044 and the `CANCELLED` error. The row `status` is authoritative.
+  The first attempt's `startedAt` (09:37:26.000) survives only in the at-halt and halted snapshots, which confirms RESEARCH
+  Pitfall 3 and why the snapshot before the operator's Start matters.
+- The stored run record (`getAllRuns` and `/api/runs`, one blob per run) reads `CREATED` in all three snapshots and still after
+  every row COMPLETED, exactly as the two stale earlier runs do. Row statuses and `laneStatus` are the evidence used here. The
+  operator's run-card status in the UI was not observed by Claude, so "run COMPLETED" rests on the five COMPLETED rows.
+- Evidence limits: the operator's actions (stop-sim, restart, Configure, Start) are not logged by Claude; they are inferred
+  from the sim logs and row timestamps, which agree with the operator's account. The operator's `CTL()` shell function
+  (`phase9-ctl.sh "$@" </dev/null`) only wraps the guarded script.
 
 ### Scenario 2
 
@@ -515,3 +577,7 @@ All files are under `evidence/`, named `<UTC stamp>-<label>.<kind>`.
 | `20261117T085710Z-post-rig-config.baseline.txt`, `.tracefiles.txt` | baseline after uat-sim and the two sim tools were configured; selected workcell uat-sim, real tools untouched | 09-05 |
 | `20261117T085940Z-drill-import.json` | protocol.import reply (protocol id 8 in uat-sim, id 3) | 09-06 |
 | `20261117T085943Z-pre-drill-go.baseline.txt`, `20261117T085944Z-pre-drill-go.queue.json` | pre-GO baseline and queue snapshot (halted false, no CREATED or STARTED row) | 09-06 |
+| `20261117T093751Z-drill-s1-at-halt.queue.json` | scenario 1 snapshot at the halt (d-x1 FAILED, SIM-FAST STARTED, halted true) | 09-06 |
+| `20261117T093850Z-drill-s1-halted.queue.json` | scenario 1 snapshot after SIM-FAST completed, before the operator Start (halted true, d-out1 CREATED) | 09-06 |
+| `20261117T094242Z-drill-s1-done.queue.json` | scenario 1 snapshot after the operator Start (all rows COMPLETED, halted false) | 09-06 |
+| `20261117T094420Z-post-drill-s1.baseline.txt` | post-scenario-1 baseline; real tools unchanged, SIM-STACK pid 101131 | 09-06 |
