@@ -105,22 +105,47 @@ const indexOfCall = (
 const keyEndsWith = (suffix: string) => (c: { params: unknown }) =>
   String((c.params as { step_key?: string }).step_key).endsWith(suffix);
 
-const EVENT_OVERRIDES = {
+// Amended D-02/D-03 (user decision 2026-11-17): the third plate starts on nest-3 (spare A in the plans,
+// the overlap source), x1 moves it to nest-1 (spare B, the overlap destination, plate 1's home) during the
+// F.A.S.T. liquid leg, out1 lands plate 1 on nest-3, and there is no return leg.
+const NEST_1 = { device: "nest-1", deck: "deck1", nest: "A1" };
+const NEST_2 = { device: "nest-2", deck: "deck`", nest: "A1" };
+const NEST_3 = { device: "nest-3", deck: "deck1", nest: "A1" };
+const out1Dest = (t: { device: string; deck: string; nest: string }) => ({
+  out1_dest_device: t.device,
+  out1_dest_deck: t.deck,
+  out1_dest_nest: t.nest,
+});
+const BASE_OVERRIDES = {
   stack_tool: "stack-1",
   fast_tool: "fast-1",
   batch_label: "LIVTEST",
-  spare_a_device: "spare-dev-a",
-  spare_a_deck: "deck1",
-  spare_a_nest: "A1",
-  spare_b_device: "spare-dev-b",
-  spare_b_deck: "deck1",
-  spare_b_nest: "A1",
+  spare_a_device: NEST_3.device,
+  spare_a_deck: NEST_3.deck,
+  spare_a_nest: NEST_3.nest,
+  spare_b_device: NEST_1.device,
+  spare_b_deck: NEST_1.deck,
+  spare_b_nest: NEST_1.nest,
 };
+// Event 1 has no overlap move: out1 returns plate 1 to nest-1. Event 2: out1 lands on the overlap source.
+const EVENT1_OVERRIDES = { ...BASE_OVERRIDES, ...out1Dest(NEST_1) };
+const EVENT2_OVERRIDES = { ...BASE_OVERRIDES, ...out1Dest(NEST_3) };
 
-describe("event-1 protocol (D-01, D-04, D-06)", () => {
+const triple = (p: Record<string, unknown>, side: "source" | "destination") =>
+  [p[`${side}_device`], p[`${side}_deck`], p[`${side}_nest`]].join("|");
+const tripleOf = (t: { device: string; deck: string; nest: string }) =>
+  [t.device, t.deck, t.nest].join("|");
+
+async function rowStatusOf(harness: LaneHarness, index: number) {
+  const id = harness.calls()[index].queueId;
+  const rows = await harness.queue.commands.all();
+  return rows.find((r) => r.queueId === id)?.status;
+}
+
+describe("event-1 protocol (D-01, D-04, D-06, amended D-02)", () => {
   const protocol = loadProtocol("09-live-lanes-event1.protocol.json");
 
-  it("is a script protocol with the cycle, tool and spare parameters", () => {
+  it("is a script protocol with the cycle, tool, overlap and out1 destination parameters", () => {
     expect(protocol.mode).toBe("script");
     const names = protocol.parameters.map((p) => p.name);
     for (const n of [
@@ -133,10 +158,18 @@ describe("event-1 protocol (D-01, D-04, D-06)", () => {
       "spare_b_device",
       "spare_b_deck",
       "spare_b_nest",
+      "out1_dest_device",
+      "out1_dest_deck",
+      "out1_dest_nest",
     ]) {
       expect(names).toContain(n);
     }
-    for (const p of protocol.parameters.filter((q) => q.name.startsWith("spare_"))) {
+    for (const p of protocol.parameters.filter(
+      (q) =>
+        q.name.startsWith("spare_") ||
+        (q.name.startsWith("out1_dest_") && q.name !== "out1_dest_transfer_profile"),
+    )) {
+      if (p.name.endsWith("transfer_profile")) continue;
       expect(p.defaultValue, p.name).toBe("");
     }
     expect(protocol.scriptContent).toContain('galago.lane("fast")');
@@ -144,7 +177,7 @@ describe("event-1 protocol (D-01, D-04, D-06)", () => {
   });
 
   it("(a) emits exactly note, in1, in2, F.A.S.T., estimate, out1, out2", async () => {
-    const commands = await runOk(protocol, EVENT_OVERRIDES);
+    const commands = await runOk(protocol, EVENT1_OVERRIDES);
     expect(commands.map((c) => c.command)).toEqual([
       "note",
       "transfer",
@@ -166,7 +199,7 @@ describe("event-1 protocol (D-01, D-04, D-06)", () => {
   });
 
   it("(b) only the F.A.S.T. row is on lane fast; barriers only on F.A.S.T. and out1; no STACK lane key", async () => {
-    const commands = await runOk(protocol, EVENT_OVERRIDES);
+    const commands = await runOk(protocol, EVENT1_OVERRIDES);
     commands.forEach((c, i) => {
       if (c.toolId === "fast-1") expect(adv(c).lane, `row ${i}`).toBe("fast");
       else expect("lane" in adv(c), `row ${i}`).toBe(false);
@@ -177,13 +210,13 @@ describe("event-1 protocol (D-01, D-04, D-06)", () => {
   });
 
   it("(c) validateLanes returns no refusal", async () => {
-    const commands = await runOk(protocol, EVENT_OVERRIDES);
+    const commands = await runOk(protocol, EVENT1_OVERRIDES);
     expect(validateLanes(laneInfos(commands) as never)).toEqual([]);
   });
 
   it("(d) the four STACK transfer keys share one base, end in -in1/-in2/-out1/-out2 and are disjoint across runs", async () => {
-    const first = stackKeys(await runOk(protocol, EVENT_OVERRIDES));
-    const second = stackKeys(await runOk(protocol, EVENT_OVERRIDES));
+    const first = stackKeys(await runOk(protocol, EVENT1_OVERRIDES));
+    const second = stackKeys(await runOk(protocol, EVENT1_OVERRIDES));
     for (const keys of [first, second]) {
       expect(keys).toHaveLength(4);
       expect(keys.map((k) => k.slice(k.lastIndexOf("-")))).toEqual([
@@ -199,8 +232,8 @@ describe("event-1 protocol (D-01, D-04, D-06)", () => {
     expect(first.filter((k) => second.includes(k))).toEqual([]);
   });
 
-  it("(e) the estimate carries spare A to spare B and no step_key or timeout_s", async () => {
-    const commands = await runOk(protocol, EVENT_OVERRIDES);
+  it("(e) the estimate carries the overlap move nest-3 to nest-1 and no step_key or timeout_s", async () => {
+    const commands = await runOk(protocol, EVENT1_OVERRIDES);
     const est = commands.find((c) => c.command === "get_transfer_estimate")!;
     const p = prm(est);
     expect("step_key" in p).toBe(false);
@@ -208,18 +241,18 @@ describe("event-1 protocol (D-01, D-04, D-06)", () => {
     expect(p).toEqual({
       robot: "stack2-6",
       labware_profile: "Default",
-      source_device: "spare-dev-a",
+      source_device: "nest-3",
       source_deck: "deck1",
       source_nest: "A1",
-      destination_device: "spare-dev-b",
+      destination_device: "nest-1",
       destination_deck: "deck1",
       destination_nest: "A1",
     });
   });
 
-  it("(e2) optional spare transfer profiles are sent only when non-blank", async () => {
+  it("(e2) optional overlap transfer profiles are sent only when non-blank", async () => {
     const commands = await runOk(protocol, {
-      ...EVENT_OVERRIDES,
+      ...EVENT1_OVERRIDES,
       spare_a_transfer_profile: "Default",
       spare_b_transfer_profile: "Default",
     });
@@ -228,34 +261,72 @@ describe("event-1 protocol (D-01, D-04, D-06)", () => {
     expect(p.destination_transfer_profile).toBe("Default");
   });
 
-  it("(f) Edge LIV-01/empty: a blank spare_a_nest throws before any galago call", async () => {
-    const result = await run(protocol, { ...EVENT_OVERRIDES, spare_a_nest: "" });
-    expect(result.success).toBe(false);
-    expect(result.error).toContain("spare_a_nest");
-    expect(result.commands).toEqual([]);
+  it("(e3) out1 targets the out1 destination parameters; out2 is unchanged", async () => {
+    const commands = await runOk(protocol, EVENT1_OVERRIDES);
+    const out1 = prm(commands.find((c) => String(prm(c).step_key).endsWith("-out1"))!);
+    const out2 = prm(commands.find((c) => String(prm(c).step_key).endsWith("-out2"))!);
+    expect(triple(out1, "source")).toBe("fa100056|tray1|5");
+    expect(triple(out1, "destination")).toBe(tripleOf(NEST_1));
+    expect(triple(out2, "source")).toBe("fa100056|tray1|6");
+    expect(triple(out2, "destination")).toBe(tripleOf(NEST_2));
   });
 
-  it("(g) Edge LIV-01/adjacency and D-02: unsafe spares are refused with the guard sentence", async () => {
+  it("(f) Edge LIV-01/empty: a blank spare_a_nest or out1_dest_nest throws before any galago call", async () => {
+    for (const blank of ["spare_a_nest", "out1_dest_nest"]) {
+      const result = await run(protocol, { ...EVENT1_OVERRIDES, [blank]: "" });
+      expect(result.success, blank).toBe(false);
+      expect(result.error).toContain(blank);
+      expect(result.commands).toEqual([]);
+    }
+  });
+
+  it("(g) Edge LIV-01/adjacency and amended D-02: unsafe overlap or out1 locations are refused with the guard sentence", async () => {
     const cases: Array<[Record<string, string>, string]> = [
       [
-        { spare_b_device: "spare-dev-a", spare_b_deck: "deck1", spare_b_nest: "A1" },
-        "LIV-01: spare A and spare B must differ",
+        { spare_b_device: NEST_3.device, spare_b_deck: NEST_3.deck, spare_b_nest: NEST_3.nest },
+        "LIV-01: overlap source and overlap destination must differ",
       ],
       [
-        { spare_a_device: "nest-1", spare_a_deck: "deck1", spare_a_nest: "A1" },
-        "LIV-01: a spare nest must not be a plate home",
+        {
+          spare_a_device: NEST_1.device,
+          spare_a_deck: NEST_1.deck,
+          spare_a_nest: NEST_1.nest,
+          spare_b_device: "free-dev",
+          spare_b_deck: "deck1",
+          spare_b_nest: "A1",
+        },
+        "LIV-01: the overlap source must not be a plate home",
       ],
       [
-        { spare_b_device: "nest-2", spare_b_deck: "deck`", spare_b_nest: "A1" },
-        "LIV-01: a spare nest must not be a plate home",
+        {
+          spare_a_device: NEST_2.device,
+          spare_a_deck: NEST_2.deck,
+          spare_a_nest: NEST_2.nest,
+          spare_b_device: "free-dev",
+          spare_b_deck: "deck1",
+          spare_b_nest: "A1",
+        },
+        "LIV-01: the overlap source must not be a plate home",
+      ],
+      [
+        { spare_b_device: NEST_2.device, spare_b_deck: NEST_2.deck, spare_b_nest: NEST_2.nest },
+        "LIV-01: the overlap destination may be plate 1's home only, not plate 2's home",
       ],
       [
         { spare_a_device: "fa100056", spare_a_deck: "trayX", spare_a_nest: "9" },
-        "LIV-01: a spare nest must not be on the F.A.S.T.-side device",
+        "LIV-01: the overlap source must not be on the F.A.S.T.-side device",
+      ],
+      [
+        { spare_b_device: "fa100056", spare_b_deck: "tray1", spare_b_nest: "4" },
+        "LIV-01: the overlap destination must not be on the F.A.S.T.-side device",
+      ],
+      [
+        out1Dest(NEST_3),
+        "LIV-01: in event 1 the out1 destination must be plate 1's home (the third plate stays on the overlap source)",
       ],
     ];
     for (const [over, sentence] of cases) {
-      const result = await run(protocol, { ...EVENT_OVERRIDES, ...over });
+      const result = await run(protocol, { ...EVENT1_OVERRIDES, ...over });
       expect(result.success, sentence).toBe(false);
       expect(result.error).toContain(sentence);
       expect(result.commands).toEqual([]);
@@ -263,7 +334,7 @@ describe("event-1 protocol (D-01, D-04, D-06)", () => {
   });
 
   it("(h) end to end: the estimate overlaps the F.A.S.T. leg, out1 waits for it, every queueId is sent once", async () => {
-    const commands = await runOk(protocol, EVENT_OVERRIDES);
+    const commands = await runOk(protocol, EVENT1_OVERRIDES);
     h = createLaneHarness();
     await h.push("e1", toLaneSteps(commands));
     const done = h.start();
@@ -303,24 +374,30 @@ describe("event-1 protocol (D-01, D-04, D-06)", () => {
   });
 });
 
-describe("event-2 protocol (D-01, D-02, D-03, D-06)", () => {
+describe("event-2 protocol (D-01, D-06, amended D-02, D-03 dropped)", () => {
   const protocol = loadProtocol("09-live-lanes-event2.protocol.json");
-  const triple = (p: Record<string, unknown>, side: "source" | "destination") =>
-    [p[`${side}_device`], p[`${side}_deck`], p[`${side}_nest`]].join("|");
+  const STEP_SUFFIXES = ["-in1", "-in2", "-x1", "-out1", "-out2"];
 
-  it("is a script protocol with an optional overlap_timeout_s and every suffix in the script", () => {
+  it("is a script protocol with an optional overlap_timeout_s, required no-default out1_dest_*, every suffix in the script and no x2", () => {
     expect(protocol.mode).toBe("script");
-    expect(protocol.parameters.map((p) => p.name)).toContain("overlap_timeout_s");
-    for (const suffix of ["-in1", "-in2", "-x1", "-out1", "-out2", "-x2"]) {
+    const names = protocol.parameters.map((p) => p.name);
+    expect(names).toContain("overlap_timeout_s");
+    for (const n of ["out1_dest_device", "out1_dest_deck", "out1_dest_nest"]) {
+      const p = protocol.parameters.find((q) => q.name === n);
+      expect(p, n).toBeDefined();
+      expect(p!.defaultValue, n).toBe("");
+      expect((p as unknown as { required: boolean }).required, n).toBe(true);
+    }
+    for (const suffix of STEP_SUFFIXES) {
       expect(protocol.scriptContent).toContain(suffix);
     }
+    expect(protocol.scriptContent).not.toContain("-x2");
   });
 
-  it("(a) emits exactly note, in1, in2, F.A.S.T., x1, out1, out2, x2", async () => {
-    const commands = await runOk(protocol, EVENT_OVERRIDES);
+  it("(a) emits exactly note, in1, in2, F.A.S.T., x1, out1, out2", async () => {
+    const commands = await runOk(protocol, EVENT2_OVERRIDES);
     expect(commands.map((c) => c.command)).toEqual([
       "note",
-      "transfer",
       "transfer",
       "transfer",
       "transfer",
@@ -336,12 +413,11 @@ describe("event-2 protocol (D-01, D-02, D-03, D-06)", () => {
       "stack-1",
       "stack-1",
       "stack-1",
-      "stack-1",
     ]);
   });
 
   it("(b) only the F.A.S.T. row is on lane fast; barriers only on F.A.S.T. and out1; no STACK lane key", async () => {
-    const commands = await runOk(protocol, EVENT_OVERRIDES);
+    const commands = await runOk(protocol, EVENT2_OVERRIDES);
     commands.forEach((c, i) => {
       if (c.toolId === "fast-1") expect(adv(c).lane, `row ${i}`).toBe("fast");
       else expect("lane" in adv(c), `row ${i}`).toBe(false);
@@ -354,137 +430,247 @@ describe("event-2 protocol (D-01, D-02, D-03, D-06)", () => {
       false,
       true,
       false,
-      false,
     ]);
     for (const c of commands) expect(adv(c).laneBarrier === false).toBe(false);
   });
 
   it("(c) validateLanes returns no refusal", async () => {
-    const commands = await runOk(protocol, EVENT_OVERRIDES);
+    const commands = await runOk(protocol, EVENT2_OVERRIDES);
     expect(validateLanes(laneInfos(commands) as never)).toEqual([]);
   });
 
-  it("(d) six STACK keys: one base, suffixes in order, six distinct values, disjoint across runs", async () => {
-    const first = stackKeys(await runOk(protocol, EVENT_OVERRIDES));
-    const second = stackKeys(await runOk(protocol, EVENT_OVERRIDES));
+  it("(d) five STACK keys, no x2: one base, suffixes in order, five distinct values per run, disjoint across runs", async () => {
+    const first = stackKeys(await runOk(protocol, EVENT2_OVERRIDES));
+    const second = stackKeys(await runOk(protocol, EVENT2_OVERRIDES));
     for (const keys of [first, second]) {
-      expect(keys).toHaveLength(6);
-      expect(keys.map((k) => k.slice(k.lastIndexOf("-")))).toEqual([
-        "-in1",
-        "-in2",
-        "-x1",
-        "-out1",
-        "-out2",
-        "-x2",
-      ]);
+      expect(keys).toHaveLength(5);
+      expect(keys.map((k) => k.slice(k.lastIndexOf("-")))).toEqual(STEP_SUFFIXES);
+      expect(keys.some((k) => k.endsWith("-x2"))).toBe(false);
       expect(new Set(keys.map((k) => k.slice(0, k.lastIndexOf("-")))).size).toBe(1);
-      expect(new Set(keys).size).toBe(6);
+      expect(new Set(keys).size).toBe(5);
     }
     expect(first.filter((k) => second.includes(k))).toEqual([]);
   });
 
-  it("(e) x1 moves spare A to spare B, x2 moves back, and neither touches a plate home or the F.A.S.T. side (D-02)", async () => {
-    const commands = await runOk(protocol, EVENT_OVERRIDES);
-    const x1 = prm(commands.find((c) => String(prm(c).step_key).endsWith("-x1"))!);
-    const x2 = prm(commands.find((c) => String(prm(c).step_key).endsWith("-x2"))!);
-    const spareA = "spare-dev-a|deck1|A1";
-    const spareB = "spare-dev-b|deck1|A1";
-    expect(triple(x1, "source")).toBe(spareA);
-    expect(triple(x1, "destination")).toBe(spareB);
-    expect(triple(x2, "source")).toBe(spareB);
-    expect(triple(x2, "destination")).toBe(spareA);
-    const homes = ["nest-1|deck1|A1", "nest-2|deck`|A1"];
-    for (const p of [x1, x2]) {
-      for (const side of ["source", "destination"] as const) {
-        expect(homes).not.toContain(triple(p, side));
-        expect(p[`${side}_device`]).not.toBe("fa100056");
-      }
+  it("(e) x1 is nest-3 to nest-1, out1 is tray1/5 to nest-3, out2 is unchanged (D-02 amended)", async () => {
+    const commands = await runOk(protocol, EVENT2_OVERRIDES);
+    const byKey = (suffix: string) =>
+      prm(commands.find((c) => String(prm(c).step_key).endsWith(suffix))!);
+    const x1 = byKey("-x1");
+    const out1 = byKey("-out1");
+    const out2 = byKey("-out2");
+    expect(triple(x1, "source")).toBe(tripleOf(NEST_3));
+    expect(triple(x1, "destination")).toBe(tripleOf(NEST_1));
+    expect(triple(out1, "source")).toBe("fa100056|tray1|5");
+    expect(triple(out1, "destination")).toBe(tripleOf(NEST_3));
+    expect(triple(out2, "source")).toBe("fa100056|tray1|6");
+    expect(triple(out2, "destination")).toBe(tripleOf(NEST_2));
+    // No leg of the overlap move touches plate 2's home or the F.A.S.T. side.
+    for (const side of ["source", "destination"] as const) {
+      expect(triple(x1, side)).not.toBe(tripleOf(NEST_2));
+      expect(x1[`${side}_device`]).not.toBe("fa100056");
     }
   });
 
   it("(e2) overlap_timeout_s: blank sends none, a number at or above 0 is sent, anything else is refused", async () => {
-    const blank = await runOk(protocol, EVENT_OVERRIDES);
-    const xKeys = (cs: Commands) => cs.filter((c) => /-x[12]$/.test(String(prm(c).step_key)));
+    const blank = await runOk(protocol, EVENT2_OVERRIDES);
+    const xKeys = (cs: Commands) => cs.filter((c) => /-x1$/.test(String(prm(c).step_key)));
+    expect(xKeys(blank)).toHaveLength(1);
     for (const c of xKeys(blank)) expect("timeout_s" in prm(c)).toBe(false);
-    const set = await runOk(protocol, { ...EVENT_OVERRIDES, overlap_timeout_s: "120" });
+    const set = await runOk(protocol, { ...EVENT2_OVERRIDES, overlap_timeout_s: "120" });
     for (const c of xKeys(set)) expect(prm(c).timeout_s).toBe(120);
     for (const bad of ["-1", "abc"]) {
-      const result = await run(protocol, { ...EVENT_OVERRIDES, overlap_timeout_s: bad });
+      const result = await run(protocol, { ...EVENT2_OVERRIDES, overlap_timeout_s: bad });
       expect(result.success, bad).toBe(false);
       expect(result.error).toContain("overlap_timeout_s");
       expect(result.commands).toEqual([]);
     }
   });
 
-  it("(f) the spare guard refuses unsafe spares and a blank spare nest before any galago call", async () => {
+  it("(f) the guard refuses unsafe overlap or out1 locations and blank required inputs before any galago call", async () => {
     const cases: Array<[Record<string, string>, string]> = [
       [{ spare_a_nest: "" }, "spare_a_nest"],
+      [{ out1_dest_device: "" }, "out1_dest_device"],
+      // overlap destination == plate 2's home
       [
-        { spare_b_device: "spare-dev-a", spare_b_deck: "deck1", spare_b_nest: "A1" },
-        "LIV-01: spare A and spare B must differ",
+        { spare_b_device: NEST_2.device, spare_b_deck: NEST_2.deck, spare_b_nest: NEST_2.nest },
+        "LIV-01: the overlap destination may be plate 1's home only, not plate 2's home",
       ],
+      // overlap destination on the F.A.S.T. device
       [
-        { spare_a_device: "nest-1", spare_a_deck: "deck1", spare_a_nest: "A1" },
-        "LIV-01: a spare nest must not be a plate home",
+        { spare_b_device: "fa100056", spare_b_deck: "tray1", spare_b_nest: "4" },
+        "LIV-01: the overlap destination must not be on the F.A.S.T.-side device",
       ],
+      // overlap source on the F.A.S.T. device
       [
         { spare_a_device: "fa100056", spare_a_deck: "trayX", spare_a_nest: "9" },
-        "LIV-01: a spare nest must not be on the F.A.S.T.-side device",
+        "LIV-01: the overlap source must not be on the F.A.S.T.-side device",
+      ],
+      // overlap source is a plate home
+      [
+        {
+          spare_a_device: NEST_1.device,
+          spare_a_deck: NEST_1.deck,
+          spare_a_nest: NEST_1.nest,
+          spare_b_device: "free-dev",
+          spare_b_deck: "deck1",
+          spare_b_nest: "A1",
+        },
+        "LIV-01: the overlap source must not be a plate home",
+      ],
+      [
+        {
+          spare_a_device: NEST_2.device,
+          spare_a_deck: NEST_2.deck,
+          spare_a_nest: NEST_2.nest,
+          spare_b_device: "free-dev",
+          spare_b_deck: "deck1",
+          spare_b_nest: "A1",
+        },
+        "LIV-01: the overlap source must not be a plate home",
+      ],
+      // overlap source == overlap destination
+      [
+        { spare_b_device: NEST_3.device, spare_b_deck: NEST_3.deck, spare_b_nest: NEST_3.nest },
+        "LIV-01: overlap source and overlap destination must differ",
+      ],
+      // out1 destination != overlap source (plate 1's home, the pre-amendment target; and a stray nest)
+      [out1Dest(NEST_1), "LIV-01: the out1 destination must equal the overlap source"],
+      [
+        out1Dest({ device: "nest-3", deck: "deck1", nest: "A2" }),
+        "LIV-01: the out1 destination must equal the overlap source",
       ],
     ];
     for (const [over, sentence] of cases) {
-      const result = await run(protocol, { ...EVENT_OVERRIDES, ...over });
+      const result = await run(protocol, { ...EVENT2_OVERRIDES, ...over });
       expect(result.success, sentence).toBe(false);
       expect(result.error).toContain(sentence);
       expect(result.commands).toEqual([]);
     }
   });
 
-  it("(g) end to end: x1 overlaps the F.A.S.T. leg, out1 waits for it, x2 runs only after out2, every queueId is sent once", async () => {
-    const commands = await runOk(protocol, EVENT_OVERRIDES);
+  // Starts the run and returns the harness with in1 and in2 completed, x1 and the F.A.S.T. step in flight.
+  async function startToOverlap(runId: string) {
+    const commands = await runOk(protocol, EVENT2_OVERRIDES);
     h = createLaneHarness();
-    await h.push("e2", toLaneSteps(commands));
+    await h.push(runId, toLaneSteps(commands));
     const done = h.start();
     await h.tick(3);
-    h.finish(indexOfCall(h, keyEndsWith("-in1")));
+    // (a) only in1 has been sent: nothing else may be sent before in1 COMPLETED.
+    expect(h.calls()).toHaveLength(1);
+    expect(indexOfCall(h, keyEndsWith("-in1"))).toBe(0);
+    expect(indexOfCall(h, keyEndsWith("-x1"))).toBe(-1);
+    h.finish(0);
     await h.tick(3);
-    h.finish(indexOfCall(h, keyEndsWith("-in2")));
+    expect(await rowStatusOf(h, 0)).toBe("COMPLETED");
+    const in2 = indexOfCall(h, keyEndsWith("-in2"));
+    expect(in2).toBeGreaterThanOrEqual(0);
+    expect(indexOfCall(h, keyEndsWith("-x1"))).toBe(-1);
+    h.finish(in2);
     await h.tick(4);
+    return { done };
+  }
 
-    const fast = indexOfCall(h, (c) => c.toolId === "fast-1" && c.command === "transfer");
-    const x1 = indexOfCall(h, keyEndsWith("-x1"));
-    expect(fast).toBeGreaterThanOrEqual(0);
+  it("(g1) x1 is sent only after in1 COMPLETED and still overlaps the F.A.S.T. liquid leg", async () => {
+    const { done } = await startToOverlap("e2-a");
+    const x1 = indexOfCall(h!, keyEndsWith("-x1"));
+    const fast = indexOfCall(h!, (c) => c.toolId === "fast-1" && c.command === "transfer");
+    expect(x1).toBeGreaterThan(indexOfCall(h!, keyEndsWith("-in1")));
     expect(x1).toBeGreaterThanOrEqual(0);
-    expect(h.calls()[fast].gate.isSettled()).toBe(false);
-    expect(h.calls()[x1].gate.isSettled()).toBe(false);
+    expect(fast).toBeGreaterThanOrEqual(0);
+    expect(await rowStatusOf(h!, indexOfCall(h!, keyEndsWith("-in1")))).toBe("COMPLETED");
+    // Both are in flight at once: the overlap this protocol exists to prove.
+    expect(h!.calls()[fast].gate.isSettled()).toBe(false);
+    expect(h!.calls()[x1].gate.isSettled()).toBe(false);
+    await releaseAll(h!);
+    await done;
+  });
 
-    h.finish(x1);
-    await h.tick(6);
-    expect(indexOfCall(h, keyEndsWith("-out1"))).toBe(-1);
+  it("(g2) out1 is sent only after x1 COMPLETED, even when the F.A.S.T. leg finishes first; no x2 follows", async () => {
+    const { done } = await startToOverlap("e2-b");
+    const x1 = indexOfCall(h!, keyEndsWith("-x1"));
+    const fast = indexOfCall(h!, (c) => c.toolId === "fast-1" && c.command === "transfer");
+    // The F.A.S.T. leg ends first; x1 is still moving: out1 must wait for x1, not just the barrier.
+    h!.finish(fast);
+    await h!.tick(8);
+    expect(h!.calls()[x1].gate.isSettled()).toBe(false);
+    expect(indexOfCall(h!, keyEndsWith("-out1"))).toBe(-1);
+    expect(indexOfCall(h!, keyEndsWith("-out2"))).toBe(-1);
 
-    h.finish(fast);
-    await h.tick(6);
-    const out1 = indexOfCall(h, keyEndsWith("-out1"));
-    expect(out1).toBeGreaterThanOrEqual(0);
-    expect(indexOfCall(h, keyEndsWith("-x2"))).toBe(-1);
-    h.finish(out1);
-    await h.tick(6);
-    const out2 = indexOfCall(h, keyEndsWith("-out2"));
+    h!.finish(x1);
+    await h!.tick(6);
+    expect(await rowStatusOf(h!, x1)).toBe("COMPLETED");
+    const out1 = indexOfCall(h!, keyEndsWith("-out1"));
+    expect(out1).toBeGreaterThan(x1);
+    expect(indexOfCall(h!, keyEndsWith("-out2"))).toBe(-1);
+    h!.finish(out1);
+    await h!.tick(6);
+    const out2 = indexOfCall(h!, keyEndsWith("-out2"));
     expect(out2).toBeGreaterThanOrEqual(0);
-    expect(indexOfCall(h, keyEndsWith("-x2"))).toBe(-1);
-    h.finish(out2);
-    await h.tick(6);
-    expect(indexOfCall(h, keyEndsWith("-x2"))).toBeGreaterThanOrEqual(0);
-    await releaseAll(h);
+    h!.finish(out2);
+    await releaseAll(h!);
     await done;
 
-    expect(h.calls()).toHaveLength(7);
-    const ids = h.calls().map((c) => c.queueId);
+    // (g) no x2 leg: seven rows, six sends (note is not sent), all queueIds distinct and sent once.
+    expect(indexOfCall(h!, keyEndsWith("-x2"))).toBe(-1);
+    expect(h!.calls()).toHaveLength(6);
+    const ids = h!.calls().map((c) => c.queueId);
     expect(ids.every((id) => id !== undefined)).toBe(true);
-    expect(new Set(ids).size).toBe(7);
-    const rows = await h.queue.commands.all();
-    expect(rows).toHaveLength(8);
+    expect(new Set(ids).size).toBe(6);
+    const rows = await h!.queue.commands.all();
+    expect(rows).toHaveLength(7);
     expect(rows.every((r) => r.status === "COMPLETED")).toBe(true);
+  });
+
+  it("(g2b) out1 also waits for the F.A.S.T. leg when x1 finishes first (barrier)", async () => {
+    const { done } = await startToOverlap("e2-e");
+    const x1 = indexOfCall(h!, keyEndsWith("-x1"));
+    const fast = indexOfCall(h!, (c) => c.toolId === "fast-1" && c.command === "transfer");
+    h!.finish(x1);
+    await h!.tick(8);
+    expect(await rowStatusOf(h!, x1)).toBe("COMPLETED");
+    expect(h!.calls()[fast].gate.isSettled()).toBe(false);
+    expect(indexOfCall(h!, keyEndsWith("-out1"))).toBe(-1);
+    h!.finish(fast);
+    await h!.tick(6);
+    expect(indexOfCall(h!, keyEndsWith("-out1"))).toBeGreaterThan(x1);
+    await releaseAll(h!);
+    await done;
+  });
+
+  it("(g3) a failed in1 halts the run: x1 and everything after it are never sent", async () => {
+    const commands = await runOk(protocol, EVENT2_OVERRIDES);
+    h = createLaneHarness();
+    await h.push("e2-c", toLaneSteps(commands));
+    const done = h.start();
+    await h.tick(3);
+    expect(indexOfCall(h, keyEndsWith("-in1"))).toBe(0);
+    h.fail(0, new Error("in1 failed"));
+    await h.tick(12);
+    expect(h.calls()).toHaveLength(1);
+    for (const suffix of ["-in2", "-x1", "-out1", "-out2"]) {
+      expect(indexOfCall(h, keyEndsWith(suffix)), suffix).toBe(-1);
+    }
+    expect(indexOfCall(h, (c) => c.toolId === "fast-1")).toBe(-1);
+    await releaseAll(h);
+    await done;
+    expect(h.calls().some((c) => keyEndsWith("-x1")(c))).toBe(false);
+  });
+
+  it("(g4) a failed x1 halts the run: out1 and out2 are never sent, so no plate lands on an occupied nest", async () => {
+    const { done } = await startToOverlap("e2-d");
+    const x1 = indexOfCall(h!, keyEndsWith("-x1"));
+    const fast = indexOfCall(h!, (c) => c.toolId === "fast-1" && c.command === "transfer");
+    h!.fail(x1, new Error("x1 failed"));
+    await h!.tick(4);
+    h!.finish(fast); // the running F.A.S.T. step may still complete; nothing new is dispatched
+    await h!.tick(12);
+    expect(indexOfCall(h!, keyEndsWith("-out1"))).toBe(-1);
+    expect(indexOfCall(h!, keyEndsWith("-out2"))).toBe(-1);
+    expect(h!.calls()).toHaveLength(4); // in1, in2, F.A.S.T., x1
+    await releaseAll(h!);
+    await done;
+    expect(h!.calls().some((c) => keyEndsWith("-out1")(c))).toBe(false);
   });
 });
 

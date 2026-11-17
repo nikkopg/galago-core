@@ -2,7 +2,7 @@
   "protocol": {
     "name": "LIV-01 event 2: third-plate STACK transfer overlaps the F.A.S.T. liquid leg (lanes)",
     "category": "LIV-01",
-    "description": "Two-plate cycle with a real third-plate STACK transfer, spare A to spare B, during the F.A.S.T. liquid leg, and a serial return leg spare B to spare A after the out1 barrier. Mints one explicit step key per STACK transfer leg (-in1, -in2, -x1, -out1, -out2, -x2). Parameter names and values follow the GAL-02 template plus runbook rows 2a-2 and 3a-2 (store protocol 15 was not readable, see protocols/store-protocol-15.export.json). Spare nests have no default: the operator types the pair confirmed in 09-03. Physical arm motion beside a running liquid handler: runs only after its own typed GO (D-01, D-14).",
+    "description": "Two-plate cycle with a real third-plate STACK transfer, the overlap move (overlap source to overlap destination, nest-3 to nest-1 under the amended D-02), during the F.A.S.T. liquid leg. out1 lands plate 1 on the overlap source (the nest x1 vacated); there is no return leg (amended D-03), so the rig ends with the third plate on nest-1, plate 1 on nest-3 and plate 2 on nest-2 and the operator restores it by hand. STACK legs serialize on the primary lane: x1 is sent only after in1 completed and out1 only after x1 completed, and a failed in1 or x1 halts the run. Mints one explicit step key per STACK transfer leg (-in1, -in2, -x1, -out1, -out2). Parameter names and values follow the GAL-02 template plus runbook rows 2a-2 and 3a-2 (store protocol 15 was not readable, see protocols/store-protocol-15.export.json). The overlap and out1 locations have no default: the operator types the triples confirmed in 09-03. Physical arm motion beside a running liquid handler: runs only after its own typed GO (D-01, D-14).",
     "commands": [],
     "parameters": [
       {
@@ -159,67 +159,99 @@
       },
       {
         "name": "spare_a_device",
-        "label": "Spare A device",
+        "label": "Overlap source device",
         "type": "string",
         "defaultValue": "",
         "required": true,
-        "description": "Spare A (third plate start): STACK device, the pair the operator confirmed in 09-03; required, no default (core value: no preselected physical choice)."
+        "description": "Overlap source (the third plate's start nest): STACK device, the amended D-02 pair confirmed in 09-03; required, no default (core value: no preselected physical choice)."
       },
       {
         "name": "spare_a_deck",
-        "label": "Spare A deck",
+        "label": "Overlap source deck",
         "type": "string",
         "defaultValue": "",
         "required": true,
-        "description": "Spare A (third plate start): STACK deck, the pair the operator confirmed in 09-03; required, no default (core value: no preselected physical choice)."
+        "description": "Overlap source (the third plate's start nest): STACK deck, the amended D-02 pair confirmed in 09-03; required, no default (core value: no preselected physical choice)."
       },
       {
         "name": "spare_a_nest",
-        "label": "Spare A nest",
+        "label": "Overlap source nest",
         "type": "string",
         "defaultValue": "",
         "required": true,
-        "description": "Spare A (third plate start): STACK nest, the pair the operator confirmed in 09-03; required, no default (core value: no preselected physical choice)."
+        "description": "Overlap source (the third plate's start nest): STACK nest, the amended D-02 pair confirmed in 09-03; required, no default (core value: no preselected physical choice)."
       },
       {
         "name": "spare_a_transfer_profile",
-        "label": "Spare A transfer profile",
+        "label": "Overlap source transfer profile",
         "type": "string",
         "defaultValue": "",
         "required": false,
-        "description": "Optional STACK transfer profile for spare A; blank sends none."
+        "description": "Optional STACK transfer profile for the overlap source; blank sends none."
       },
       {
         "name": "spare_b_device",
-        "label": "Spare B device",
+        "label": "Overlap destination device",
         "type": "string",
         "defaultValue": "",
         "required": true,
-        "description": "Spare B (third plate target): STACK device, the pair the operator confirmed in 09-03; required, no default (core value: no preselected physical choice)."
+        "description": "Overlap destination (where the third plate moves during the F.A.S.T. liquid leg): STACK device, the amended D-02 pair confirmed in 09-03; required, no default (core value: no preselected physical choice)."
       },
       {
         "name": "spare_b_deck",
-        "label": "Spare B deck",
+        "label": "Overlap destination deck",
         "type": "string",
         "defaultValue": "",
         "required": true,
-        "description": "Spare B (third plate target): STACK deck, the pair the operator confirmed in 09-03; required, no default (core value: no preselected physical choice)."
+        "description": "Overlap destination (where the third plate moves during the F.A.S.T. liquid leg): STACK deck, the amended D-02 pair confirmed in 09-03; required, no default (core value: no preselected physical choice)."
       },
       {
         "name": "spare_b_nest",
-        "label": "Spare B nest",
+        "label": "Overlap destination nest",
         "type": "string",
         "defaultValue": "",
         "required": true,
-        "description": "Spare B (third plate target): STACK nest, the pair the operator confirmed in 09-03; required, no default (core value: no preselected physical choice)."
+        "description": "Overlap destination (where the third plate moves during the F.A.S.T. liquid leg): STACK nest, the amended D-02 pair confirmed in 09-03; required, no default (core value: no preselected physical choice)."
       },
       {
         "name": "spare_b_transfer_profile",
-        "label": "Spare B transfer profile",
+        "label": "Overlap destination transfer profile",
         "type": "string",
         "defaultValue": "",
         "required": false,
-        "description": "Optional STACK transfer profile for spare B; blank sends none."
+        "description": "Optional STACK transfer profile for the overlap destination; blank sends none."
+      },
+      {
+        "name": "out1_dest_device",
+        "label": "Out1 destination device",
+        "type": "string",
+        "defaultValue": "",
+        "required": true,
+        "description": "Out1 destination (F.A.S.T. tray slot 1 back to the STACK side): STACK device; must equal the overlap source (the nest x1 vacates), so out1 lands plate 1 where the third plate started; required, no default (core value: no preselected physical choice)."
+      },
+      {
+        "name": "out1_dest_deck",
+        "label": "Out1 destination deck",
+        "type": "string",
+        "defaultValue": "",
+        "required": true,
+        "description": "Out1 destination (F.A.S.T. tray slot 1 back to the STACK side): STACK deck; must equal the overlap source (the nest x1 vacates), so out1 lands plate 1 where the third plate started; required, no default (core value: no preselected physical choice)."
+      },
+      {
+        "name": "out1_dest_nest",
+        "label": "Out1 destination nest",
+        "type": "string",
+        "defaultValue": "",
+        "required": true,
+        "description": "Out1 destination (F.A.S.T. tray slot 1 back to the STACK side): STACK nest; must equal the overlap source (the nest x1 vacates), so out1 lands plate 1 where the third plate started; required, no default (core value: no preselected physical choice)."
+      },
+      {
+        "name": "out1_dest_transfer_profile",
+        "label": "Out1 destination transfer profile",
+        "type": "string",
+        "defaultValue": "",
+        "required": false,
+        "description": "Optional STACK transfer profile for the out1 destination; blank sends none."
       },
       {
         "name": "overlap_timeout_s",
@@ -339,7 +371,7 @@
       }
     ],
     "mode": "script",
-    "scriptContent": "// LIV-01: event 2, two-plate cycle with a third-plate STACK transfer overlapping the F.A.S.T. liquid leg (lanes).\n// Every input is validated and every parameter object is built BEFORE the first galago call,\n// so a bad input throws with nothing queued. No fallback values live here: defaults are the\n// parameter defaults shown in the run form. The F.A.S.T. rules mirror _check_args in\n// tools/fast/server.py (deck 1-6, ids / columns / rows >= 1, 1-2 letter rows, volume > 0,\n// tip_reuse fresh or reuse); keep the two in step.\nfunction text(name) {\n  var v = params[name];\n  return v === undefined || v === null ? \"\" : String(v).trim();\n}\nfunction need(name) {\n  var v = text(name);\n  if (v === \"\") { throw new Error(\"LIV-01: parameter '\" + name + \"' is required\"); }\n  return v;\n}\nfunction whole(name) {\n  var n = Number(need(name));\n  if (!isFinite(n) || Math.floor(n) !== n) { throw new Error(\"LIV-01: parameter '\" + name + \"' must be a whole number\"); }\n  if (n < -2147483648 || n > 2147483647) { throw new Error(\"LIV-01: parameter '\" + name + \"' must fit a 32-bit integer\"); }\n  return n;\n}\nfunction wholeBetween(name, min, max) {\n  var n = whole(name);\n  if (n < min || n > max) { throw new Error(\"LIV-01: parameter '\" + name + \"' must be a whole number from \" + min + \" to \" + max); }\n  return n;\n}\nfunction letters(name) {\n  var v = need(name);\n  var ok = v.length >= 1 && v.length <= 2;\n  for (var i = 0; ok && i < v.length; i++) { ok = \"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz\".indexOf(v.charAt(i)) >= 0; }\n  if (!ok) { throw new Error(\"LIV-01: parameter '\" + name + \"' must be one or two letters\"); }\n  return v;\n}\nfunction oneOf(name, allowed) {\n  var v = need(name);\n  if (allowed.indexOf(v) < 0) { throw new Error(\"LIV-01: parameter '\" + name + \"' must be one of \" + allowed.join(\", \")); }\n  return v;\n}\nfunction positive(name) {\n  var n = Number(need(name));\n  if (!isFinite(n) || n <= 0) { throw new Error(\"LIV-01: parameter '\" + name + \"' must be a number above 0\"); }\n  return n;\n}\nfunction fastStep() {\n  var p = {};\n  var decks = [\"source_deck\", \"dest_deck\"];\n  for (var d = 0; d < decks.length; d++) { p[decks[d]] = wholeBetween(\"fast_step_\" + decks[d], 1, 6); }\n  var ints = [\"source_plate_id\", \"dest_plate_id\", \"source_start_col\", \"dest_start_col\", \"num_rows\", \"num_cols\"];\n  for (var i = 0; i < ints.length; i++) { p[ints[i]] = wholeBetween(\"fast_step_\" + ints[i], 1, 2147483647); }\n  p.source_start_row = letters(\"fast_step_source_start_row\");\n  p.dest_start_row = letters(\"fast_step_dest_start_row\");\n  p.volume = positive(\"fast_step_volume\");\n  p.tip_reuse = oneOf(\"fast_step_tip_reuse\", [\"fresh\", \"reuse\"]);\n  if (text(\"fast_step_expected_tray_id\") !== \"\") { p.expected_tray_id = whole(\"fast_step_expected_tray_id\"); }\n  return p;\n}\nfunction toolKey(name) { return String(name || \"\").toLowerCase().replace(/[^a-z0-9]/g, \"\"); }\n\n// Step key base: label (cut to 20 code points) + queue-time timestamp + 8 hex random.\n// Computed once per run; every STACK leg gets its own suffix so two legs never merge.\nvar label = Array.from(need(\"batch_label\")).slice(0, 20).join(\"\");\nvar rand = (Math.random().toString(16) + \"00000000\").slice(2, 10);\nvar base = label + \"-\" + new Date().toISOString() + \"-\" + rand;\n\n// A STACK location: device, deck, nest (byte-exact, trimmed) and an optional transfer profile.\nfunction loc(prefix, profileParam) {\n  return {\n    device: need(prefix + \"_device\"),\n    deck: need(prefix + \"_deck\"),\n    nest: need(prefix + \"_nest\"),\n    profile: profileParam ? text(profileParam) : \"\"\n  };\n}\nfunction sameLoc(a, b) { return a.device === b.device && a.deck === b.deck && a.nest === b.nest; }\n\n// STACK parameter object. key null builds a get_transfer_estimate object (no step_key);\n// timeout null sends no timeout_s.\nfunction stackParams(from, to, key, timeout) {\n  var p = {};\n  if (key !== null) { p.step_key = key; }\n  p.robot = need(\"robot\");\n  p.labware_profile = need(\"labware_profile\");\n  p.source_device = from.device;\n  p.source_deck = from.deck;\n  p.source_nest = from.nest;\n  if (from.profile !== \"\") { p.source_transfer_profile = from.profile; }\n  p.destination_device = to.device;\n  p.destination_deck = to.deck;\n  p.destination_nest = to.nest;\n  if (to.profile !== \"\") { p.destination_transfer_profile = to.profile; }\n  if (timeout !== null) { p.timeout_s = timeout; }\n  return p;\n}\n\nvar stackTool = need(\"stack_tool\");\nvar fastTool = need(\"fast_tool\");\nif (toolKey(stackTool) === toolKey(fastTool)) { throw new Error(\"LIV-01: parameter 'fast_tool' must differ from 'stack_tool'\"); }\n\nvar plate1 = loc(\"plate1\", \"transfer_profile\");\nvar plate2 = loc(\"plate2\", \"transfer_profile\");\nvar tray1 = loc(\"tray1\", \"transfer_profile\");\nvar tray2 = loc(\"tray2\", \"transfer_profile\");\nvar spareA = loc(\"spare_a\", \"spare_a_transfer_profile\");\nvar spareB = loc(\"spare_b\", \"spare_b_transfer_profile\");\n\n// D-02 spare guard: the overlap move is spare A to spare B only. It must never touch a plate\n// home, the F.A.S.T. side, or be a no-op. Compared byte-exact like the manager.\nif (sameLoc(spareA, spareB)) { throw new Error(\"LIV-01: spare A and spare B must differ\"); }\nif (sameLoc(spareA, plate1) || sameLoc(spareA, plate2) || sameLoc(spareB, plate1) || sameLoc(spareB, plate2)) {\n  throw new Error(\"LIV-01: a spare nest must not be a plate home\");\n}\nif (spareA.device === tray1.device || spareA.device === tray2.device || spareB.device === tray1.device || spareB.device === tray2.device) {\n  throw new Error(\"LIV-01: a spare nest must not be on the F.A.S.T.-side device\");\n}\n\nvar cycleTimeout = text(\"stack_timeout_s\") !== \"\" ? positive(\"stack_timeout_s\") : null;\nvar fastParams = fastStep();\nvar legIn1 = stackParams(plate1, tray1, base + \"-in1\", cycleTimeout);\nvar legIn2 = stackParams(plate2, tray2, base + \"-in2\", cycleTimeout);\nvar legOut1 = stackParams(tray1, plate1, base + \"-out1\", cycleTimeout);\nvar legOut2 = stackParams(tray2, plate2, base + \"-out2\", cycleTimeout);\n// Event 2 (motion): a third plate moves spare A to spare B during the F.A.S.T. leg and\n// returns after the out1 barrier, so the rig ends where it started (D-03).\nvar overlapTimeout = null;\nif (text(\"overlap_timeout_s\") !== \"\") {\n  var ot = Number(text(\"overlap_timeout_s\"));\n  if (!isFinite(ot) || ot < 0) { throw new Error(\"LIV-01: parameter 'overlap_timeout_s' must be a number at or above 0\"); }\n  overlapTimeout = ot;\n}\nvar legX1 = stackParams(spareA, spareB, base + \"-x1\", overlapTimeout);\nvar legX2 = stackParams(spareB, spareA, base + \"-x2\", overlapTimeout);\n\ngalago.note(\"LIV-01 key base \" + base);\ngalago.command(stackTool, \"transfer\", legIn1);\ngalago.command(stackTool, \"transfer\", legIn2);\ngalago.lane(\"fast\");\ngalago.command(fastTool, \"transfer\", fastParams, { barrier: true });\n// The lane is sticky: reset to primary or the overlap step would queue behind the F.A.S.T. step.\ngalago.lane();\ngalago.command(stackTool, \"transfer\", legX1);\ngalago.command(stackTool, \"transfer\", legOut1, { barrier: true });\ngalago.command(stackTool, \"transfer\", legOut2);\ngalago.command(stackTool, \"transfer\", legX2);\n"
+    "scriptContent": "// LIV-01: event 2, two-plate cycle with a third-plate STACK transfer overlapping the F.A.S.T. liquid leg (lanes).\n// Every input is validated and every parameter object is built BEFORE the first galago call,\n// so a bad input throws with nothing queued. No fallback values live here: defaults are the\n// parameter defaults shown in the run form. The F.A.S.T. rules mirror _check_args in\n// tools/fast/server.py (deck 1-6, ids / columns / rows >= 1, 1-2 letter rows, volume > 0,\n// tip_reuse fresh or reuse); keep the two in step.\nfunction text(name) {\n  var v = params[name];\n  return v === undefined || v === null ? \"\" : String(v).trim();\n}\nfunction need(name) {\n  var v = text(name);\n  if (v === \"\") { throw new Error(\"LIV-01: parameter '\" + name + \"' is required\"); }\n  return v;\n}\nfunction whole(name) {\n  var n = Number(need(name));\n  if (!isFinite(n) || Math.floor(n) !== n) { throw new Error(\"LIV-01: parameter '\" + name + \"' must be a whole number\"); }\n  if (n < -2147483648 || n > 2147483647) { throw new Error(\"LIV-01: parameter '\" + name + \"' must fit a 32-bit integer\"); }\n  return n;\n}\nfunction wholeBetween(name, min, max) {\n  var n = whole(name);\n  if (n < min || n > max) { throw new Error(\"LIV-01: parameter '\" + name + \"' must be a whole number from \" + min + \" to \" + max); }\n  return n;\n}\nfunction letters(name) {\n  var v = need(name);\n  var ok = v.length >= 1 && v.length <= 2;\n  for (var i = 0; ok && i < v.length; i++) { ok = \"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz\".indexOf(v.charAt(i)) >= 0; }\n  if (!ok) { throw new Error(\"LIV-01: parameter '\" + name + \"' must be one or two letters\"); }\n  return v;\n}\nfunction oneOf(name, allowed) {\n  var v = need(name);\n  if (allowed.indexOf(v) < 0) { throw new Error(\"LIV-01: parameter '\" + name + \"' must be one of \" + allowed.join(\", \")); }\n  return v;\n}\nfunction positive(name) {\n  var n = Number(need(name));\n  if (!isFinite(n) || n <= 0) { throw new Error(\"LIV-01: parameter '\" + name + \"' must be a number above 0\"); }\n  return n;\n}\nfunction fastStep() {\n  var p = {};\n  var decks = [\"source_deck\", \"dest_deck\"];\n  for (var d = 0; d < decks.length; d++) { p[decks[d]] = wholeBetween(\"fast_step_\" + decks[d], 1, 6); }\n  var ints = [\"source_plate_id\", \"dest_plate_id\", \"source_start_col\", \"dest_start_col\", \"num_rows\", \"num_cols\"];\n  for (var i = 0; i < ints.length; i++) { p[ints[i]] = wholeBetween(\"fast_step_\" + ints[i], 1, 2147483647); }\n  p.source_start_row = letters(\"fast_step_source_start_row\");\n  p.dest_start_row = letters(\"fast_step_dest_start_row\");\n  p.volume = positive(\"fast_step_volume\");\n  p.tip_reuse = oneOf(\"fast_step_tip_reuse\", [\"fresh\", \"reuse\"]);\n  if (text(\"fast_step_expected_tray_id\") !== \"\") { p.expected_tray_id = whole(\"fast_step_expected_tray_id\"); }\n  return p;\n}\nfunction toolKey(name) { return String(name || \"\").toLowerCase().replace(/[^a-z0-9]/g, \"\"); }\n\n// Step key base: label (cut to 20 code points) + queue-time timestamp + 8 hex random.\n// Computed once per run; every STACK leg gets its own suffix so two legs never merge.\nvar label = Array.from(need(\"batch_label\")).slice(0, 20).join(\"\");\nvar rand = (Math.random().toString(16) + \"00000000\").slice(2, 10);\nvar base = label + \"-\" + new Date().toISOString() + \"-\" + rand;\n\n// A STACK location: device, deck, nest (byte-exact, trimmed) and an optional transfer profile.\nfunction loc(prefix, profileParam) {\n  return {\n    device: need(prefix + \"_device\"),\n    deck: need(prefix + \"_deck\"),\n    nest: need(prefix + \"_nest\"),\n    profile: profileParam ? text(profileParam) : \"\"\n  };\n}\nfunction sameLoc(a, b) { return a.device === b.device && a.deck === b.deck && a.nest === b.nest; }\n\n// STACK parameter object. key null builds a get_transfer_estimate object (no step_key);\n// timeout null sends no timeout_s.\nfunction stackParams(from, to, key, timeout) {\n  var p = {};\n  if (key !== null) { p.step_key = key; }\n  p.robot = need(\"robot\");\n  p.labware_profile = need(\"labware_profile\");\n  p.source_device = from.device;\n  p.source_deck = from.deck;\n  p.source_nest = from.nest;\n  if (from.profile !== \"\") { p.source_transfer_profile = from.profile; }\n  p.destination_device = to.device;\n  p.destination_deck = to.deck;\n  p.destination_nest = to.nest;\n  if (to.profile !== \"\") { p.destination_transfer_profile = to.profile; }\n  if (timeout !== null) { p.timeout_s = timeout; }\n  return p;\n}\n\nvar stackTool = need(\"stack_tool\");\nvar fastTool = need(\"fast_tool\");\nif (toolKey(stackTool) === toolKey(fastTool)) { throw new Error(\"LIV-01: parameter 'fast_tool' must differ from 'stack_tool'\"); }\n\nvar plate1 = loc(\"plate1\", \"transfer_profile\");\nvar plate2 = loc(\"plate2\", \"transfer_profile\");\nvar tray1 = loc(\"tray1\", \"transfer_profile\");\nvar tray2 = loc(\"tray2\", \"transfer_profile\");\nvar overlapSrc = loc(\"spare_a\", \"spare_a_transfer_profile\");\nvar overlapDst = loc(\"spare_b\", \"spare_b_transfer_profile\");\nvar out1Dest = loc(\"out1_dest\", \"out1_dest_transfer_profile\");\n\n// D-02 overlap guard (amended 2026-11-17): the overlap move is overlap source to overlap destination.\n// The source is never a plate home and never on the F.A.S.T. side; the destination may equal plate 1's\n// home ONLY (never plate 2's home, never the F.A.S.T. side); source and destination differ. Compared\n// byte-exact like the manager.\nif (sameLoc(overlapSrc, overlapDst)) { throw new Error(\"LIV-01: overlap source and overlap destination must differ\"); }\nif (sameLoc(overlapSrc, plate1) || sameLoc(overlapSrc, plate2)) { throw new Error(\"LIV-01: the overlap source must not be a plate home\"); }\nif (sameLoc(overlapDst, plate2)) { throw new Error(\"LIV-01: the overlap destination may be plate 1's home only, not plate 2's home\"); }\nif (overlapSrc.device === tray1.device || overlapSrc.device === tray2.device) { throw new Error(\"LIV-01: the overlap source must not be on the F.A.S.T.-side device\"); }\nif (overlapDst.device === tray1.device || overlapDst.device === tray2.device) { throw new Error(\"LIV-01: the overlap destination must not be on the F.A.S.T.-side device\"); }\nif (!sameLoc(out1Dest, overlapSrc)) { throw new Error(\"LIV-01: the out1 destination must equal the overlap source\"); }\n\nvar cycleTimeout = text(\"stack_timeout_s\") !== \"\" ? positive(\"stack_timeout_s\") : null;\nvar fastParams = fastStep();\nvar legIn1 = stackParams(plate1, tray1, base + \"-in1\", cycleTimeout);\nvar legIn2 = stackParams(plate2, tray2, base + \"-in2\", cycleTimeout);\nvar legOut1 = stackParams(tray1, out1Dest, base + \"-out1\", cycleTimeout);\nvar legOut2 = stackParams(tray2, plate2, base + \"-out2\", cycleTimeout);\n// Event 2 (motion): a third plate moves overlap source to overlap destination during the F.A.S.T.\n// leg. There is no return leg (D-03 dropped 2026-11-17): out1 lands plate 1 on the overlap source.\n// STACK legs serialize on the primary lane, so x1 is sent only after in1 and in2 completed and\n// out1 only after x1 completed; a failed leg halts the run before the next leg is sent.\nvar overlapTimeout = null;\nif (text(\"overlap_timeout_s\") !== \"\") {\n  var ot = Number(text(\"overlap_timeout_s\"));\n  if (!isFinite(ot) || ot < 0) { throw new Error(\"LIV-01: parameter 'overlap_timeout_s' must be a number at or above 0\"); }\n  overlapTimeout = ot;\n}\nvar legX1 = stackParams(overlapSrc, overlapDst, base + \"-x1\", overlapTimeout);\n\ngalago.note(\"LIV-01 key base \" + base);\ngalago.command(stackTool, \"transfer\", legIn1);\ngalago.command(stackTool, \"transfer\", legIn2);\ngalago.lane(\"fast\");\ngalago.command(fastTool, \"transfer\", fastParams, { barrier: true });\n// The lane is sticky: reset to primary or the overlap step would queue behind the F.A.S.T. step.\ngalago.lane();\ngalago.command(stackTool, \"transfer\", legX1);\ngalago.command(stackTool, \"transfer\", legOut1, { barrier: true });\ngalago.command(stackTool, \"transfer\", legOut2);\n"
   },
   "exportedAt": "2026-11-17T04:08:39.102Z",
   "version": "1.0"
