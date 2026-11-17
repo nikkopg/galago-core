@@ -230,6 +230,10 @@ export const RunsComponent: React.FC = () => {
 
   const laneStatusQuery = useLaneStatus();
 
+  // Called as a function (ErrorBanner()), never mounted as an element: a component
+  // declared inside render is a new type on every render, so React would unmount and
+  // remount the banner on each poll and reset the failure list's scroll position and any
+  // text selection. It uses no hooks, so a plain call is safe (review WR-04).
   const ErrorBanner = () => {
     const bannerError: unknown =
       getError.data ?? (getError.error ? { message: getError.error.message } : null);
@@ -536,7 +540,7 @@ export const RunsComponent: React.FC = () => {
         onClose={() => setRunStopRequest(null)}
       />
 
-      <ErrorBanner />
+      {ErrorBanner()}
       <VStack spacing={6} align="stretch">
         <Card bg={cardBg} shadow="md">
           <CardBody>

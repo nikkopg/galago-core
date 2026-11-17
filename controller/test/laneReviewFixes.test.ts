@@ -1,6 +1,8 @@
 // Phase 8 code-review fixes WR-02 and WR-06 through the real CommandQueue.
 // Fakes only: every Tool.executeCommand is a deferred the test resolves and every control call
 // lands on a fake gRPC endpoint, so no instrument can move.
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { ResponseCode } from "gen-interfaces/tools/grpc_interfaces/tool_base";
 import { logAction } from "@/server/logger";
@@ -149,5 +151,24 @@ describe("WR-06: an operator goto supersedes a pending late abort reply for a fa
     expect(logs("Aborted Run Dequeued")).toHaveLength(0);
     expect(logs("Aborted Run Dequeue Skipped")).toHaveLength(1);
     expect(await statusByCommand(h, "out1")).not.toBe("SKIPPED");
+  });
+});
+
+describe("WR-04: the error banner keeps a stable identity across renders", () => {
+  // The vitest environment is node with no DOM renderer, so remounting cannot be observed
+  // directly. This pins the cause instead: the banner is a plain render function that is
+  // called, never mounted as a component element (a component type declared inside render
+  // is new on every render, so React remounts it on each poll).
+  const code = readFileSync(join(__dirname, "../components/runs/RunsComponent.tsx"), "utf8")
+    .split("\n")
+    .filter((line) => !line.trim().startsWith("//"))
+    .join("\n");
+
+  it("does not mount ErrorBanner as a component element", () => {
+    expect(code).not.toMatch(/<ErrorBanner\b/);
+  });
+
+  it("renders the banner by calling the render function", () => {
+    expect(code).toMatch(/\{ErrorBanner\(\)\}/);
   });
 });
