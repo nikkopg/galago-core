@@ -80,9 +80,13 @@ export interface LaneFailureListView {
 }
 
 export const FIRST_FAILURE_NOTE = "First failure, shown above";
+// Used when the banner's failure is not the first listed one (the operator cleared an
+// earlier error, so a later failure is the one shown in the banner).
+export const BANNER_FAILURE_NOTE = "Shown above";
 
-// D-16: the list shows only with two or more failures. The first entry is the
-// banner's own failure, so it carries no repeated message.
+// D-16: the list shows only with two or more failures. The entry marked `banner` is the
+// banner's own failure, so it carries no repeated message. It is not always the first
+// entry: clearError() leaves earlier failures listed (review WR-05).
 export function describeLaneFailures(
   failures: ReadonlyArray<LaneFailureEntry>,
   overflow: number,
@@ -93,8 +97,8 @@ export function describeLaneFailures(
   const entries = failures.map((failure, index) => ({
     lane: failure.lane,
     meta: `${toolDisplayName(failure.toolType)} · ${formatTime(failure.at)}`,
-    note: index === 0 ? FIRST_FAILURE_NOTE : null,
-    message: index === 0 ? null : failure.message,
+    note: failure.banner === true ? (index === 0 ? FIRST_FAILURE_NOTE : BANNER_FAILURE_NOTE) : null,
+    message: failure.banner === true ? null : failure.message,
   }));
   return {
     heading: `Failures by lane (${entries.length + more})`,

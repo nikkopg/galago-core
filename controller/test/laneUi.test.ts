@@ -202,6 +202,7 @@ describe("describeLaneFailures (D-16, LUI-06)", () => {
     toolType: "stack",
     message: "g-1",
     at: 1000,
+    banner: true,
   };
   const f2: LaneFailureEntry = {
     lane: "fast",
@@ -232,6 +233,15 @@ describe("describeLaneFailures (D-16, LUI-06)", () => {
       ],
       overflowLine: null,
     });
+  });
+
+  it("hides the message only of the banner entry, even when it is not the first (review WR-05)", () => {
+    // The operator cleared lane primary's error, then lane fast failed and became the banner.
+    const view = describeLaneFailures([{ ...f1, banner: false }, { ...f2, banner: true }], 0, fmt);
+    expect(view?.entries).toEqual([
+      { lane: "primary", meta: "STACK · T1000", note: null, message: "g-1" },
+      { lane: "fast", meta: "F.A.S.T. · T2000", note: "Shown above", message: null },
+    ]);
   });
 
   it("counts overflow in the heading and words it singular and plural", () => {

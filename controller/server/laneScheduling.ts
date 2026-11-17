@@ -57,6 +57,9 @@ export interface LaneFailureEntry {
   toolType: string;
   message: string;
   at: number;
+  // True only for the entry whose message is the banner error (this.error). After the
+  // operator clears the error, a later failure becomes the banner and the flag moves to it.
+  banner?: boolean;
 }
 
 export interface LaneStatusSnapshot {

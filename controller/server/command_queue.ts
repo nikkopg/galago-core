@@ -521,6 +521,13 @@ export class CommandQueue {
   private _recordFailure(error: Error, ctx?: LaneFailureContext): void {
     this._failureSeq += 1;
     if (this._laneMode && ctx) {
+      // The entry that becomes the banner error is marked, so the list hides the message of
+      // the banner's own failure and no other. After clearError() this is not entry 0, and
+      // the old banner entry's message is then shown in the list (review WR-05).
+      const becomesBanner = !this.error;
+      if (becomesBanner) {
+        for (const entry of this._laneFailures) entry.banner = false;
+      }
       if (this._laneFailures.length < LANE_FAILURE_CAP) {
         this._laneFailures.push({
           lane: ctx.lane,
@@ -529,6 +536,7 @@ export class CommandQueue {
           toolType: ctx.toolType === undefined ? "" : String(ctx.toolType),
           message: error.message,
           at: Date.now(),
+          banner: becomesBanner,
         });
       } else {
         this._laneFailureOverflow += 1;

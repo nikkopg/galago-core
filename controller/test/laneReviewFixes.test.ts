@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { ResponseCode } from "gen-interfaces/tools/grpc_interfaces/tool_base";
 import { logAction } from "@/server/logger";
+import { describeLaneFailures } from "@/components/runs/laneStatus";
 import { deferred } from "./helpers/fakeTool";
 import { createLaneHarness, stackStep, fastStep, type LaneHarness } from "./helpers/laneHarness";
 
@@ -170,5 +171,64 @@ describe("WR-04: the error banner keeps a stable identity across renders", () =>
 
   it("renders the banner by calling the render function", () => {
     expect(code).toMatch(/\{ErrorBanner\(\)\}/);
+  });
+});
+
+describe("WR-05: the failure list hides only the banner's own message", () => {
+  it("shows the earlier failure's message after clearError() when a later lane fails", async () => {
+    h = createLaneHarness();
+    await h.push("r1", [
+      fastStep("t1", { lane: "fast", params: { tag: "F1" } }),
+      stackStep("A"),
+    ]);
+    h.start();
+    await h.tick(3);
+
+    // The fast lane fails first and fills the banner. The operator clears it while the
+    // primary step is still running, then the primary step fails and becomes the banner.
+    h.fail(indexOfCall(h, "t1"), new Error("fast lane boom"));
+    await h.tick(3);
+    expect(h.queue.error?.message).toContain("fast lane boom");
+    await h.queue.clearError();
+    h.fail(indexOfCall(h, "A"), new Error("primary lane boom"));
+    await h.tick(4);
+    expect(h.queue.error?.message).toContain("primary lane boom");
+
+    const status = h.queue.laneStatus();
+    expect(status.failures.map((f) => [f.lane, f.banner])).toEqual([
+      ["fast", false],
+      ["primary", true],
+    ]);
+
+    const view = describeLaneFailures(status.failures, status.overflow, () => "T");
+    expect(view?.entries.map((e) => [e.lane, e.message])).toEqual([
+      ["fast", "fast lane boom"],
+      ["primary", null],
+    ]);
+    // Every failure message is visible somewhere: the banner shows one, the list the other.
+    expect(view?.entries[0].note).toBeNull();
+    expect(view?.entries[1].note).toBe("Shown above");
+  });
+
+  it("keeps the first entry as the banner when nothing was cleared", async () => {
+    h = createLaneHarness();
+    await h.push("r1", [
+      fastStep("t1", { lane: "fast", params: { tag: "F1" } }),
+      stackStep("A"),
+    ]);
+    h.start();
+    await h.tick(3);
+    h.fail(indexOfCall(h, "t1"), new Error("fast lane boom"));
+    await h.tick(3);
+    h.fail(indexOfCall(h, "A"), new Error("primary lane boom"));
+    await h.tick(4);
+
+    const status = h.queue.laneStatus();
+    expect(status.failures.map((f) => [f.lane, f.banner])).toEqual([
+      ["fast", true],
+      ["primary", false],
+    ]);
+    const view = describeLaneFailures(status.failures, status.overflow, () => "T");
+    expect(view?.entries.map((e) => e.message)).toEqual([null, "primary lane boom"]);
   });
 });
