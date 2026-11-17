@@ -98,14 +98,18 @@ export function isToolBoxStep(info: LaneCommandInfo | undefined): boolean {
   return info.toolId === "Tool Box" || String(info.toolType) === "toolbox";
 }
 
-// A Tool Box step is always primary, and so is an invalid name: a smuggled or
-// unvalidated tag can only make dispatch more sequential, never less.
+// A Tool Box step is always primary, and so is an invalid or non-text name. That
+// is not always more sequential: a mistyped lane runs on the primary lane beside
+// the side lanes, and a mistyped barrier is dropped (see isBarrier). validateLanes
+// rule 0 therefore refuses both at run creation instead of relying on this fallback.
 export function laneOf(info: LaneCommandInfo | undefined): string {
   if (isToolBoxStep(info)) return PRIMARY_LANE;
   const lane = normalizeLane(advancedValue(info, "lane"));
   return isValidLaneName(lane) ? lane : PRIMARY_LANE;
 }
 
+// Only a stored boolean true is a barrier. Any other value ("true", 1) is not
+// honoured here and is refused by validateLanes rule 0.
 export function isBarrier(info: LaneCommandInfo | undefined): boolean {
   return advancedValue(info, "laneBarrier") === true;
 }
@@ -208,6 +212,9 @@ export const laneMessages = Object.freeze({
     `The first step on lane '${lane}' (step ${n}) must wait for all earlier steps. Turn on "Wait for all earlier steps" for it.`,
   gotoInLaneRun: (n: number): string =>
     `Step ${n} is a Go to step, which cannot be used in a run that has lanes. Remove it, or keep every step on the primary lane.`,
+  barrierNotBoolean: (n: number): string =>
+    `Step ${n}: "Wait for all earlier steps" must be on or off.`,
+  laneNotText: (n: number): string => `Step ${n}: the lane name must be text.`,
   deadWait: (n: number): string =>
     `The lane setup cannot finish: step ${n} would wait forever. Check the "Wait for all earlier steps" settings.`,
 });
@@ -254,11 +261,25 @@ function isGotoStep(info: LaneCommandInfo): boolean {
   );
 }
 
-// Run-creation refusals in fixed rule order: invalid name, non-tool step on a
+// Run-creation refusals in fixed rule order: wrong-typed lane or barrier tag, invalid name, non-tool step on a
 // secondary lane, one tool on two lanes, more than MAX_LANES_PER_RUN lanes, first
 // row of a secondary lane without a barrier, Tool Box goto in a laned run, dead wait.
 export function validateLanes(infos: ReadonlyArray<LaneCommandInfo>): string[] {
   const messages: string[] = [];
+
+  // 0. A present tag of the wrong type. Stored command JSON is untrusted and the
+  // dispatch rules ignore such a tag silently, which would drop a barrier or move a
+  // step onto the primary lane, so refuse it here with a message instead.
+  infos.forEach((info, i) => {
+    const ap = info && typeof info === "object" ? info.advancedParameters : undefined;
+    if (!ap || typeof ap !== "object") return;
+    if (hasOwn(ap, "laneBarrier") && typeof ap.laneBarrier !== "boolean") {
+      messages.push(laneMessages.barrierNotBoolean(i + 1));
+    }
+    if (hasOwn(ap, "lane") && ap.lane !== undefined && typeof ap.lane !== "string") {
+      messages.push(laneMessages.laneNotText(i + 1));
+    }
+  });
 
   // 1. Invalid lane name, once per distinct normalised value.
   const badNames: string[] = [];

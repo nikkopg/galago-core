@@ -339,6 +339,29 @@ describe("validateLanes sentences (UI-SPEC S2c)", () => {
     ).toEqual([]);
   });
 
+  it("refuses a lane or barrier tag of the wrong type instead of ignoring it (review WR-01)", () => {
+    // A stored "true" or 1 is not a barrier, and a numeric lane is not a lane name. Dispatch
+    // ignores both, so the run would start steps earlier or on the primary lane unannounced.
+    expect(validateLanes([info("stack-1"), info("fast-1", { toolType: "fast", barrier: "true" })])).toContain(
+      'Step 2: "Wait for all earlier steps" must be on or off.',
+    );
+    expect(validateLanes([info("stack-1"), info("fast-1", { toolType: "fast", barrier: 1 })])).toContain(
+      'Step 2: "Wait for all earlier steps" must be on or off.',
+    );
+    expect(validateLanes([info("stack-1", { lane: 5 })])).toEqual(["Step 1: the lane name must be text."]);
+    expect(validateLanes([info("stack-1", { lane: null })])).toEqual(["Step 1: the lane name must be text."]);
+  });
+
+  it("still accepts boolean barriers and absent or text lane tags (review WR-01)", () => {
+    expect(
+      validateLanes([
+        info("stack-1"),
+        info("fast-1", { toolType: "fast", lane: "fast", barrier: true }),
+        info("stack-1", { barrier: false }),
+      ]),
+    ).toEqual([]);
+  });
+
   it("refuses a non-tool step on a secondary lane", () => {
     expect(
       validateLanes([info("stack-1"), info("Tool Box", { command: "note", lane: "fast" })]),
