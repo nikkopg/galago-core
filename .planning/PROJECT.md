@@ -7,7 +7,9 @@ The `nikkopg/galago-core` fork of `sciencecorp/galago-core`: Galago's Next.js + 
 tool servers over gRPC. This GSD project covers the queue, tRPC and run-page work that lets an
 operator control a running instrument step live — and, since v1.1, STACK tool support: codegen from
 the frozen `stack.proto`, born-empty STACK command forms, operator-only STACK error
-acknowledgement, and the queue's single-flight Start guard with full tool-error visibility. The
+acknowledgement, and the queue's single-flight Start guard with full tool-error visibility (single-flight per lane when
+`GALAGO_PARALLEL_LANES=1`: at most one step per tool server in flight, any failure or Freeze lanes stops
+new dispatch on every lane and only the operator's Start re-arms; unchanged with the flag off). The
 F.A.S.T. and STACK tool servers it controls are planned in the galago-tools fork's own GSD project.
 
 ## Core Value
@@ -142,10 +144,14 @@ operator-decides-recovery guarantee.
   rows, failures-by-lane banner list, step-drawer lane controls and per-lane preview for visual and
   script protocols — Phase 8 (verification passed after review fixes WR-02/03/06, UAT 8/8 on a
   simulated two-tool rig, 2026-11-17)
+- ✓ LIV-01..03 — v1.2: per-toolId concurrency lanes proven live on two tools (STACK2-6 + FA100056,
+  supervised, typed go, galago-web-dev with `GALAGO_PARALLEL_LANES=1`): a STACK estimate (event 1) and
+  a third-plate STACK transfer nest-3 to nest-1 (event 2) overlapped the F.A.S.T. liquid leg with
+  per-lane rows, explicit per-run step keys and one ledger record per key; the sim drill froze both
+  lanes on a failure in either lane and on Freeze lanes, nothing aborted — Phase 9 (evidence
+  `.planning/phases/09-supervised-live-two-tool-proof/09-LIVE-EVIDENCE.md`, 2026-11-17)
 
 ### Active
-
-- [ ] Per-toolId concurrency lanes proven live on two tools (supervised run) — v1.2, Phase 9
 
 (Detailed REQ-IDs in `.planning/REQUIREMENTS.md`.)
 
@@ -240,6 +246,10 @@ operator-decides-recovery guarantee.
 | v1.2 lanes: any failure on any lane freezes every lane without aborting running steps; only a Start resumes and it re-runs the failed step | The operator decides every recovery action; nothing moves on its own after a failure | ✓ Phase 8 (UAT 1-2 on a simulated rig) |
 | v1.2 lanes: the first step on a secondary lane must be a barrier, and Tool Box steps are always primary | Keeps a lane from starting before the setup it depends on; Tool Box built-ins pause the whole queue | ✓ Phase 8 |
 | Phase 8 UAT ran against simulated STACK/F.A.S.T. tool servers in an isolated workcell (host ports 40091/40092, inside the container's 40000-40099 firewall window) | Real instruments must not move during UAT; the live two-tool proof is Phase 9 | ✓ Phase 8 UAT, 2026-11-17 |
+| v1.2 live proof (D5 settled, amended D-02/D-03): the overlap step is a real STACK command, proven first as a `get_transfer_estimate` read (event 1), then a third-plate transfer nest-3 to nest-1 into plate 1's home after in1 vacated it, with out1 landing plate 1 on nest-3 and no return leg; each event under its own typed go after an operator nest-3 / nest-1 round trip; no goto-safe exists | The rig had one spare nest, not a spare pair; a read is the safest first overlap, the move proves the arm genuinely works while the F.A.S.T. runs | ✓ Phase 9 |
+| v1.2 live proof (D8 settled): explicit per-run step keys in a script protocol; auto-mint stays on and is not exercised; the automated one-send guarantee is `controller/test/laneOneSend.test.ts` | One ledger record per key can be checked exactly (four and five records); per-key one-shot is claimed for those explicit keys only | ✓ Phase 9 |
+| v1.2 live proof: IN-01 accepted by pinning the dispatch span (`staticScan.test.ts`, with a negative control) | The span between claim and send stays reviewable without changing the queue | ✓ Phase 9 |
+| v1.2 deploy decision B: lanes were turned on by recreating the dev container `galago-web-dev` with `GALAGO_PARALLEL_LANES=1` kept in the gitignored root `.env`; rollback is a flag-off recreate | forb01 has no production galago-web container and no rollback image; the image id `a331fa4d812a` did not change | ✓ Phase 9 |
 
 ## Evolution
 

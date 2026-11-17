@@ -104,9 +104,33 @@ server's own discipline.
 
 ## Acceptance
 
-- [ ] A live two-tool run where the STACK arm completes a short maneuver while
+- [x] A live two-tool run where the STACK arm completes a short maneuver while
       the F.A.S.T. executes its internal transfer, with per-lane evidence rows
       and the ledger's per-key one-shot safety intact on both tools.
-- [ ] The lane-halt behavior verified (a latched failure freezes both lanes).
-- [ ] The feature flag off = byte-identical sequential behavior.
-- [ ] PROJECT.md + this file's resolution note updated.
+- [x] The lane-halt behavior verified (a latched failure freezes both lanes).
+- [x] The feature flag off = byte-identical sequential behavior.
+- [x] PROJECT.md + this file's resolution note updated.
+
+## Resolution (galago-core Phase 9, 2026-11-17)
+
+Resolved by galago-core Phase 9 (supervised live two-tool proof). Evidence:
+`.planning/phases/09-supervised-live-two-tool-proof/09-LIVE-EVIDENCE.md`.
+
+| Acceptance item | Evidence |
+|-----------------|----------|
+| Live two-tool run, STACK maneuver while the F.A.S.T. executes its internal transfer, per-lane rows, ledger one-shot intact | Events 1 and 2 in 09-LIVE-EVIDENCE.md. Event 1 (run `1596ecfad681e7000`): a STACK `get_transfer_estimate` ran inside the F.A.S.T. row, four explicit keys, four ledger records done / ran. Event 2 (run `1596f9bcf081e7000`): a third-plate STACK transfer nest-3 to nest-1 ran for 30.7 s wholly inside the 71.5 s F.A.S.T. row, five explicit keys, five ledger records done / ran, no `-x2`. Automated one-send guarantee: `controller/test/laneOneSend.test.ts` (per-key one-shot is claimed for the explicit keys of these runs) |
+| Lane-halt (a failure freezes both lanes) | LIV-02 drill scenarios 1-3 (failure in the primary lane, failure in the fast lane, Freeze lanes): both lanes froze, nothing aborted, only the operator's Start re-armed. 09-LIVE-EVIDENCE.md, "LIV-02 verdict" |
+| Flag off = byte-identical sequential behavior | Phase 8 golden fixture, `controller/test/lanesFlagOff.test.ts` |
+| PROJECT.md and this note | PROJECT.md Validated bullet "LIV-01..03", single-flight wording and Phase 9 key decisions; this note |
+
+Differences from the sketch above: the `goto-safe` step was replaced by real STACK commands (D-01: a
+`get_transfer_estimate` read in event 1, a transfer in event 2), and the spare-pair move by the amended
+nest-3 to nest-1 move into plate 1's home after in1 vacated it, with out1 landing plate 1 on nest-3 and
+no return leg (amended D-02, D-03 dropped: the rig had one spare nest, not a pair).
+
+Follow-ups (not acceptance items):
+
+- In lanes mode the stored run record stays `CREATED` after every row `COMPLETED` (09-07 finding), so
+  verifiers read row status and `laneStatus`; a fix belongs to a later phase.
+- `FA100056.log` grows continuously from the web UI's `GET /status` polling; evidence uses "Running command" counts, not line counts.
+- nest-3 to nest-1 moves were unreliable earlier on 2026-11-17 (3 of 5 operator test moves failed before the readiness round trips succeeded), so each live cycle keeps its operator round-trip gate.
