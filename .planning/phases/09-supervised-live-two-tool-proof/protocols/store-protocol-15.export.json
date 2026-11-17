@@ -1,0 +1,13 @@
+{
+  "unavailable": "protocol.export for id 15 on http://localhost:3010 returned NOT_FOUND (Protocol not found) on 2026-11-17; protocol.getAll lists only id 4 'test' (visual, category development, workcell 1), so the LIVE-10 protocol is not in the store this web app serves. Not retried (read-only, no tool contact).",
+  "fallback": "gal-02 template + runbook rows 2a-2/3a-2",
+  "values_used": {
+    "in1": "STACK2-6 nest-1/deck1/A1 -> fa100056/tray1/5",
+    "in2": "STACK2-6 nest-2/deck`/A1 -> fa100056/tray1/6",
+    "fast_leg": "deck 5 -> 6, volume 5 uL, tip_reuse fresh",
+    "robot": "stack2-6",
+    "labware_profile": "Default",
+    "transfer_profile": "Default",
+    "timeout_s": 300
+  }
+}
