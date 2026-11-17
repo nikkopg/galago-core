@@ -7,13 +7,17 @@
 # name. Its single signal-sending path is stop-sim, which can stop only the one PID that listens on
 # a sim port (40091 or 40092), whose command line names that exact port, and which does not also
 # listen on any real port.
+# The sim servers start-sim launches are the real driver modules; they are simulated only while
+# galago-web configures them with simulated on. start-sim gives them an isolated XDG_STATE_HOME so a
+# sim STACK server can never write the real STACK ledger.
 #
 # Subcommands:
 #   baseline LABEL              write EVID/STAMP-LABEL.baseline.txt (provenance, listeners, log counts, ledger)
 #   snapshot LABEL              write EVID/STAMP-LABEL.queue.json (laneStatus, getAll, getAllRuns)
 #   logs-since BASELINE LABEL   copy the lines appended to both tool logs since BASELINE (redacted)
 #   ledger LABEL PREFIX         copy ledger records whose key starts with PREFIX
-#   start-sim stack|fast        launch a sim tool server on its sim port
+#   start-sim stack|fast        launch a sim tool server on its sim port, with XDG_STATE_HOME set to
+#                               $STATE/sim-state so its STACK ledger never shares the real one (WR-01)
 #   stop-sim stack|fast         stop the sim tool server on its sim port (the only signal)
 #   check-guards                prove the kill guards without sending any signal; prints GUARDS OK
 #
@@ -32,6 +36,13 @@ TOOLS_DIR="${GALAGO_TOOLS_DIR:-$HOME/data/nikko/galago-tools}"
 EVID="$PHASE_DIR/evidence"
 STATE="${XDG_STATE_HOME:-$HOME/.local/state}/galago-phase9"
 LEDGER="$HOME/.local/state/galago-tools/stack/stack-ledger.json"
+# WR-01: XDG_STATE_HOME handed to every sim server. The STACK server resolves its ledger directory
+# (tools/stack/ledger.py resolve_ledger_dir) as: an absolute Config.ledger_dir, else
+# $XDG_STATE_HOME/galago-tools/stack when XDG_STATE_HOME is set and absolute, else
+# ~/.local/state/galago-tools/stack (the real ledger). A dedicated absolute state home keeps a sim
+# run off the real ledger. It cannot override an explicit Config.ledger_dir in the sim workcell's
+# tool config, so that field must stay blank for SIM-STACK.
+SIM_STATE_HOME="$STATE/sim-state"
 TRACE_ROOT="$HOME/.local/share/galago/trace_logs"
 REAL_PORTS="3010 8081 11010 40001 40012"
 SIM_PORT_STACK=40091
@@ -230,12 +241,19 @@ cmd_start_sim() {
   port="$(sim_port_for "$name")" || die "start-sim takes stack or fast"
   [ -n "$(ss -ltnH "sport = :$port" 2>/dev/null)" ] && die "port $port already has a listener"
   case "$name" in stack) mod=tools.stack.server ;; fast) mod=tools.fast.server ;; esac
-  mkdir -p "$STATE"
+  # WR-01: the sim state home must be absolute (a relative XDG_STATE_HOME is ignored by the server,
+  # which would then fall back to the real ledger) and must not resolve to the real ledger directory.
+  case "$SIM_STATE_HOME" in /*) ;; *) die "sim state home is not absolute: $SIM_STATE_HOME" ;; esac
+  mkdir -p "$STATE" "$SIM_STATE_HOME"
+  if [ "$(realpath -m "$SIM_STATE_HOME/galago-tools/stack")" = "$(realpath -m "$(dirname "$LEDGER")")" ]; then
+    die "sim state home resolves to the real STACK ledger directory: $SIM_STATE_HOME"
+  fi
   stampv="$(stamp)"
   logf="$STATE/sim-$name-$stampv.log"
   # setsid -f detaches the server fully: a backgrounded `cd && setsid ...` list leaves a waiting bash
   # parent that keeps the caller's stdout pipe open, so `PID=$(phase9-ctl.sh start-sim ...)` hung.
-  ( cd "$TOOLS_DIR" && setsid -f nohup "$TOOLS_DIR/.venv/bin/python3" -m "$mod" --port="$port" > "$logf" 2>&1 < /dev/null )
+  # XDG_STATE_HOME is set for the child only, so its STACK ledger lives under $SIM_STATE_HOME.
+  ( cd "$TOOLS_DIR" && XDG_STATE_HOME="$SIM_STATE_HOME" setsid -f nohup "$TOOLS_DIR/.venv/bin/python3" -m "$mod" --port="$port" > "$logf" 2>&1 < /dev/null )
   local i pid=""
   for i in $(seq 1 30); do
     pid="$(pids_on_port "$port" | head -1)"
