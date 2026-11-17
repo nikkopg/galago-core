@@ -19,7 +19,9 @@
 #   start-sim stack|fast        launch a sim tool server on its sim port, with XDG_STATE_HOME set to
 #                               $STATE/sim-state so its STACK ledger never shares the real one (WR-01)
 #   stop-sim stack|fast         stop the sim tool server on its sim port (the only signal)
-#   check-guards                prove the kill guards without sending any signal; prints GUARDS OK
+#   check-guards                prove the kill guards without sending any signal; prints GUARDS OK only
+#                               when every real listener's owner was resolved and at least one
+#                               real-listener refusal was exercised (WR-02), else exits 1
 #
 # Environment overrides: GALAGO_WEB_URL, GALAGO_TOOLS_DIR, XDG_STATE_HOME.
 # Evidence files hold values read from the host, never an environment-file value.
@@ -70,6 +72,15 @@ sim_port_for() {
 # Distinct PIDs that listen on TCP port $1 (empty when none, or when ss cannot see the owner).
 pids_on_port() {
   { ss -ltnpH "sport = :$1" 2>/dev/null || true; } | { grep -o 'pid=[0-9]*' || true; } | cut -d= -f2 | sort -u
+}
+
+# Distinct owner uids of the TCP sockets listening on port $1, read from /proc/net/tcp{,6} (state 0A).
+# Unlike ss -p this works for another user's socket (for example a root-owned docker-proxy).
+listener_uids() {
+  local hex
+  hex="$(printf '%04X' "$1")"
+  awk -v h="$hex" 'FNR > 1 && $4 == "0A" { n = split($2, a, ":"); if (a[n] == h) print $8 }' \
+    /proc/net/tcp /proc/net/tcp6 2>/dev/null | sort -u
 }
 
 redact() {
@@ -284,7 +295,7 @@ cmd_stop_sim() {
 }
 
 cmd_check_guards() {
-  local rc=0 p pid reason checked=0
+  local rc=0 p pid reason checked=0 me pids uids u
   bash "$SELF" stop-sim bogus >/dev/null 2>&1 || rc=$?
   [ "$rc" -eq 2 ] || { echo "GUARD FAIL: stop-sim bogus exited $rc, expected 2" >&2; exit 1; }
   rc=0
@@ -297,14 +308,34 @@ cmd_check_guards() {
   [ "$REAL_PORTS" = "3010 8081 11010 40001 40012" ] || { echo "GUARD FAIL: REAL_PORTS changed" >&2; exit 1; }
   # No signal is sent: ask the guard about the real listeners and this shell. Each must be refused
   # for both sim ports.
+  # WR-02: fail closed. Every real listener's owner must be resolved: by PID (ss -p), or, when ss
+  # cannot see the PID, by socket uid. An unseen PID is acceptable only when the socket belongs to a
+  # different uid than this non-root script, because the kernel then refuses any signal from it.
+  me="$(id -u)"
   for p in $REAL_PORTS; do
-    for pid in $(pids_on_port "$p"); do
+    pids="$(pids_on_port "$p")"
+    if [ -z "$pids" ]; then
+      if [ -z "$({ ss -ltnH "sport = :$p" 2>/dev/null || true; })" ]; then
+        echo "real port $p: no listener"
+        continue
+      fi
+      uids="$(listener_uids "$p")"
+      [ -n "$uids" ] || { echo "GUARD FAIL: real port $p has a listener whose owner could not be resolved" >&2; exit 1; }
+      [ "$me" -ne 0 ] || { echo "GUARD FAIL: real port $p listener PID is not visible even to root" >&2; exit 1; }
+      for u in $uids; do
+        [ "$u" != "$me" ] || { echo "GUARD FAIL: real port $p listener is owned by this uid ($me) but its PID is not visible" >&2; exit 1; }
+      done
+      echo "real port $p: PID not visible; socket uid $(echo $uids) is not uid $me, so the kernel refuses any signal from this script"
+      continue
+    fi
+    for pid in $pids; do
       for sp in $SIM_PORT_STACK $SIM_PORT_FAST; do
         reason="$(refuse_reason "$sp" "$pid")" || { echo "GUARD FAIL: real listener PID $pid (port $p) not refused for sim port $sp" >&2; exit 1; }
         checked=$((checked + 1))
       done
     done
   done
+  [ "$checked" -gt 0 ] || { echo "GUARD FAIL: no real-listener refusal was exercised (no real listener with a visible PID)" >&2; exit 1; }
   for sp in $SIM_PORT_STACK $SIM_PORT_FAST; do
     reason="$(refuse_reason "$sp" "$$")" || { echo "GUARD FAIL: own PID not refused for sim port $sp" >&2; exit 1; }
     reason="$(refuse_reason "$sp" "")" || { echo "GUARD FAIL: empty PID not refused" >&2; exit 1; }
