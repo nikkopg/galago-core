@@ -676,7 +676,11 @@ describe("event-2 protocol (D-01, D-06, amended D-02, D-03 dropped)", () => {
 
 describe("sim-drill protocol (D-10, D-11)", () => {
   const protocol = loadProtocol("09-sim-drill.protocol.json");
-  const DRILL_OVERRIDES = { stack_tool: "stack-1", fast_tool: "fast-1" };
+  // The drill only accepts SIM tool names (CR-01), but the lane harness fakes "stack-1" and
+  // "fast-1". Run at the SIM defaults, then point the rows at the harness fakes.
+  const HARNESS_TOOL: Record<string, string> = { "SIM-STACK": "stack-1", "SIM-FAST": "fast-1" };
+  const toHarnessTools = (commands: Commands): Commands =>
+    commands.map((c) => ({ ...c, toolId: HARNESS_TOOL[c.toolId] ?? c.toolId }));
   const defaultOf = (name: string) =>
     protocol.parameters.find((p) => p.name === name)?.defaultValue;
 
@@ -725,23 +729,58 @@ describe("sim-drill protocol (D-10, D-11)", () => {
     expect(validateLanes(laneInfos(commands) as never)).toEqual([]);
   });
 
-  it("(d) a real tool name is refused before any galago call, in any case", async () => {
+  it("(d) a real tool name is refused before any galago call, in any spelling the queue resolves", async () => {
+    // The queue looks tools up by normalizeToolKey (lowercase, non-alphanumerics stripped), so
+    // every variant below resolves to the real STACK2-6 / FA100056 and must be refused (CR-01).
     for (const over of [
       { stack_tool: "STACK2-6" },
       { stack_tool: "stack2-6" },
       { fast_tool: "FA100056" },
       { fast_tool: "fa100056" },
       { stack_tool: "  STACK2-6  " },
+      { stack_tool: "STACK_2-6" },
+      { fast_tool: "FA-100056" },
+      { stack_tool: "stack 2 6" },
+      { fast_tool: "fa_100056" },
+      { stack_tool: "stack 26", fast_tool: "FA-100056" },
     ]) {
       const result = await run(protocol, over as unknown as Record<string, string>);
       expect(result.success, JSON.stringify(over)).toBe(false);
-      expect(result.error).toContain("LIV-02: the drill must not address a real tool");
-      expect(result.commands).toEqual([]);
+      expect(result.error, JSON.stringify(over)).toContain(
+        "LIV-02: the drill must not address a real tool",
+      );
+      expect(result.commands, JSON.stringify(over)).toEqual([]);
+    }
+  });
+
+  it("(d2) only SIM tools are allowed: any other name is refused before any galago call", async () => {
+    for (const over of [
+      { stack_tool: "stack-1" },
+      { fast_tool: "fast-1" },
+      { stack_tool: "PF400" },
+      { fast_tool: "Liquid Handler 2" },
+      { stack_tool: "my-SIM-STACK" },
+    ]) {
+      const result = await run(protocol, over as unknown as Record<string, string>);
+      expect(result.success, JSON.stringify(over)).toBe(false);
+      expect(result.error, JSON.stringify(over)).toContain(
+        "LIV-02: the drill addresses only tools whose name starts with SIM",
+      );
+      expect(result.commands, JSON.stringify(over)).toEqual([]);
+    }
+    for (const over of [
+      {},
+      { stack_tool: "SIM-STACK", fast_tool: "SIM-FAST" },
+      { stack_tool: "sim_stack", fast_tool: "Sim Fast" },
+    ]) {
+      const result = await run(protocol, over as Record<string, string>);
+      expect(result.error, JSON.stringify(over)).toBeUndefined();
+      expect(result.success, JSON.stringify(over)).toBe(true);
     }
   });
 
   it("(e) end to end: d-x1 overlaps the F.A.S.T. step and d-out1 waits for it", async () => {
-    const commands = await runOk(protocol, DRILL_OVERRIDES);
+    const commands = toHarnessTools(await runOk(protocol));
     h = createLaneHarness();
     await h.push("d1", toLaneSteps(commands));
     const done = h.start();
