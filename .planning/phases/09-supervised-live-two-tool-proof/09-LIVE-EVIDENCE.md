@@ -26,8 +26,8 @@ in this file or under `evidence/` (runbook credential rule).
 | `STACK2-6.log` | 2168 lines, 24 "Running command", 4 "Running command Transfer" | baseline file |
 | `FA100056.log` | 139686 lines, 4 "Running command", 1 "Running command Transfer" | baseline file |
 | Ledger | `~/.local/state/galago-tools/stack/stack-ledger.json`, sha256 `94892d6fdb184022ef3f453ef57f800dd4fab9703ccc75167cf4ec9b911ef68c`, 4 records (all `done`/`ran`, 2026-11-16 11:21Z to 11:25Z) | baseline file |
-| Image IDs (running, rollback anchor, new) | filled at deploy (09-04) | |
-| galago-core HEAD at each event | deploy: _pending (09-04)_; drill: _pending_; event 1: _pending_; event 2: _pending_ | |
+| Image IDs (running, rollback anchor, new) | dev image `a331fa4d812a...` before and after (no build, no anchor); container `18b8638fc1c8` to `855c334135eb` (09-04, Deploy section) | Deploy section |
+| galago-core HEAD at each event | deploy: `486cf09` (09-04); drill: _pending_; event 1: _pending_; event 2: _pending_ | |
 | galago-tools SHA re-verified at each baseline | pre-spare-check: `d53da53` (above); others: _pending_ | |
 | Runbook SHA (galago-tools) after rows 3a-11..3a-15 | _pending (09-08, 09-12)_ | |
 
@@ -323,8 +323,35 @@ return to the user, never hot-fix):
 7. Record in this section: GO time (UTC), HEAD, container ids before and after, the flag-persistence choice,
    and every result above (data for runbook row 3a-11).
 
-Status: awaiting the typed GO (blocking-human, never auto-approved). Nothing was stopped, recreated, built
-or tagged by 09-04 so far.
+### GO and deploy record (09-04, executed 2026-11-17)
+
+GO: the operator typed, verbatim, "Go env" (the typed GO with the ENV option) at the GO gate, after the
+four-point checklist (latch cleared and arm idle, real workcell selected or "workcell later", plates on
+nest-1/2/3, no run in progress and OK to restart galago-web-dev). The operator did not say "workcell later".
+Claude's pre-deploy re-check at 08:33:06Z (the GO was acted on at this time): `/api/runs` count 0 (no run RUNNING),
+`git status --porcelain -- controller` empty, `.env` absent (presence check only).
+
+| Item | Result |
+|------|--------|
+| GO acted on (UTC) | 2026-11-17T08:33:06Z (`.env` written), recreate command returned 08:33:15Z, `/api/health` ok at 08:33:20Z (second poll) |
+| galago-core HEAD at deploy | `486cf09db8fd177e7e9dd8c791226211b92c5b1c` (controller tree identical to `63d61e4`; no production change since `d09a047`) |
+| Flag persistence choice | ENV: root `.env` containing only `GALAGO_PARALLEL_LANES=1` written (compose reads it automatically). `git check-ignore .env` prints `.env` (ignored, `.gitignore:45`); not staged, never committed. Content is a feature flag, not a credential |
+| Command | `GALAGO_PARALLEL_LANES=1 docker compose -f docker-compose.dev.yml up -d --no-build galago-web-dev` printed `Recreate / Recreated / Starting / Started` for `galago-web-dev` |
+| Container id before / after | `18b8638fc1c8` (up since 2026-11-16T22:51:51Z, flag empty) / `855c334135eb` |
+| Image id before / after | `sha256:a331fa4d812aee4c152fc5fddcbb6a09b2ab23663aaa0d6aad8c8f14d01f6a0e` / the same (unchanged, `--no-build`) |
+| Check 1: image + env | image unchanged; container id differs; `docker exec galago-web-dev printenv GALAGO_PARALLEL_LANES` prints `1`. PASS |
+| Check 2: health | `/api/health` `{"status":"ok"}` after about 5 s. PASS |
+| Check 3: laneStatus | `{"laneMode":true,"hasLaneRows":false,"halted":false,"haltReason":null,"queueBusy":false,"runningLanes":[],"failures":[],"overflow":0}`. PASS |
+| Check 4: tools / workcell | `GET /api/tools` lists `STACK2-6` (id 5, type stack, `host.docker.internal:40012`, workcellId 1) and `FA100056` (id 6, type fast, `host.docker.internal:40001`, workcellId 1). PASS for the tools list. `/api/settings/workcell` still returns `{"value":"test"}`: the operator did not select a different workcell. **Open item, not a deploy failure: confirm before 09-05/09-09 that workcell `test` (workcellId 1, which holds STACK2-6 and FA100056) is the workcell the live events should run on, or reselect the real workcell. The `/api/tools` list is returned unscoped here, so this check does not by itself prove the selected workcell is the right one** |
+| Check 5: pre-flight, both forms (`GAL07_WEB_CONTAINER=galago-web-dev`) | plain form and `GAL07_REQUIRE_STACK_ENV=1` form: last line exactly `PREFLIGHT OK`, exit 0 both. The STACK owner lock reads "held by galago (pid 7491), the expected single-owner state". PASS |
+| Check 6: post-deploy baseline | `evidence/20261117T083332Z-post-deploy.baseline.txt` vs `20261117T051917Z-pre-deploy.baseline.txt`: listener PIDs unchanged (8081 `6872`, 11010 `7490`, 40012 `7491`, 40001 `2320808`); `STACK2-6.log` 12 "Running command Transfer" (unchanged); ledger sha256 `5de43c84a422c05ffb66f1bf9dee92b3fdf9183537c3e93d9bac1b08b353670b`, 9 records (unchanged); `FA100056.log` 1 Transfer line (unchanged; its total line count grew 145744 to 171341, the F.A.S.T. server's idle chatter, as it did between earlier baselines); `/api/runs` count 0; `git status --porcelain -- controller` empty. The only diff lines are label, HEAD, the FA100056 line count and `laneMode` false to true. PASS |
+| Rollback not needed | no check failed. Rollback commands (above) stay available; to roll back also delete the root `.env` |
+
+Nothing was sent to STACK2-6 or FA100056 and no run was started. The two CREATED runs in the store were not
+touched.
+
+Status: DEPLOYED (decision B). `galago-web-dev` runs with lanes on. Not covered by the original D-13 wording and
+recorded as such: no production container, no `rollback-pre-lanes` image anchor.
 
 ## Freeze drill (LIV-02), row 3a-12
 
@@ -369,3 +396,4 @@ All files are under `evidence/`, named `<UTC stamp>-<label>.<kind>`.
 | `20261117T050637Z-post-operator-nest-test.baseline.txt` | new reference baseline for later GO gates | 09-03 |
 | `20261117T051917Z-pre-deploy.baseline.txt` | pre-deploy baseline (same Transfer count and ledger sha as the reference) | 09-04 |
 | `20261117T051917Z-pre-deploy.queue.json` | pre-deploy queue snapshot | 09-04 |
+| `20261117T083332Z-post-deploy.baseline.txt` | post-deploy baseline (same PIDs, Transfer count and ledger sha as pre-deploy; laneMode true) | 09-04 |

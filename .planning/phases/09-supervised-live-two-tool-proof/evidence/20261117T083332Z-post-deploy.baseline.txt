@@ -1,0 +1,45 @@
+baseline_label=post-deploy
+utc_time=2026-11-17T08:33:32Z
+galago_core_head=486cf09db8fd177e7e9dd8c791226211b92c5b1c
+galago_core_controller_dirty_lines=0
+galago_tools_head=d53da5384f9f99d6751a5abfbbe0abbaa7a02389
+galago_tools_automint_0604348_ancestor_exit=0
+galago_tools_tools_dirty_lines=1
+--- listeners (ss -ltnpH, real and sim ports)
+port=3010 pids=
+  LISTEN 0      4096   0.0.0.0:3010 0.0.0.0:*
+  LISTEN 0      4096      [::]:3010    [::]:*
+port=8081 pids=6872,
+  LISTEN 0      5      0.0.0.0:8081 0.0.0.0:* users:(("galago",pid=6872,fd=7))
+port=11010 pids=7490,
+  LISTEN 0      4096   *:11010 *:* users:(("python3",pid=7490,fd=5))
+port=40001 pids=2320808,
+  LISTEN 0      4096   *:40001 *:* users:(("python3",pid=2320808,fd=5))
+port=40012 pids=7491,
+  LISTEN 0      4096   *:40012 *:* users:(("python3",pid=7491,fd=5))
+port=40091 pids=
+port=40092 pids=
+--- trace logs
+trace_folder=1794670020
+STACK2-6.log.wc=4508
+STACK2-6.log.running_command=52
+STACK2-6.log.running_command_transfer=12
+FA100056.log.wc=171341
+FA100056.log.running_command=4
+FA100056.log.running_command_transfer=1
+--- ledger
+ledger_sha256=5de43c84a422c05ffb66f1bf9dee92b3fdf9183537c3e93d9bac1b08b353670b
+ledger_record_count=9
+record key=20261116T112155412690-fa9f500f state=done result.kind=ran createdAt=2026-11-16T11:21:55.745440+00:00 updatedAt=2026-11-16T11:22:30.012395+00:00
+record key=20261116T112231568373-b462a208 state=done result.kind=ran createdAt=2026-11-16T11:22:31.733770+00:00 updatedAt=2026-11-16T11:23:00.653358+00:00
+record key=20261116T112352733658-5c2f1376 state=done result.kind=ran createdAt=2026-11-16T11:23:52.907963+00:00 updatedAt=2026-11-16T11:24:21.921814+00:00
+record key=20261116T112423485857-6c8ff899 state=done result.kind=ran createdAt=2026-11-16T11:24:23.781722+00:00 updatedAt=2026-11-16T11:24:57.888646+00:00
+record key=20261117T044040363158-b8b46edd state=done result.kind=failed createdAt=2026-11-17T04:40:40.555680+00:00 updatedAt=2026-11-17T04:40:54.413316+00:00
+record key=20261117T045039804682-d0fcb716 state=done result.kind=failed createdAt=2026-11-17T04:50:39.952743+00:00 updatedAt=2026-11-17T04:50:57.729340+00:00
+record key=20261117T045118813461-c2242fce state=done result.kind=ran createdAt=2026-11-17T04:51:18.995288+00:00 updatedAt=2026-11-17T04:51:54.314276+00:00
+record key=20261117T045213288978-c9611ad9 state=done result.kind=failed createdAt=2026-11-17T04:52:13.494770+00:00 updatedAt=2026-11-17T04:52:44.821350+00:00
+record key=20261117T050304252388-d419c7de state=done result.kind=ran createdAt=2026-11-17T05:03:04.462688+00:00 updatedAt=2026-11-17T05:03:33.741995+00:00
+--- galago-web (HTTP GET)
+health={"status":"ok"}
+selected_workcell={"value":"test"}
+laneStatus={"result":{"data":{"json":{"laneMode":true,"hasLaneRows":false,"halted":false,"haltReason":null,"queueBusy":false,"runningLanes":[],"failures":[],"overflow":0}}}}
