@@ -487,3 +487,114 @@ describe("event-2 protocol (D-01, D-02, D-03, D-06)", () => {
     expect(rows.every((r) => r.status === "COMPLETED")).toBe(true);
   });
 });
+
+describe("sim-drill protocol (D-10, D-11)", () => {
+  const protocol = loadProtocol("09-sim-drill.protocol.json");
+  const DRILL_OVERRIDES = { stack_tool: "stack-1", fast_tool: "fast-1" };
+  const defaultOf = (name: string) =>
+    protocol.parameters.find((p) => p.name === name)?.defaultValue;
+
+  it("is a script protocol that defaults to the simulated tools and refuses nothing at default", async () => {
+    expect(protocol.mode).toBe("script");
+    expect(defaultOf("stack_tool")).toBe("SIM-STACK");
+    expect(defaultOf("fast_tool")).toBe("SIM-FAST");
+    expect(protocol.scriptContent).toContain("LIV-02: the drill must not address a real tool");
+    await runOk(protocol);
+  });
+
+  it("(a) default params emit note, SIM-STACK, SIM-FAST, SIM-STACK, SIM-STACK in order", async () => {
+    const commands = await runOk(protocol);
+    expect(commands.map((c) => `${c.toolId}:${c.command}`)).toEqual([
+      "Tool Box:note",
+      "SIM-STACK:transfer",
+      "SIM-FAST:transfer",
+      "SIM-STACK:transfer",
+      "SIM-STACK:transfer",
+    ]);
+    const keys = commands
+      .filter((c) => c.toolId === "SIM-STACK")
+      .map((c) => String(prm(c).step_key));
+    expect(keys.map((k) => k.slice(k.indexOf("-d-") + 1))).toEqual(["d-in1", "d-x1", "d-out1"]);
+    expect(new Set(keys).size).toBe(3);
+  });
+
+  it("(b) lane fast only on SIM-FAST; barrier only on SIM-FAST and d-out1", async () => {
+    const commands = await runOk(protocol);
+    commands.forEach((c, i) => {
+      if (c.toolId === "SIM-FAST") expect(adv(c).lane, `row ${i}`).toBe("fast");
+      else expect("lane" in adv(c), `row ${i}`).toBe(false);
+    });
+    expect(commands.map((c) => adv(c).laneBarrier === true)).toEqual([
+      false,
+      false,
+      true,
+      false,
+      true,
+    ]);
+    for (const c of commands) expect(adv(c).laneBarrier === false).toBe(false);
+  });
+
+  it("(c) validateLanes returns no refusal", async () => {
+    const commands = await runOk(protocol);
+    expect(validateLanes(laneInfos(commands) as never)).toEqual([]);
+  });
+
+  it("(d) a real tool name is refused before any galago call, in any case", async () => {
+    for (const over of [
+      { stack_tool: "STACK2-6" },
+      { stack_tool: "stack2-6" },
+      { fast_tool: "FA100056" },
+      { fast_tool: "fa100056" },
+      { stack_tool: "  STACK2-6  " },
+    ]) {
+      const result = await run(protocol, over as unknown as Record<string, string>);
+      expect(result.success, JSON.stringify(over)).toBe(false);
+      expect(result.error).toContain("LIV-02: the drill must not address a real tool");
+      expect(result.commands).toEqual([]);
+    }
+  });
+
+  it("(e) end to end: d-x1 overlaps the F.A.S.T. step and d-out1 waits for it", async () => {
+    const commands = await runOk(protocol, DRILL_OVERRIDES);
+    h = createLaneHarness();
+    await h.push("d1", toLaneSteps(commands));
+    const done = h.start();
+    await h.tick(3);
+    const dIn1 = indexOfCall(h, keyEndsWith("-d-in1"));
+    expect(dIn1).toBeGreaterThanOrEqual(0);
+    expect(indexOfCall(h, (c) => c.toolId === "fast-1")).toBe(-1);
+    h.finish(dIn1);
+    await h.tick(4);
+
+    const fast = indexOfCall(h, (c) => c.toolId === "fast-1" && c.command === "transfer");
+    const dX1 = indexOfCall(h, keyEndsWith("-d-x1"));
+    expect(fast).toBeGreaterThanOrEqual(0);
+    expect(dX1).toBeGreaterThanOrEqual(0);
+    expect(h.calls()[fast].gate.isSettled()).toBe(false);
+    expect(h.calls()[dX1].gate.isSettled()).toBe(false);
+
+    h.finish(dX1);
+    await h.tick(6);
+    expect(indexOfCall(h, keyEndsWith("-d-out1"))).toBe(-1);
+
+    h.finish(fast);
+    await releaseAll(h);
+    await done;
+
+    expect(h.calls()).toHaveLength(4);
+    expect(new Set(h.calls().map((c) => c.queueId)).size).toBe(4);
+    const rows = await h.queue.commands.all();
+    expect(rows).toHaveLength(5);
+    expect(rows.every((r) => r.status === "COMPLETED")).toBe(true);
+  });
+
+  it("(f) no STACK row carries a wait-budget key", async () => {
+    const commands = await runOk(protocol);
+    const stackRows = commands.filter((c) => c.toolId === "SIM-STACK");
+    expect(stackRows).toHaveLength(3);
+    for (const c of stackRows) {
+      expect("timeout_s" in prm(c)).toBe(false);
+      expect(Object.keys(prm(c)).some((k) => /timeout|wait/i.test(k))).toBe(false);
+    }
+  });
+});
