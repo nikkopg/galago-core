@@ -1,0 +1,775 @@
+{
+  "capturedAtUtc": "2026-11-17T09:51:03Z",
+  "getAll": {
+    "result": {
+      "data": {
+        "json": [
+          {
+            "commandInfo": {
+              "advancedParameters": {
+                "runAsynchronously": false,
+                "skipExecutionVariable": {
+                  "value": null,
+                  "variable": null
+                }
+              },
+              "command": "transfer",
+              "label": "",
+              "params": {
+                "dest_deck": 3,
+                "dest_plate_id": 1,
+                "dest_start_col": 1,
+                "dest_start_row": "A",
+                "num_cols": 1,
+                "num_rows": 8,
+                "source_deck": 1,
+                "source_plate_id": 1,
+                "source_start_col": 1,
+                "source_start_row": "A",
+                "tip_reuse": "reuse",
+                "volume": 5
+              },
+              "toolId": "FA100056",
+              "toolType": "fast",
+              "tool_info": {
+                "type": "fast"
+              }
+            },
+            "completedAt": "2026-11-16T08:29:00.933Z",
+            "createdAt": "2026-11-16T08:27:59.289Z",
+            "queueId": 27,
+            "runId": "15941cf7dc81e7000",
+            "startedAt": "2026-11-16T08:28:00.789Z",
+            "status": "COMPLETED"
+          },
+          {
+            "commandInfo": {
+              "advancedParameters": {
+                "runAsynchronously": false,
+                "skipExecutionVariable": {
+                  "value": null,
+                  "variable": null
+                }
+              },
+              "command": "transfer",
+              "label": "",
+              "params": {
+                "destination_deck": "tray1",
+                "destination_device": "fa100056",
+                "destination_nest": "5",
+                "destination_transfer_profile": "Default",
+                "labware_profile": "96",
+                "robot": "stack2-6",
+                "source_deck": "deck1",
+                "source_device": "nest-1",
+                "source_nest": "A1",
+                "source_transfer_profile": "Default",
+                "step_key": "",
+                "timeout_s": 300
+              },
+              "toolId": "STACK2-6",
+              "toolType": "stack",
+              "tool_info": {
+                "type": "stack"
+              }
+            },
+            "completedAt": "2026-11-16T11:22:30.065Z",
+            "createdAt": "2026-11-16T11:21:42.675Z",
+            "queueId": 28,
+            "runId": "15946c7e0981e7000",
+            "startedAt": "2026-11-16T11:21:55.400Z",
+            "status": "COMPLETED"
+          },
+          {
+            "commandInfo": {
+              "advancedParameters": {
+                "runAsynchronously": false,
+                "skipExecutionVariable": {
+                  "value": null,
+                  "variable": null
+                }
+              },
+              "command": "transfer",
+              "label": "",
+              "params": {
+                "destination_deck": "tray1",
+                "destination_device": "fa100056",
+                "destination_nest": "6",
+                "destination_transfer_profile": "Default",
+                "labware_profile": "96",
+                "robot": "stack2-6",
+                "source_deck": "deck`",
+                "source_device": "nest-2",
+                "source_nest": "A1",
+                "source_transfer_profile": "Default",
+                "step_key": "",
+                "timeout_s": 300
+              },
+              "toolId": "STACK2-6",
+              "toolType": "stack",
+              "tool_info": {
+                "type": "stack"
+              }
+            },
+            "completedAt": "2026-11-16T11:23:00.714Z",
+            "createdAt": "2026-11-16T11:21:42.675Z",
+            "queueId": 29,
+            "runId": "15946c7e0981e7000",
+            "startedAt": "2026-11-16T11:22:31.565Z",
+            "status": "COMPLETED"
+          },
+          {
+            "commandInfo": {
+              "advancedParameters": {
+                "runAsynchronously": false,
+                "skipExecutionVariable": {
+                  "value": null,
+                  "variable": null
+                }
+              },
+              "command": "transfer",
+              "label": "",
+              "params": {
+                "dest_deck": 6,
+                "dest_plate_id": 1,
+                "dest_start_col": 1,
+                "dest_start_row": "A",
+                "num_cols": 1,
+                "num_rows": 8,
+                "source_deck": 5,
+                "source_plate_id": 1,
+                "source_start_col": 1,
+                "source_start_row": "A",
+                "tip_reuse": "reuse",
+                "volume": 10
+              },
+              "toolId": "FA100056",
+              "toolType": "fast",
+              "tool_info": {
+                "type": "fast"
+              }
+            },
+            "completedAt": "2026-11-16T11:23:51.229Z",
+            "createdAt": "2026-11-16T11:21:42.675Z",
+            "queueId": 30,
+            "runId": "15946c7e0981e7000",
+            "startedAt": "2026-11-16T11:23:02.215Z",
+            "status": "COMPLETED"
+          },
+          {
+            "commandInfo": {
+              "advancedParameters": {
+                "runAsynchronously": false,
+                "skipExecutionVariable": {
+                  "value": null,
+                  "variable": null
+                }
+              },
+              "command": "transfer",
+              "label": "",
+              "params": {
+                "destination_deck": "deck`",
+                "destination_device": "nest-2",
+                "destination_nest": "A1",
+                "destination_transfer_profile": "Default",
+                "labware_profile": "96",
+                "robot": "stack2-6",
+                "source_deck": "tray1",
+                "source_device": "fa100056",
+                "source_nest": "5",
+                "source_transfer_profile": "Default",
+                "step_key": "",
+                "timeout_s": 300
+              },
+              "toolId": "STACK2-6",
+              "toolType": "stack",
+              "tool_info": {
+                "type": "stack"
+              }
+            },
+            "completedAt": "2026-11-16T11:24:21.981Z",
+            "createdAt": "2026-11-16T11:21:42.675Z",
+            "queueId": 31,
+            "runId": "15946c7e0981e7000",
+            "startedAt": "2026-11-16T11:23:52.731Z",
+            "status": "COMPLETED"
+          },
+          {
+            "commandInfo": {
+              "advancedParameters": {
+                "runAsynchronously": false,
+                "skipExecutionVariable": {
+                  "value": null,
+                  "variable": null
+                }
+              },
+              "command": "transfer",
+              "label": "",
+              "params": {
+                "destination_deck": "deck1",
+                "destination_device": "nest-1",
+                "destination_nest": "A1",
+                "destination_transfer_profile": "Default",
+                "labware_profile": "96",
+                "robot": "stack2-6",
+                "source_deck": "tray1",
+                "source_device": "fa100056",
+                "source_nest": "6",
+                "source_transfer_profile": "Default",
+                "step_key": "",
+                "timeout_s": 300
+              },
+              "toolId": "STACK2-6",
+              "toolType": "stack",
+              "tool_info": {
+                "type": "stack"
+              }
+            },
+            "completedAt": "2026-11-16T11:24:57.940Z",
+            "createdAt": "2026-11-16T11:21:42.675Z",
+            "queueId": 32,
+            "runId": "15946c7e0981e7000",
+            "startedAt": "2026-11-16T11:24:23.483Z",
+            "status": "COMPLETED"
+          },
+          {
+            "commandInfo": {
+              "advancedParameters": {
+                "runAsynchronously": false,
+                "skipExecutionVariable": {
+                  "value": "",
+                  "variable": null
+                }
+              },
+              "command": "note",
+              "label": "",
+              "params": {
+                "message": "LIV-02 drill base DRILL-2026-11-17T09:36:28.312Z-6af6b279"
+              },
+              "toolId": "Tool Box",
+              "toolType": "toolbox"
+            },
+            "completedAt": "2026-11-17T09:36:47.957Z",
+            "createdAt": "2026-11-17T09:36:28.315Z",
+            "queueId": 48,
+            "runId": "1596cf7f4d01e7000",
+            "startedAt": "2026-11-17T09:36:47.955Z",
+            "status": "COMPLETED"
+          },
+          {
+            "commandInfo": {
+              "advancedParameters": {
+                "runAsynchronously": false,
+                "skipExecutionVariable": {
+                  "value": "",
+                  "variable": null
+                }
+              },
+              "command": "transfer",
+              "label": "",
+              "params": {
+                "destination_deck": "sim-deck",
+                "destination_device": "sim-dev-b",
+                "destination_nest": "A1",
+                "labware_profile": "sim-labware",
+                "robot": "sim-arm",
+                "source_deck": "sim-deck",
+                "source_device": "sim-dev-a",
+                "source_nest": "A1",
+                "step_key": "DRILL-2026-11-17T09:36:28.312Z-6af6b279-d-in1"
+              },
+              "toolId": "SIM-STACK",
+              "toolType": "stack"
+            },
+            "completedAt": "2026-11-17T09:37:24.498Z",
+            "createdAt": "2026-11-17T09:36:28.315Z",
+            "queueId": 49,
+            "runId": "1596cf7f4d01e7000",
+            "startedAt": "2026-11-17T09:36:49.458Z",
+            "status": "COMPLETED"
+          },
+          {
+            "commandInfo": {
+              "advancedParameters": {
+                "lane": "fast",
+                "laneBarrier": true,
+                "runAsynchronously": false,
+                "skipExecutionVariable": {
+                  "value": "",
+                  "variable": null
+                }
+              },
+              "command": "transfer",
+              "label": "",
+              "params": {
+                "dest_deck": 2,
+                "dest_plate_id": 1,
+                "dest_start_col": 1,
+                "dest_start_row": "A",
+                "num_cols": 1,
+                "num_rows": 8,
+                "source_deck": 1,
+                "source_plate_id": 1,
+                "source_start_col": 1,
+                "source_start_row": "A",
+                "tip_reuse": "fresh",
+                "volume": 5
+              },
+              "toolId": "SIM-FAST",
+              "toolType": "fast"
+            },
+            "completedAt": "2026-11-17T09:38:45.547Z",
+            "createdAt": "2026-11-17T09:36:28.315Z",
+            "queueId": 50,
+            "runId": "1596cf7f4d01e7000",
+            "startedAt": "2026-11-17T09:37:25.472Z",
+            "status": "COMPLETED"
+          },
+          {
+            "commandInfo": {
+              "advancedParameters": {
+                "runAsynchronously": false,
+                "skipExecutionVariable": {
+                  "value": "",
+                  "variable": null
+                }
+              },
+              "command": "transfer",
+              "label": "",
+              "params": {
+                "destination_deck": "sim-deck",
+                "destination_device": "sim-dev-a",
+                "destination_nest": "A1",
+                "labware_profile": "sim-labware",
+                "robot": "sim-arm",
+                "source_deck": "sim-deck",
+                "source_device": "sim-dev-b",
+                "source_nest": "A1",
+                "step_key": "DRILL-2026-11-17T09:36:28.312Z-6af6b279-d-x1"
+              },
+              "toolId": "SIM-STACK",
+              "toolType": "stack"
+            },
+            "completedAt": "2026-11-17T09:40:37.331Z",
+            "createdAt": "2026-11-17T09:36:28.315Z",
+            "error": {
+              "message": "1 CANCELLED: Call cancelled",
+              "name": "Error"
+            },
+            "failedAt": "2026-11-17T09:37:35.044Z",
+            "queueId": 51,
+            "runId": "1596cf7f4d01e7000",
+            "startedAt": "2026-11-17T09:40:02.303Z",
+            "status": "COMPLETED"
+          },
+          {
+            "commandInfo": {
+              "advancedParameters": {
+                "laneBarrier": true,
+                "runAsynchronously": false,
+                "skipExecutionVariable": {
+                  "value": "",
+                  "variable": null
+                }
+              },
+              "command": "transfer",
+              "label": "",
+              "params": {
+                "destination_deck": "sim-deck",
+                "destination_device": "sim-dev-b",
+                "destination_nest": "A1",
+                "labware_profile": "sim-labware",
+                "robot": "sim-arm",
+                "source_deck": "sim-deck",
+                "source_device": "sim-dev-a",
+                "source_nest": "A1",
+                "step_key": "DRILL-2026-11-17T09:36:28.312Z-6af6b279-d-out1"
+              },
+              "toolId": "SIM-STACK",
+              "toolType": "stack"
+            },
+            "completedAt": "2026-11-17T09:41:13.869Z",
+            "createdAt": "2026-11-17T09:36:28.315Z",
+            "queueId": 52,
+            "runId": "1596cf7f4d01e7000",
+            "startedAt": "2026-11-17T09:40:38.831Z",
+            "status": "COMPLETED"
+          },
+          {
+            "commandInfo": {
+              "advancedParameters": {
+                "runAsynchronously": false,
+                "skipExecutionVariable": {
+                  "value": "",
+                  "variable": null
+                }
+              },
+              "command": "note",
+              "label": "",
+              "params": {
+                "message": "LIV-02 drill base DRILL-S2-2026-11-17T09:50:01.184Z-cae7f03f"
+              },
+              "toolId": "Tool Box",
+              "toolType": "toolbox"
+            },
+            "completedAt": "2026-11-17T09:50:08.981Z",
+            "createdAt": "2026-11-17T09:50:01.186Z",
+            "queueId": 53,
+            "runId": "1596d5b2f101e7000",
+            "startedAt": "2026-11-17T09:50:08.980Z",
+            "status": "COMPLETED"
+          },
+          {
+            "commandInfo": {
+              "advancedParameters": {
+                "runAsynchronously": false,
+                "skipExecutionVariable": {
+                  "value": "",
+                  "variable": null
+                }
+              },
+              "command": "transfer",
+              "label": "",
+              "params": {
+                "destination_deck": "sim-deck",
+                "destination_device": "sim-dev-b",
+                "destination_nest": "A1",
+                "labware_profile": "sim-labware",
+                "robot": "sim-arm",
+                "source_deck": "sim-deck",
+                "source_device": "sim-dev-a",
+                "source_nest": "A1",
+                "step_key": "DRILL-S2-2026-11-17T09:50:01.184Z-cae7f03f-d-in1"
+              },
+              "toolId": "SIM-STACK",
+              "toolType": "stack"
+            },
+            "completedAt": "2026-11-17T09:50:45.498Z",
+            "createdAt": "2026-11-17T09:50:01.186Z",
+            "queueId": 54,
+            "runId": "1596d5b2f101e7000",
+            "startedAt": "2026-11-17T09:50:10.482Z",
+            "status": "COMPLETED"
+          },
+          {
+            "commandInfo": {
+              "advancedParameters": {
+                "lane": "fast",
+                "laneBarrier": true,
+                "runAsynchronously": false,
+                "skipExecutionVariable": {
+                  "value": "",
+                  "variable": null
+                }
+              },
+              "command": "transfer",
+              "label": "",
+              "params": {
+                "dest_deck": 2,
+                "dest_plate_id": 1,
+                "dest_start_col": 1,
+                "dest_start_row": "A",
+                "num_cols": 1,
+                "num_rows": 8,
+                "source_deck": 1,
+                "source_plate_id": 1,
+                "source_start_col": 1,
+                "source_start_row": "A",
+                "tip_reuse": "fresh",
+                "volume": 5
+              },
+              "toolId": "SIM-FAST",
+              "toolType": "fast"
+            },
+            "createdAt": "2026-11-17T09:50:01.186Z",
+            "error": {
+              "message": "1 CANCELLED: Call cancelled",
+              "name": "Error"
+            },
+            "failedAt": "2026-11-17T09:50:49.374Z",
+            "queueId": 55,
+            "runId": "1596d5b2f101e7000",
+            "startedAt": "2026-11-17T09:50:46.497Z",
+            "status": "FAILED"
+          },
+          {
+            "commandInfo": {
+              "advancedParameters": {
+                "runAsynchronously": false,
+                "skipExecutionVariable": {
+                  "value": "",
+                  "variable": null
+                }
+              },
+              "command": "transfer",
+              "label": "",
+              "params": {
+                "destination_deck": "sim-deck",
+                "destination_device": "sim-dev-a",
+                "destination_nest": "A1",
+                "labware_profile": "sim-labware",
+                "robot": "sim-arm",
+                "source_deck": "sim-deck",
+                "source_device": "sim-dev-b",
+                "source_nest": "A1",
+                "step_key": "DRILL-S2-2026-11-17T09:50:01.184Z-cae7f03f-d-x1"
+              },
+              "toolId": "SIM-STACK",
+              "toolType": "stack"
+            },
+            "createdAt": "2026-11-17T09:50:01.186Z",
+            "queueId": 56,
+            "runId": "1596d5b2f101e7000",
+            "startedAt": "2026-11-17T09:50:46.999Z",
+            "status": "STARTED"
+          },
+          {
+            "commandInfo": {
+              "advancedParameters": {
+                "laneBarrier": true,
+                "runAsynchronously": false,
+                "skipExecutionVariable": {
+                  "value": "",
+                  "variable": null
+                }
+              },
+              "command": "transfer",
+              "label": "",
+              "params": {
+                "destination_deck": "sim-deck",
+                "destination_device": "sim-dev-b",
+                "destination_nest": "A1",
+                "labware_profile": "sim-labware",
+                "robot": "sim-arm",
+                "source_deck": "sim-deck",
+                "source_device": "sim-dev-a",
+                "source_nest": "A1",
+                "step_key": "DRILL-S2-2026-11-17T09:50:01.184Z-cae7f03f-d-out1"
+              },
+              "toolId": "SIM-STACK",
+              "toolType": "stack"
+            },
+            "createdAt": "2026-11-17T09:50:01.186Z",
+            "queueId": 57,
+            "runId": "1596d5b2f101e7000",
+            "status": "CREATED"
+          }
+        ],
+        "meta": {
+          "values": {
+            "0.completedAt": [
+              "Date"
+            ],
+            "0.createdAt": [
+              "Date"
+            ],
+            "0.startedAt": [
+              "Date"
+            ],
+            "1.completedAt": [
+              "Date"
+            ],
+            "1.createdAt": [
+              "Date"
+            ],
+            "1.startedAt": [
+              "Date"
+            ],
+            "10.completedAt": [
+              "Date"
+            ],
+            "10.createdAt": [
+              "Date"
+            ],
+            "10.startedAt": [
+              "Date"
+            ],
+            "11.completedAt": [
+              "Date"
+            ],
+            "11.createdAt": [
+              "Date"
+            ],
+            "11.startedAt": [
+              "Date"
+            ],
+            "12.completedAt": [
+              "Date"
+            ],
+            "12.createdAt": [
+              "Date"
+            ],
+            "12.startedAt": [
+              "Date"
+            ],
+            "13.createdAt": [
+              "Date"
+            ],
+            "13.error": [
+              "Error"
+            ],
+            "13.failedAt": [
+              "Date"
+            ],
+            "13.startedAt": [
+              "Date"
+            ],
+            "14.createdAt": [
+              "Date"
+            ],
+            "14.startedAt": [
+              "Date"
+            ],
+            "15.createdAt": [
+              "Date"
+            ],
+            "2.completedAt": [
+              "Date"
+            ],
+            "2.createdAt": [
+              "Date"
+            ],
+            "2.startedAt": [
+              "Date"
+            ],
+            "3.completedAt": [
+              "Date"
+            ],
+            "3.createdAt": [
+              "Date"
+            ],
+            "3.startedAt": [
+              "Date"
+            ],
+            "4.completedAt": [
+              "Date"
+            ],
+            "4.createdAt": [
+              "Date"
+            ],
+            "4.startedAt": [
+              "Date"
+            ],
+            "5.completedAt": [
+              "Date"
+            ],
+            "5.createdAt": [
+              "Date"
+            ],
+            "5.startedAt": [
+              "Date"
+            ],
+            "6.completedAt": [
+              "Date"
+            ],
+            "6.createdAt": [
+              "Date"
+            ],
+            "6.startedAt": [
+              "Date"
+            ],
+            "7.completedAt": [
+              "Date"
+            ],
+            "7.createdAt": [
+              "Date"
+            ],
+            "7.startedAt": [
+              "Date"
+            ],
+            "8.completedAt": [
+              "Date"
+            ],
+            "8.createdAt": [
+              "Date"
+            ],
+            "8.startedAt": [
+              "Date"
+            ],
+            "9.completedAt": [
+              "Date"
+            ],
+            "9.createdAt": [
+              "Date"
+            ],
+            "9.error": [
+              "Error"
+            ],
+            "9.failedAt": [
+              "Date"
+            ],
+            "9.startedAt": [
+              "Date"
+            ]
+          }
+        }
+      }
+    }
+  },
+  "getAllRuns": {
+    "result": {
+      "data": {
+        "json": [
+          {
+            "commands_count": 1,
+            "id": "15941cf7dc81e7000",
+            "run_type": "test",
+            "status": "CREATED"
+          },
+          {
+            "commands_count": 5,
+            "id": "15946c7e0981e7000",
+            "run_type": "test",
+            "status": "CREATED"
+          },
+          {
+            "commands_count": 5,
+            "id": "1596cf7f4d01e7000",
+            "run_type": "LIV-02 sim drill: lanes halt and freeze (uat-sim only)",
+            "status": "CREATED"
+          },
+          {
+            "commands_count": 5,
+            "id": "1596d5b2f101e7000",
+            "run_type": "LIV-02 sim drill: lanes halt and freeze (uat-sim only)",
+            "status": "CREATED"
+          }
+        ]
+      }
+    }
+  },
+  "laneStatus": {
+    "result": {
+      "data": {
+        "json": {
+          "failures": [
+            {
+              "at": 1794909049375,
+              "banner": true,
+              "lane": "fast",
+              "message": "1 CANCELLED: Call cancelled",
+              "queueId": 55,
+              "toolId": "SIM-FAST",
+              "toolType": "fast"
+            }
+          ],
+          "haltReason": "failure",
+          "halted": true,
+          "hasLaneRows": true,
+          "laneMode": true,
+          "overflow": 0,
+          "queueBusy": false,
+          "runningLanes": [
+            {
+              "command": "transfer",
+              "lane": "primary",
+              "queueId": 56,
+              "toolId": "SIM-STACK",
+              "toolType": "stack"
+            }
+          ]
+        }
+      }
+    }
+  }
+}

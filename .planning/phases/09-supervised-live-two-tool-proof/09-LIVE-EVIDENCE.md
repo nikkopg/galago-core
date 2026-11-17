@@ -535,7 +535,67 @@ Observations, none a failed criterion:
 
 ### Scenario 2
 
-_Pending._
+**Verdict: PASS** (D-11 scenario 2, LIV-02 part 2 of 3). A F.A.S.T.-step failure while the stack step ran halted the lanes;
+the stack lane's step finished and was never aborted; the later row was held until the operator's Start; only the operator
+re-armed and finished the run. Judged by Claude from the three operator-taken snapshots and the sim server logs (all read
+only). One unplanned event is recorded below (a second failed retry), which does not break a D-11 clause. The operator
+reported "scenario 2 and 3 done, workcell switched back" at about 2026-11-17T09:58Z (one reply for both scenarios) with no
+deviations. Claude did not queue, start, stop or freeze anything (D-18).
+
+Run: `1596d5b2f101e7000` (protocol 8, uat-sim), batch label DRILL-S2, queueIds 53 to 57. Row times are the raw `startedAt` /
+`failedAt` / `completedAt` values from the snapshots, UTC (HH:MM:SS.mmm). The sim logs are local time (UTC+7) and match them.
+
+| queueId | Row | Lane | Start | End | Final status |
+|---------|-----|------|-------|-----|--------------|
+| 53 | Tool Box note | primary | 09:50:08.980 | 09:50:08.981 | COMPLETED |
+| 54 | SIM-STACK `d-in1` | primary | 09:50:10.482 | 09:50:45.498 | COMPLETED |
+| 55 | SIM-FAST transfer, attempt 1 (`laneBarrier`) | fast | 09:50:46.497 | FAILED 09:50:49.374 (`1 CANCELLED: Call cancelled`) | FAILED |
+| 56 | SIM-STACK `d-x1` | primary | 09:50:46.999 | 09:51:22.034 | COMPLETED (never ABORTED) |
+| 55 | SIM-FAST transfer, attempt 2 (see below) | fast | not recorded | FAILED 09:51:52.534 (`14 UNAVAILABLE ... ECONNREFUSED 172.17.0.1:40092`) | FAILED |
+| 55 | SIM-FAST transfer, final attempt | fast | 09:52:22.885 | 09:53:42.906 (80.0 s) | COMPLETED |
+| 57 | SIM-STACK `d-out1` (`laneBarrier`) | primary | 09:53:43.932 | 09:54:18.970 | COMPLETED |
+
+Timeline: run created 09:50:01.186; `d-x1` started 0.502 s after the SIM-FAST step (overlap, inside the 1500 ms loop tolerance of
+the D-05 rule). The operator stopped the sim F.A.S.T. server (`CTL stop-sim fast`); SIM-FAST FAILED 2.9 s into its step while
+`d-x1` was 2.4 s into its 35 s step; at-halt snapshot 09:51:03Z (`d-x1` 17 s in); `d-x1` COMPLETED 09:51:22.034; halted snapshot
+09:51:30Z (8 s after `d-x1` finished, `d-out1` still CREATED); sim F.A.S.T. restarted 09:51:39Z (new pid `121058`) and Configured
+with `simulated: true` at 09:52:09Z; final attempt started 09:52:22.885; `d-out1` started 1.03 s after SIM-FAST completed (one
+loop delay); done snapshot 09:54:21Z.
+
+Snapshots (`evidence/`), each judged against the plan's criteria:
+
+| Snapshot | Facts read from it | Criterion |
+|----------|--------------------|-----------|
+| `20261117T095103Z-drill-s2-at-halt.queue.json` (09:51:03Z) | q55 SIM-FAST FAILED (`failedAt` 09:50:49.374); q56 `d-x1` STARTED (`runningLanes` lists it on lane `primary`); q57 `d-out1` CREATED; q53 and q54 COMPLETED; `laneStatus` `halted:true`, `haltReason:"failure"`, one failure (lane fast, SIM-FAST, queueId 55, banner true) | met |
+| `20261117T095130Z-drill-s2-halted.queue.json` (09:51:30Z) | q56 `d-x1` COMPLETED 09:51:22.034 (never ABORTED, no `abortedAt`); q55 still FAILED; q57 `d-out1` still CREATED; `halted:true`, `haltReason:"failure"`, `runningLanes:[]`, failure still listed | met |
+| `20261117T095421Z-drill-s2-done.queue.json` (09:54:21Z) | q53 to q57 all COMPLETED; `halted:false`, `haltReason:null`, `failures:[]`, `runningLanes:[]`, `queueBusy:false` | met |
+
+One send per queueId, from the sim server logs (`~/.local/state/galago-phase9/`, read only): SIM-STACK
+(`sim-stack-20261117T093900Z.log`, not restarted in this scenario) logged "Running command Transfer" at 16:50:10 (`d-in1`),
+16:50:47 (`d-x1`) and 16:53:43 (`d-out1`), each SUCCESS: three sends for three stack queueIds. The first SIM-FAST process
+(`sim-fast-20261117T083905Z.log`) logged one Transfer at 16:50:46 with no response line (stopped mid-step); the restarted
+SIM-FAST (`sim-fast-20261117T095139Z.log`) logged one Transfer at 16:52:22, SUCCESS 16:53:42. That is two sends for queueId 55,
+the operator-retried failed row; every other queueId has exactly one. No Transfer line on either sim server between the failure
+(09:50:49Z) and the operator's re-arm (first new Transfer, SIM-FAST 09:52:22Z), apart from `d-x1` which had started 2.4 s before
+the failure: no auto-retry and no auto-start of `d-out1` during the halt, including the 8 s from `d-x1` finishing to the halted
+snapshot and the 52 s from that snapshot to the final Start. The note row is the Tool Box and sends nothing to a tool.
+
+Unplanned event, stated plainly: the done snapshot shows q55 COMPLETED but carrying `failedAt` 09:51:52.534, which is later than
+the first failure (09:50:49.374) and 13 s after the SIM-FAST server came back (09:51:39Z) but 17 s before it was Configured
+(09:52:09Z). A retry therefore ran and failed once more with `14 UNAVAILABLE ... ECONNREFUSED` (the gRPC channel's last error is
+stamped 09:51:17.652Z, from the stopped server), and the operator pressed Start a further time at about 09:52:22Z after the
+Configure. The SIM-FAST server log shows no Transfer for that middle attempt (it never reached the server), so no extra send
+occurred. No snapshot was taken between the two retries, so the second halt is inferred from `failedAt` and from the row not
+completing until 09:53:42.906; a retry of a FAILED row needs an operator Start, so both retries were operator-driven. The
+plan's step order was "start-sim, Configure, then Start"; the middle Start evidently came before the Configure. The
+operator's reply reported no deviation, so this is an observation to confirm, not a recorded operator account. Because the
+run did not complete after the first re-arm, it took two Starts instead of one; `d-out1` stayed CREATED throughout, and the
+only operator actions were Start presses, so the D-11 clauses (other-lane row finishes, never aborted, later row held,
+only the operator re-arms and finishes) still hold.
+
+Real tools: see the combined baseline in the Scenario 3 subsection (`evidence/20261117T095938Z-post-drill-s2-and-s3-before-teardown.baseline.txt`).
+It was taken after scenario 3, not after scenario 2 alone, so it is labelled that way and not `post-drill-s2`; no per-scenario
+baseline exists for scenario 2. The sim logs and the real tools' unchanged "Running command" counts are the scenario 2 evidence.
 
 ### Scenario 3
 
