@@ -661,6 +661,86 @@ status, which the web app issues while a UI session is polling the tool (inferre
 switch back; Claude did not open one). The file also grew from 145744 to 171341 lines between the pre-deploy and post-deploy
 baselines in earlier operator sessions, and stood still (171341) from 08:33Z to 09:44Z. It is not a command to the tool. The V-10 criteria (PIDs, "Running command" counts, trace folder, ledger sha256) are unchanged.
 
+### Drill teardown (09-07 Task 3), 2026-11-17 10:01Z
+
+Sim servers stopped by Claude with the guarded, port-resolved path only (`phase9-ctl.sh stop-sim stack`, then `stop-sim fast`,
+each with stdin `/dev/null`): SIM-STACK pid `101131` and SIM-FAST pid `121058`, each the single PID on 40091 / 40092 with
+`--port=NNNNN` on its command line and not a real-port listener. Both exited within the guard's 15 s wait. `ss` shows nothing on
+40091 and 40092 and neither PID exists. Real listeners after the stops: 8081 `6872`, 11010 `7490`, 40012 `7491`, 40001
+`2320808`, the same PIDs as before the drill (V-10, T-09-27).
+
+| Check | Result |
+|-------|--------|
+| Baseline | `evidence/20261117T100156Z-post-drill.baseline.txt` (10:01:56Z); a second one, `20261117T100221Z-post-drill-final.baseline.txt`, was taken after the two pre-flight runs and differs from it only by label, time and `FA100056.log` line count |
+| Queue snapshot | `evidence/20261117T100157Z-post-drill.queue.json`: `laneStatus` `laneMode:true`, `halted:false`, `haltReason:null`, `failures:[]`, `runningLanes:[]`, `queueBusy:false`; `getAll` 21 rows, all COMPLETED |
+| Trace folder and files | `evidence/20261117T100156Z-post-drill.tracefiles.txt`; folder `1794670020` in both baselines; `diff` against `20261117T083601Z-pre-drill.tracefiles.txt` prints nothing (`FA100056.log`, `STACK2-6.log`, `Tool Box.log`, `web_server.log`) |
+| Pre-drill vs post-drill baseline (`diff`) | Only label, time, galago-core HEAD, and the `FA100056.log` line count differ. Listeners 40091 and 40092 are empty in both; `selected_workcell` is `test` in both |
+| Real listener PIDs | 8081 `6872`, 11010 `7490`, 40012 `7491`, 40001 `2320808`: equal |
+| "Running command" counts | `STACK2-6.log` 4508 lines, 52 "Running command", 12 Transfer; `FA100056.log` 4 "Running command", 1 Transfer: equal |
+| Ledger | sha256 `5de43c84a422c05ffb66f1bf9dee92b3fdf9183537c3e93d9bac1b08b353670b`, 9 records: equal |
+| `galago_core_controller_dirty_lines` | 0, as before |
+
+The `FA100056.log` line count is the one difference, explained in the Scenario 3 subsection: the new lines (1973 by 10:02Z, now
+growing as the real tool's status is polled) are 179 `GET http://10.150.1.125:5003/status` requests plus their httpcore debug lines.
+A search of all of them finds no POST, PUT, DELETE, "Running command", ExecuteCommand, Configure, Received, ERROR or
+WARNING line, and no HTTP request other than that status GET. It is a status read, not a command to the tool. The plan's
+V-10 criteria (PIDs, "Running command" counts, trace folder and files, ledger sha256) all hold.
+
+V-11 (clean exit, RESEARCH Pitfalls 5 and 6):
+
+| Check | Result |
+|-------|--------|
+| `laneStatus` | `halted:false`, `haltReason:null`, `failures:[]`, `runningLanes:[]`, `queueBusy:false` |
+| `commandQueue.getAll` | 21 rows, all COMPLETED: no CREATED or STARTED row |
+| `GET /api/runs` | 3 runs (the three drill runs), all stored `CREATED`, no `RUNNING` run |
+| `GET /api/settings/workcell` | `{"value":"test"}`, the real workcell; `GET /api/tools` lists `STACK2-6` and `FA100056` |
+| Pre-flight form 1 (`GAL07_WEB_CONTAINER=galago-web-dev`, from `~/data/nikko/galago-tools`) | last line `PREFLIGHT OK`, exit 0 |
+| Pre-flight form 2 (`GAL07_REQUIRE_STACK_ENV=1`, same container) | last line `PREFLIGHT OK`, exit 0; the owner lock at 10.150.1.125:5005 is held by galago pid 7491, the expected single-owner state |
+
+The D-13 amendment applies: the deployed container is `galago-web-dev`, so `GAL07_WEB_CONTAINER=galago-web-dev` was set for
+both pre-flight forms. No latch, stale run or `uat-sim` selection is left to leak into event 1.
+
+Left behind, inert and recorded: the `uat-sim` workcell (id 3), the two SIM tool records (SIM-STACK id 9, SIM-FAST id 10) and
+the imported drill protocol (id 8) remain in the store; they are in a separate workcell and send nothing. The three drill runs
+and the two older runs stay stored as `CREATED` (see the finding below). Nobody should press Start on any of them; event 1
+queues a fresh run.
+
+### Finding (not a D-11 clause): stored run status stays CREATED in lanes mode
+
+In all three scenarios the stored run record (`getAllRuns`, `/api/runs`) read `CREATED` in every snapshot, including after every
+row of the run was COMPLETED: scenario 1 run `1596cf7f4d01e7000`, scenario 2 run `1596d5b2f101e7000`, scenario 3 run
+`1596d7f33081e7000` (S2 and S3 done snapshots, and a read at 10:02Z, all `CREATED`). The row statuses and `laneStatus` are the
+evidence used for the verdict; the operator's run-card status in the UI was not observed by Claude. This confirms the 09-06
+observation: in lanes mode the run record is not advanced to COMPLETED when the rows finish. It does not affect the lane-halt,
+freeze or recovery behaviour proven here, but a verifier or operator that reads run status instead of row status will see
+every lanes run as unfinished. Flagged for follow-up; not fixed here (D-10: no hot-fix during the drill).
+
+### LIV-02 verdict
+
+**PASS.** Every D-11 clause holds in all three scenarios, V-10 holds and V-11 holds. The deployed lanes-on build
+(`galago-web-dev`, decision B) halted on a failure from either lane, held later rows through both a failure halt and the
+operator's Freeze, aborted nothing, and resumed only on the operator's Start, against two simulated tool servers in the isolated
+`uat-sim` workcell, with the real STACK2-6 and FA100056 untouched.
+
+| Clause | S1: stack fails while fast runs (09-06) | S2: fast fails while stack runs | S3: operator Freeze lanes |
+|--------|------------------------------------------|----------------------------------|----------------------------|
+| Other lane's running row finishes COMPLETED, never ABORTED | q50 SIM-FAST COMPLETED, met | q56 `d-x1` COMPLETED 09:51:22.034, met | q60 SIM-FAST and q61 `d-x1` both COMPLETED, none ABORTED, met |
+| Later row held CREATED while halted (no auto-start, no auto-retry) | q52 `d-out1` CREATED in the halted snapshot, met | q57 `d-out1` CREATED in the halted snapshot, met | q62 `d-out1` CREATED in the frozen snapshot, 8.5 s after the fast step ended, met |
+| Halted with the right reason | `halted:true`, `haltReason` failure, met | `halted:true`, `haltReason` failure, met | `halted:true`, `haltReason` freeze, `failures:[]`, met |
+| Only the operator's Start re-armed and finished the run | done snapshot: all COMPLETED, `halted:false`, met | done snapshot: all COMPLETED, `halted:false`, met (two operator Starts; see the unplanned event) | done snapshot: all COMPLETED, `halted:false`, met |
+| One send per queueId, none during the halt (sim logs) | met, one extra for the operator-retried row | met, two sends for the operator-retried q55 | met, four sends for four transfer queueIds |
+| V-10: real tools untouched | met (post-drill-s1 baseline) | met (combined baseline) | met (combined baseline) |
+
+Overall V-10 (D-10): PIDs, "Running command" counts, trace folder and files and ledger sha256 equal the pre-drill baseline; the
+`FA100056.log` line growth is read-only status polling. Overall V-11: clean queue, `test` selected, both pre-flight forms
+`PREFLIGHT OK`, sim ports closed.
+
+Caveats stated, none a failed clause: (1) scenario 2 took two operator Starts because a retry ran before the SIM-FAST server was
+Configured and failed once more, with no snapshot between; (2) the exact time of the Freeze press and the operator's other
+actions are inferred from snapshots and sim logs, not logged by Claude; (3) the run record stays `CREATED` (finding above);
+(4) scenarios 2 and 3 share one baseline, labelled `post-drill-s2-and-s3-before-teardown`, taken after both. Data for runbook row
+3a-12 (09-08).
+
 ## Live event 1, row 3a-13
 
 _Pending (09-09, 09-10). D-02 decided (amended, above)._
@@ -701,3 +781,12 @@ All files are under `evidence/`, named `<UTC stamp>-<label>.<kind>`.
 | `20261117T093850Z-drill-s1-halted.queue.json` | scenario 1 snapshot after SIM-FAST completed, before the operator Start (halted true, d-out1 CREATED) | 09-06 |
 | `20261117T094242Z-drill-s1-done.queue.json` | scenario 1 snapshot after the operator Start (all rows COMPLETED, halted false) | 09-06 |
 | `20261117T094420Z-post-drill-s1.baseline.txt` | post-scenario-1 baseline; real tools unchanged, SIM-STACK pid 101131 | 09-06 |
+| `20261117T095103Z-drill-s2-at-halt.queue.json` | scenario 2 snapshot at the halt (SIM-FAST FAILED, d-x1 STARTED, d-out1 CREATED, halted true) | 09-07 |
+| `20261117T095130Z-drill-s2-halted.queue.json` | scenario 2 snapshot after d-x1 completed, before the operator Start (halted true, d-out1 CREATED) | 09-07 |
+| `20261117T095421Z-drill-s2-done.queue.json` | scenario 2 snapshot after the operator Starts (all rows COMPLETED, halted false) | 09-07 |
+| `20261117T095615Z-drill-s3-at-freeze.queue.json` | scenario 3 snapshot at the freeze (both rows STARTED, halted true, haltReason freeze) | 09-07 |
+| `20261117T095709Z-drill-s3-frozen.queue.json` | scenario 3 snapshot after both rows completed (none ABORTED, d-out1 CREATED, haltReason freeze) | 09-07 |
+| `20261117T095753Z-drill-s3-done.queue.json` | scenario 3 snapshot after the operator Start (all rows COMPLETED, halted false) | 09-07 |
+| `20261117T095938Z-post-drill-s2-and-s3-before-teardown.baseline.txt` | baseline after scenarios 2 and 3, workcell back on test, sims still up | 09-07 |
+| `20261117T100156Z-post-drill.baseline.txt`, `.tracefiles.txt`; `20261117T100157Z-post-drill.queue.json` | teardown baseline, trace file names and queue snapshot (sims stopped, real tools unchanged, clean queue) | 09-07 |
+| `20261117T100221Z-post-drill-final.baseline.txt` | baseline after both pre-flight forms; only the FA100056.log status-poll line count moved | 09-07 |
