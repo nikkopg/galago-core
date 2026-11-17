@@ -1022,7 +1022,62 @@ reached the tool. Per 09-11 Task 1 verification step 4 nothing further was done:
 protocol import, no GO offered. Claude sent nothing to any tool (D-18). An earlier "go" typed by the operator before this step was shown was
 rejected by the orchestrator and is not an event-2 GO.
 
-_Pending: the round trip, the pre-e2 baseline, the import and the GO (09-11)._
+### Operator readiness attempt 2 and pre-GO record (09-11 Task 1), 2026-11-17
+
+Operator reply at 10:59:23Z (relayed by the orchestrator, verbatim in `evidence/20261117T110044Z-e2-go-readiness.txt`): "ready, nothing re-taught".
+The operator did not paste the Transfer replies or fresh latch / robot-state / gripper reads this time; the round-trip evidence below comes from the
+tool log and the STACK ledger, read by Claude as local files (nothing sent to any tool, D-18). "nothing re-taught" is the operator's word; the log
+shows no teach command in the window. The operator's last pasted reads of the latch, the arm state and the gripper are the 10:55:17Z paste
+(`latched:false`, `stack2-6` `idle`, `hasLabware:false`, attempt 1), byte-identical to the 10:51:44Z reads; the GO re-reads them.
+
+**Round trip, read from the log and ledger** (`STACK2-6.log` lines 7360 to 8322, `stack-ledger.json`; log time is UTC+7):
+
+| Check | Result |
+|-------|--------|
+| New "Running command" lines (+7: 73 to 80) | five reads (`GetRobotStates` 17:56:58, `ListLabwareProfiles`, `ListDevices`, `GetRobotStates`, `ListTransferProfiles` all 17:57:28) and exactly two `Transfer` (17:57:52, 17:58:39); no `GetFailureLatch`, no teach, no `AcknowledgeFailure` |
+| Transfer 1, nest-3 / deck1 / A1 to nest-1 / deck1 / A1 | ledger `20261117T105752943801-d7490fae` done / ran, task `completed`, 00:00:30, 10:57:53Z to 10:58:24Z, task guid `ab92bc14-f2bc-4477-b1b3-29a077b10fa7`; log `ExecuteCommand Response: response: SUCCESS` 17:58:24 |
+| Transfer 2, nest-1 / deck1 / A1 to nest-3 / deck1 / A1 | ledger `20261117T105839741567-7d1b2abf` done / ran, task `completed`, 00:00:28, 10:58:39Z to 10:59:09Z, task guid `a29248ed-d0cb-4bc1-9bf9-753f54fce204`; log `ExecuteCommand Response: response: SUCCESS` 17:59:09 |
+| Order and anything after | nest-3 to nest-1 first, then back; no later Transfer line or ledger record |
+| ERROR / WARNING / latch / refusal / retry / exception / HTTP 4xx or 5xx in the appended text | none |
+| `FA100056.log` "Running command Transfer" / "Running command" | 2 / 5, equal to the reference |
+
+Both records are auto-minted tool-page keys outside any run (D-07; "auto-mint: on (not exercised)" holds for the run's explicit keys). Attempt 1's
+"round trip not done" finding is closed.
+
+**Pre-flight:** both forms with `GAL07_WEB_CONTAINER=galago-web-dev` end `PREFLIGHT OK` (plain form 11:00:35Z, `GAL07_REQUIRE_STACK_ENV=1` form
+11:00:39Z). Workcell `test` (id 1); `GET /api/tools` lists STACK2-6 (id 5) and FA100056 (id 6), both `workcellId` 1.
+
+**Pre-e2 baseline** (`evidence/20261117T110058Z-pre-e2.baseline.txt`, `evidence/20261117T110058Z-pre-e2.queue.json`, taken after the round trip).
+`diff` against `20261117T105220Z-post-e2-readiness.baseline.txt` shows only the label, time, `galago_core_head`, the STACK2-6 / FA100056 log counters
+and the ledger (two new records, new sha); listener PIDs 8081 `6872`, 11010 `7490`, 40012 `7491`, 40001 `2320808` and trace folder `1794670020` equal.
+
+| Value | Reading |
+|-------|---------|
+| galago-core HEAD at baseline | `356d7c67c972415f30628ad7592703f162b4b0d7` (docs commits only since 207a640); `galago_core_controller_dirty_lines` 0, `git status --porcelain -- controller` empty |
+| galago-tools HEAD | `034867ca8aec9cb5ed83140306ebd89bf61b9ae7` (docs-only descendant of d53da53, one file under `docs/runbooks/`), tool code unchanged since d53da53; `0604348` ancestor exit 0; only `tools/` status line is untracked `tools/fast-mcp-locks/` |
+| auto-mint | on (not exercised) |
+| `STACK2-6.log` "Running command Transfer" / "Running command" | 20 / 80 |
+| `FA100056.log` "Running command Transfer" / "Running command" | 2 / 5 |
+| ledger | 17 records, sha256 `c8c6297091b7f1c9cf67f53fe08df4cdfa085f1bc4f593515d858aa0e6caebdd`; the two newest are the round trip, done / ran |
+| laneStatus | `laneMode:true`, `halted:false`, `haltReason:null`, `failures:[]`, `runningLanes:[]`, `queueBusy:false`; `getAll` 28 rows, all `COMPLETED` (no CREATED or STARTED row) |
+| runs | `GET /api/runs`: 4 runs, all stored `CREATED` (three drill runs and event 1), no RUNNING run; the snapshot lists 6 `CREATED` runs in all (two older). None may be started |
+| `docker exec galago-web-dev printenv GALAGO_PARALLEL_LANES` | `1` |
+
+**Protocol import:** `POST /api/trpc/protocol.import` `{"json":{"workcellId":1,"protocol":<the .protocol object of protocols/09-live-lanes-event2.protocol.json>}}`,
+HTTP 200 at 11:01:24Z; reply `evidence/20261117T110124Z-e2-import.json`: protocol id `10`, name "LIV-01 event 2: third-plate STACK transfer overlaps the
+F.A.S.T. liquid leg (lanes)", `workcellId` 1, mode `script`, 45 parameters. `GET /api/trpc/protocol.getAll` lists ids 4 and 10 (workcell 1), 8 (drill,
+workcell 3) and 9 (event 1, workcell 1).
+
+**Event-2 run form (amended D-02, for the operator):** `batch_label` LIV01-E2; `spare_a_device` nest-3, `spare_a_deck` deck1, `spare_a_nest` A1 (overlap
+source); `spare_b_device` nest-1, `spare_b_deck` deck1, `spare_b_nest` A1 (overlap destination); `out1_dest_device` nest-3, `out1_dest_deck` deck1,
+`out1_dest_nest` A1 (must equal the overlap source); `overlap_timeout_s` blank; every other field at its default.
+
+**Expected event-2 traffic and end state:** five STACK transfers (-in1, -in2, -x1, -out1, -out2), no -x2 and no return leg; `STACK2-6.log` "Running
+command Transfer" 20 to 25 (no GetTransferEstimate from the run); `FA100056.log` "Running command Transfer" 2 to 3; ledger 17 to 22 records, the five
+new ones keyed `<LIV01-E2 key base>-in1 / -in2 / -x1 / -out1 / -out2`, each done / ran; the operator's GO-gate reads add other "Running command" lines
+that move nothing. End state: third plate on nest-1, plate 1 on nest-3, plate 2 on nest-2, restored by hand only after Claude says "capture done".
+
+_Pending: the one-way GO and the run (09-11 Tasks 2 and 3)._
 
 ## LIV-01 verdict
 
@@ -1075,3 +1130,6 @@ All files are under `evidence/`, named `<UTC stamp>-<label>.<kind>`.
 | `20261117T105220Z-e2-readiness.txt` | event-2 operator readiness reply (latched false, idle, hasLabware false, "third plate ready"; steps 1 and 2 not described in words) | 09-10 |
 | `20261117T105220Z-post-e2-readiness.baseline.txt` | baseline after the readiness reads (Transfers 18 and 2, ledger sha and PIDs equal e1-after) | 09-10 |
 | `20261117T105601Z-e2-go-readiness.txt` | event-2 operator readiness attempt 1 (reads re-pasted, no Transfer pasted; log and ledger show no round trip) | 09-11 |
+| `20261117T110044Z-e2-go-readiness.txt` | event-2 operator readiness attempt 2 ("ready, nothing re-taught"; Transfer replies not pasted; round trip verified from log and ledger, both done / ran) | 09-11 |
+| `20261117T110058Z-pre-e2.baseline.txt`, `20261117T110058Z-pre-e2.queue.json` | pre-e2 baseline (taken after the round trip; Transfers 20 and 2, ledger 17, sha c8c62970...caebdd) and queue snapshot | 09-11 |
+| `20261117T110124Z-e2-import.json` | protocol.import reply (event-2 protocol id 10 in workcell test, id 1) | 09-11 |

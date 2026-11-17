@@ -1,0 +1,41 @@
+09-11 Task 1 operator readiness record, attempt 2 (event 2, latch / arm / nest-3 -> nest-1 -> nest-3 round trip)
+Saved by Claude 2026-11-17T11:00:44Z. No credential appears in this file.
+Attempt 1 is in 20261117T105601Z-e2-go-readiness.txt (round trip not done, plan stopped).
+
+OPERATOR REPLY (as relayed by the orchestrator, verbatim) at 2026-11-17T10:59:23Z:
+ready, nothing re-taught
+
+NOT PASTED by the operator in this attempt: the Transfer replies (steps 4 and 5), and fresh GetFailureLatch /
+GetRobotStates / GetLabwarePresence reads. The evidence for the round trip comes from the tool log and the STACK
+ledger (local files, read by Claude; nothing sent to any tool), not from pasted replies. The statement "nothing
+re-taught" is the operator's word; the log shows no teach or other non-read command in the window.
+
+ORCHESTRATOR'S READ-ONLY CHECK at 2026-11-17T10:59:27Z (throwaway baseline, deleted afterwards): STACK2-6.log
+"Running command" 80 (+7 over 73), "Running command Transfer" 20 (+2 over 18); ledger 17 records (+2), sha256
+c8c6297091b7f1c9cf67f53fe08df4cdfa085f1bc4f593515d858aa0e6caebdd.
+
+CLAUDE'S VERIFICATION at 2026-11-17T11:00:06Z to 11:00:35Z (STACK2-6.log lines 7360 to 8322, and stack-ledger.json):
+- New "Running command" lines (local UTC+7), 7 in all:
+    17:56:58 GetRobotStates            (read)
+    17:57:28 ListLabwareProfiles       (read)
+    17:57:28 ListDevices               (read)
+    17:57:28 GetRobotStates            (read)
+    17:57:28 ListTransferProfiles      (read)
+    17:57:52 Transfer                  (round trip move 1)
+    17:58:39 Transfer                  (round trip move 2)
+  Five reads and exactly two Transfers; no GetFailureLatch, no teach, no AcknowledgeFailure.
+- Transfer 1: log 10:57:52Z POST /api/v2/transfer 200, task guid ab92bc14-f2bc-4477-b1b3-29a077b10fa7, 'ExecuteCommand
+  Response: response: SUCCESS' at 17:58:24. Ledger record 20261117T105752943801-d7490fae: state done, result.kind ran,
+  task state completed, elapsed 00:00:30, nest-3/deck1/A1 -> nest-1/deck1/A1, labware profile 96, transfer profile Default.
+  createdAt 2026-11-17T10:57:53.118006Z, updatedAt 10:58:24.450591Z.
+- Transfer 2: log 10:58:39Z POST /api/v2/transfer 200, task guid a29248ed-d0cb-4bc1-9bf9-753f54fce204, 'ExecuteCommand
+  Response: response: SUCCESS' at 17:59:09. Ledger record 20261117T105839741567-7d1b2abf: state done, result.kind ran,
+  task state completed, elapsed 00:00:28, nest-1/deck1/A1 -> nest-3/deck1/A1, same profiles.
+  createdAt 2026-11-17T10:58:39.914535Z, updatedAt 10:59:09.379015Z.
+- Order: nest-3 -> nest-1 first, then nest-1 -> nest-3, as the plan requires. No Transfer line or ledger record after them.
+- No ERROR, WARNING, latch, refusal, retry, exception or HTTP 4xx/5xx text in the appended log lines.
+- FA100056.log: "Running command Transfer" 2 and "Running command" 5, equal to the reference.
+- Ledger now 17 records (15 + these two); both are auto-minted tool-page keys outside any run.
+
+RESULT: the round trip happened and both Transfers ended done/ran. Task 1 proceeds to the pre-flight, the pre-e2
+baseline, the import and the pre-GO record.
