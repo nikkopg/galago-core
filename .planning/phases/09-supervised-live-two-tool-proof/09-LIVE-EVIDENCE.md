@@ -91,8 +91,62 @@ Operator reads still to come (tool page, not a protocol run): `list_devices` (re
 The standalone estimate is a real-mode read: one estimation request to the manager, no arm motion,
 no ledger record.
 
-Post-check proof to record: `post-spare-check` baseline must show the same `STACK2-6.log` "Running
-command Transfer" count (4) and the same ledger sha256 as the pre-check baseline.
+Post-check proof as planned: the `post-spare-check` baseline was to show the same `STACK2-6.log`
+"Running command Transfer" count (4) and the same ledger sha256 as the pre-check baseline. It did
+not: see "Operator nest-3 testing during the spare-check window" below. The Task 2 verification is judged
+"delta explained by operator activity", not "unchanged".
+
+### Operator nest-3 testing during the spare-check window
+
+Found by the post-spare-check baseline (`evidence/20261117T045034Z-post-spare-check.baseline.txt`,
+04:50:34Z): the STACK2-6 "Running command Transfer" count was no longer 4 and the ledger had changed.
+Claude sent nothing to any tool at any point. The operator then explained it: "it was me testing the new
+nest" (the new nest-3), disposition (a): the rig is OK and the plates are back where the plan expects them
+(plate 1 on nest-1, plate 2 on nest-2, the third plate on nest-3).
+
+Timeline, UTC, read from the local `STACK2-6.log` (log lines are local time, UTC+7; the HTTP `Date`
+headers confirm UTC) and the local STACK ledger. These are operator-run tool-page calls, not Claude's:
+
+| UTC | Event | Source |
+|-----|-------|--------|
+| 04:40:25 | Transfer rejected (manager HTTP 400 on estimation, `unhandledException`); no ledger record | log |
+| 04:40:40 | Transfer ran about 14 s, `done`/`failed`, nest-3 to nest-1, failure latched (guid `23cbe3fc-...`) | log, ledger `20261117T044040363158-b8b46edd` |
+| 04:48 to 04:49 | three `GetTransferEstimate` (the replies reported in the spare-check, read only) | log |
+| 04:50:23 | Transfer refused (`failureLatched`, guid `23cbe3fc-...`) | log |
+| 04:50:30 to 04:50:35 | `GetFailureLatch`, `AcknowledgeFailure` | log |
+| 04:50:39 | Transfer ran about 18 s, `done`/`failed` (`smartAlignmentMaxNumRetry`), nest-1 to nest-3, latched again (guid `bc535b57-...`) | log, ledger `20261117T045039804682-d0fcb716` |
+| 04:51:11 to 04:51:15 | `GetFailureLatch`, `AcknowledgeFailure` | log |
+| 04:51:18 | Transfer ran about 35 s, `done`/`ran`, nest-1 to nest-3 | ledger `20261117T045118813461-c2242fce` |
+| 04:52:13 | Transfer `done`/`failed` at once, nest-3 to nest-1, arm holding labware, latched (guid `974f6ec4-...`) | ledger `20261117T045213288978-c9611ad9` |
+| 04:52:54 to 04:52:59 | `GetFailureLatch`, `AcknowledgeFailure` (reply `SUCCESS`) | log |
+| 05:02:59 | Transfer rejected (`unhandledException`); no ledger record | log |
+| 05:03:04 | Transfer ran about 29 s, `done`/`ran`, nest-1 to nest-3 | ledger `20261117T050304252388-d419c7de` |
+
+Counts: `STACK2-6.log` "Running command Transfer" 4 (pre-check) to 7 (04:50:34Z) to 12 (the new baseline
+below); ledger records 4 to 5 to 9. Five records are new: three `failed`, two `ran`, as listed. None of
+this touched `FA100056` (its log stays at 1 "Running command Transfer").
+
+Failure latch now, read only from the local ledger and log: the last latching failure (guid
+`974f6ec4-...`, 04:52:13Z) was followed by `AcknowledgeFailure` at 04:52:59Z (reply `SUCCESS`), and the
+05:03:04Z Transfer was then accepted and ran, which a latched STACK refuses (it did at 04:50:23Z). So the
+latch reads as cleared. This is inferred from the local files; no `GetFailureLatch` was sent by Claude and
+none will be. The 09-04 precondition below requires the operator to confirm it live.
+
+Evidence gaps, stated plainly:
+
+- `get_labware_presence` was not run, so plate placement is the operator's statement, not a read. The last
+  recorded move is nest-1 to nest-3 at 05:03:04Z with no recorded move after it, so the stated placement
+  (plate 1 on nest-1, third plate on nest-3) was reached by hand or by moves outside the ledger.
+- The three failed Transfers (04:40:40Z, 04:50:39Z, and 04:52:13Z with the arm holding labware) happened
+  on the same nests the amended D-02 uses (nest-3 and nest-1). The estimates in the spare-check replies
+  were read-only and clean; three of the five ledger-recorded live moves between these nests ended `failed` (plus two Transfers rejected before any record).
+  The operator owns the physical state. This is recorded as a risk input for the 09-04 and 09-09 to 09-11
+  GO gates, not as a finding about the lanes code.
+
+New reference baseline for later GO gates (Transfer count and ledger sha come from it):
+`evidence/20261117T050637Z-post-operator-nest-test.baseline.txt` at 05:06:37Z. galago-core HEAD
+`c9432d84632d4e94a82bfeda6090560e6cfb5fe6`, `STACK2-6.log` 12 "Running command Transfer", ledger sha256
+`5de43c84a422c05ffb66f1bf9dee92b3fdf9183537c3e93d9bac1b08b353670b`, 9 records.
 
 Verdict, exact spare A / spare B triples, and the UTC time of the reply: _pending the operator reply and
 the D-02 decision_.
@@ -139,3 +193,6 @@ All files are under `evidence/`, named `<UTC stamp>-<label>.<kind>`.
 |------|------|------|
 | `20261117T042000Z-pre-spare-check.baseline.txt` | baseline (provenance, listeners, log counts, ledger, web reads) | 09-03 |
 | `20261117T042000Z-pre-spare-check.queue.json` | queue snapshot (laneStatus, getAll, getAllRuns) | 09-03 |
+| `20261117T045034Z-spare-check.txt` | operator replies to the spare-nest check (list_devices, two estimates, reach) | 09-03 |
+| `20261117T045034Z-post-spare-check.baseline.txt` | baseline taken at 04:50:34Z; showed the operator nest-test delta | 09-03 |
+| `20261117T050637Z-post-operator-nest-test.baseline.txt` | new reference baseline for later GO gates | 09-03 |
