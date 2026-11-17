@@ -17,7 +17,7 @@ findings:
     title: "Rule 0 refuses `lane: null` and `laneBarrier: null`, and treats `undefined` differently for the two tags"
   - id: IN-01
     severity: info
-    disposition: open
+    disposition: skipped
     title: "The \"no dispatch after halt\" guarantee still depends on the SQLite driver being synchronous"
   - id: IN-05
     severity: info
@@ -75,7 +75,7 @@ findings:
     severity: info
     disposition: open
     title: "The freeze toast reports \"Lanes frozen\" even when the server answered `frozen: false`"
-open: 11
+open: 10
 total: 18
 recorded: 2026-11-17T01:44:13.700Z
 ---
@@ -87,7 +87,7 @@ recorded: 2026-11-17T01:44:13.700Z
 | WR-08 | warning | open | - |
 | WR-09 | warning | open | - |
 | WR-10 | warning | open | - |
-| IN-01 | info | open | - |
+| IN-01 | info | skipped | accepted in Phase 9 D-15; pinned by controller/test/staticScan.test.ts "dispatch span (D-15, IN-01)" |
 | IN-05 | info | open | - |
 | IN-06 | info | open | - |
 | IN-07 | info | open | - |

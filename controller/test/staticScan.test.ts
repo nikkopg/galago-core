@@ -1348,6 +1348,77 @@ describe("concurrency lane seams (D-09, D-10, D-14)", () => {
     const ctor = extractBracedRegion(queueSrc, /constructor\(/);
     expect(ctor).toContain('process.env.GALAGO_PARALLEL_LANES === "1"');
   });
+
+  // D-15 / IN-01: the "may dispatch" read and the claim are one synchronous span.
+  describe("dispatch span (D-15, IN-01)", () => {
+    const ASYNC_BOUNDARY =
+      /\bawait\b|\byield\b|\.then\s*\(|\.catch\s*\(|\bnew\s+Promise\b|\bsetTimeout\b|\bsetImmediate\b|\bqueueMicrotask\b|process\.nextTick/;
+    const pickNext = extractBracedRegion(queueSrc, /private async _pickNext\(/);
+
+    // Text from the state check through the claim, with the order of the five anchors asserted.
+    function dispatchSpan(region: string): string {
+      const from = region.indexOf("this.state !== ToolStatus.BUSY");
+      const read = region.indexOf("queuedRowsSync()");
+      const pick = region.indexOf("pickEligible(");
+      const gate = region.indexOf("this._dispatchGate()");
+      const claim = region.indexOf("claimEligible(");
+      for (const [name, at] of Object.entries({ from, read, pick, gate, claim })) {
+        expect(at, name).toBeGreaterThanOrEqual(0);
+      }
+      expect(from).toBeLessThan(read);
+      expect(read).toBeLessThan(pick);
+      expect(pick).toBeLessThan(gate);
+      expect(gate).toBeLessThan(claim);
+      return region.slice(from, claim);
+    }
+
+    it("has no async boundary from the state check through the claim", () => {
+      expect(dispatchSpan(pickNext)).not.toMatch(ASYNC_BOUNDARY);
+    });
+
+    it("the pin fails when an await is injected (negative control, mutate the REGION text)", () => {
+      // The rows line also exists in laneStatus, so only the extracted region is mutated.
+      for (const [from, to] of [
+        ["const verdict = pickEligible(", "await Promise.resolve(); const verdict = pickEligible("],
+        [
+          "const rows = this.commands.queuedRowsSync();",
+          "const rows = await this.commands.queuedRowsSync();",
+        ],
+        [
+          "const claimed = this.commands.claimEligible(",
+          "const claimed = await this.commands.claimEligible(",
+        ],
+      ]) {
+        const mutated = pickNext.replace(from, to);
+        expect(mutated, from).not.toBe(pickNext);
+        expect(dispatchSpan(mutated), from).toMatch(ASYNC_BOUNDARY);
+      }
+    });
+
+    it("the helpers on the span are synchronous", () => {
+      expect(extractBracedRegion(queueSrc, /private _dispatchGate\(/)).not.toMatch(ASYNC_BOUNDARY);
+      const sched = stripComments(read("server/laneScheduling.ts"));
+      expect(sched).toContain("export function pickEligible<");
+      expect(sched).not.toMatch(/\basync\b/);
+      const sq = read("server/utils/SqliteQueue.ts");
+      const m = sq.match(/^[ \t]*(async[ \t]+)?queuedRowsSync\(\)/m);
+      expect(m).not.toBeNull();
+      expect(m && m[1]).toBeUndefined();
+    });
+
+    it("side lane (the IN-01 window): the only await between the pick and the send is _shouldSkip", () => {
+      const region = extractBracedRegion(queueSrc, /private async _runSideLane\(/);
+      const pickCall = "await this._pickNext(lane)";
+      const pickAt = region.indexOf(pickCall);
+      expect(pickAt).toBeGreaterThanOrEqual(0);
+      const from = pickAt + pickCall.length;
+      const to = region.indexOf("await this.executeCommand(picked)");
+      expect(to).toBeGreaterThan(from);
+      const awaits = region.slice(from, to).match(/\bawait\b[^;]*;/g) ?? [];
+      expect(awaits).toHaveLength(1);
+      expect(awaits[0]).toContain("this._shouldSkip(picked, lane)");
+    });
+  });
 });
 
 describe("lane halt and freeze invariants (D-12, D-15, D-16)", () => {
