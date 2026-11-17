@@ -3,14 +3,18 @@ phase: 08
 review: 08-REVIEW.md
 titles: json
 findings:
-  - id: WR-05
+  - id: WR-08
     severity: warning
-    disposition: fixed
-    title: "The first entry of the failure list is assumed to be the banner error, which is false after `clearError()`"
-  - id: WR-07
+    disposition: open
+    title: "A failure recorded without a lane context leaves a stale `banner` flag, which hides the message of a failure that is no longer the banner"
+  - id: WR-09
     severity: warning
-    disposition: fixed
-    title: "The protocol editor states \"runs its steps one at a time\" before the server mode is known, and still shows lane refusals that are not applied"
+    disposition: open
+    title: "In off mode, a summary that holds only refusals now renders an empty \"Lane summary\" section with the \"one at a time\" note"
+  - id: WR-10
+    severity: warning
+    disposition: open
+    title: "Rule 0 refuses `lane: null` and `laneBarrier: null`, and treats `undefined` differently for the two tags"
   - id: IN-01
     severity: info
     disposition: open
@@ -22,11 +26,23 @@ findings:
   - id: IN-06
     severity: info
     disposition: open
-    title: "The new WR-03 UI tests assert on source text, not behaviour"
+    title: "The UI wiring tests assert on source text, not behaviour"
   - id: IN-07
     severity: info
     disposition: open
     title: "`describeQueueStart` defaults `laneMode` to false"
+  - id: IN-08
+    severity: info
+    disposition: open
+    title: "`laneUiState` treats `isSuccess` with missing data as \"off\""
+  - id: WR-05
+    severity: warning
+    disposition: fixed
+    title: "The first entry of the failure list is assumed to be the banner error, which is false after `clearError()`"
+  - id: WR-07
+    severity: warning
+    disposition: fixed
+    title: "The protocol editor states \"runs its steps one at a time\" before the server mode is known, and still shows lane refusals that are not applied"
   - id: WR-01
     severity: warning
     disposition: fixed
@@ -59,21 +75,25 @@ findings:
     severity: info
     disposition: open
     title: "The freeze toast reports \"Lanes frozen\" even when the server answered `frozen: false`"
-open: 7
-total: 14
-recorded: 2026-11-17T01:34:20.842Z
+open: 11
+total: 18
+recorded: 2026-11-17T01:44:13.700Z
 ---
 
 # Phase 08: Code Review Disposition
 
 | Finding | Severity | Disposition | Source |
 |---------|----------|-------------|--------|
-| WR-05 | warning | fixed | 08-REVIEW-FIX.md |
-| WR-07 | warning | fixed | 08-REVIEW-FIX.md |
+| WR-08 | warning | open | - |
+| WR-09 | warning | open | - |
+| WR-10 | warning | open | - |
 | IN-01 | info | open | - |
 | IN-05 | info | open | - |
 | IN-06 | info | open | - |
 | IN-07 | info | open | - |
+| IN-08 | info | open | - |
+| WR-05 | warning | fixed | 08-REVIEW-FIX.md (not in the current review) |
+| WR-07 | warning | fixed | 08-REVIEW-FIX.md (not in the current review) |
 | WR-01 | warning | fixed | 08-REVIEW-FIX.md (not in the current review) |
 | WR-02 | warning | fixed | c438887; re-review (8ece3ad) confirms fixed; tests in controller/test/laneReviewFixes.test.ts (not in the current review) |
 | WR-03 | warning | fixed | 773389c; re-review (8ece3ad) confirms Start summary and audit line fixed; editor residual tracked as WR-07 (not in the current review) |
