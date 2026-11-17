@@ -23,10 +23,11 @@ interface Protocol {
 }
 type Commands = Awaited<ReturnType<typeof executeProtocolScript>>["commands"];
 
-const PROTOCOL_DIR = path.join(
-  path.resolve(__dirname, "../.."),
-  ".planning/phases/09-supervised-live-two-tool-proof/protocols",
-);
+// WR-04: the tested copies live beside this file, so the suite does not depend on the
+// .planning phase directory (archived by /gsd-cleanup, absent when ./controller is mounted
+// alone). The .planning/phases/09-supervised-live-two-tool-proof/protocols copies are the
+// historical record of what was imported for the live events.
+const PROTOCOL_DIR = path.join(__dirname, "fixtures", "phase9");
 
 function loadProtocol(file: string): Protocol {
   return JSON.parse(fs.readFileSync(path.join(PROTOCOL_DIR, file), "utf-8")).protocol;
