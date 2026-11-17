@@ -5,15 +5,15 @@ titles: json
 findings:
   - id: CR-01
     severity: critical
-    disposition: open
+    disposition: fixed
     title: "The sim drill's real-tool refusal is bypassed by name variants that the queue still resolves to the real tool"
   - id: WR-01
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "start-sim launches the real-capable driver and shares the real STACK ledger; nothing enforces simulation"
   - id: WR-02
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "check-guards prints GUARDS OK even when it checked zero real listeners"
   - id: WR-03
     severity: warning
@@ -21,7 +21,7 @@ findings:
     title: "The D-15 pin ends before the claim and never asserts that claimEligible is synchronous"
   - id: WR-04
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "liveLanesProtocol.test.ts depends on a planning-phase directory outside the controller"
   - id: WR-05
     severity: warning
@@ -71,7 +71,7 @@ findings:
     severity: info
     disposition: open
     title: "overlap_timeout_s=0 is accepted and sent, but STACK reads 0 as \"no override\""
-open: 17
+open: 13
 total: 17
 recorded: 2026-11-17T11:31:39.712Z
 ---
@@ -80,11 +80,11 @@ recorded: 2026-11-17T11:31:39.712Z
 
 | Finding | Severity | Disposition | Source |
 |---------|----------|-------------|--------|
-| CR-01 | critical | open | - |
-| WR-01 | warning | open | - |
-| WR-02 | warning | open | - |
+| CR-01 | critical | fixed | gsd-code-fixer 4474bc9 |
+| WR-01 | warning | fixed | gsd-code-fixer 98d0d61 |
+| WR-02 | warning | fixed | gsd-code-fixer 88a972d |
 | WR-03 | warning | open | - |
-| WR-04 | warning | open | - |
+| WR-04 | warning | fixed | gsd-code-fixer 81e274c |
 | WR-05 | warning | open | - |
 | WR-06 | warning | open | - |
 | IN-01 | info | open | - |
