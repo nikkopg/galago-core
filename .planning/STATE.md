@@ -5,17 +5,17 @@ milestone_name: Tool-inferred dropdowns + per-tool concurrency lanes
 current_phase: 09
 current_phase_name: Supervised Live Two-Tool Proof
 status: executing
-stopped_at: Completed 09-02-PLAN.md
-last_updated: "2026-11-17T04:17:42.545Z"
+stopped_at: Completed 09-03-PLAN.md
+last_updated: "2026-11-17T05:15:57.952Z"
 last_activity: 2026-11-17
 last_activity_desc: Phase 09 execution started
-state_head: 529508285a4b54c62a17fdb0afee97b2a9702c3f
+state_head: e563f3b777fe70842112852cbec763fb9c6e242f
 progress:
   total_phases: 4
   completed_phases: 3
   total_plans: 37
-  completed_plans: 27
-  percent: 73
+  completed_plans: 28
+  percent: 75
 ---
 
 # Project State
@@ -31,11 +31,11 @@ decides every recovery action; the web app never acts on its own or pre-selects 
 ## Current Position
 
 Phase: 09 (Supervised Live Two-Tool Proof) — EXECUTING
-Plan: 3 of 12
+Plan: 4 of 12
 Status: Ready to execute
 Last activity: 2026-11-17 — Phase 09 execution started
 
-Progress: [███████░░░] 73% (3 of 4 v1.2 phases)
+Progress: [████████░░] 75% (3 of 4 v1.2 phases)
 
 ## Performance Metrics
 
@@ -118,6 +118,7 @@ Progress: [███████░░░] 73% (3 of 4 v1.2 phases)
 | Phase 08 P10 | 8 min | 2 tasks | 3 files |
 | Phase 09 P01 | 7 min | 3 tasks | 5 files |
 | Phase 09 P02 | 6 min | 2 tasks | 3 files |
+| Phase 09 P03 | 58 min | 3 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -222,6 +223,9 @@ Recent decisions affecting current work:
 - [Phase 09]: Store protocol 15 unreadable (NOT_FOUND on :3010); 09-01 event/drill protocols authored from GAL-02 template plus runbook rows 2a-2/3a-2; 09-03 must confirm cycle parameters and the operator-typed spare pair
 - [Phase 09]: 09-02: IN-01 recorded as skipped (accepted and pinned by dispatch-span test), not deferred — Disposition legend has no accepted value; deferred would imply a later fix
 - [Phase 09]: 09-02: D-09 test proven able to fail via enqueue-while-halted refusal removal; a claimEligible-only weakening is masked by layered guards — Seven claim/picker/halt mutations pass; only the _startLanes enqueue refusal removal fails case 2
+- [Phase 09]: D-02 amended by the user (2026-11-17): third plate starts on nest-3, x1 nest-3 to nest-1 during the F.A.S.T. leg, out1 tray1/5 to nest-3, out2 unchanged
+- [Phase 09]: D-03 dropped by the user: no -x2 return leg; operator restores the rig by hand after event 2
+- [Phase 09]: Protocol params keep spare_a_* (overlap source) and spare_b_* (overlap destination) names; out1_dest_* required with no default
 
 ### Pending Todos
 
@@ -229,7 +233,7 @@ None. (The F.A.S.T. plate-list todo shipped in Phase 7, PLT-01..09.)
 
 ### Blockers/Concerns
 
-- [Phase 6]: `06-REVIEW-DISPOSITION.md` has 7 open info advisories, none blocking: re-review IN-01 device
+- [Phase 6]: `06-REVIEW-DISPOSITION.md` has 7 open info advisories, blocking: re-review IN-01 device
   unbind also clears variable-bound deck/nest; IN-02 unbind rule duplicated in modal + drawer with no
   host-level test; IN-03 a bound variable missing from the list cannot be unbound from the picker;
   first-review IN-01..IN-04 (refresh `isRefreshing` outside `finally`, `clearToolStore` generation bump
@@ -261,7 +265,7 @@ None. (The F.A.S.T. plate-list todo shipped in Phase 7, PLT-01..09.)
   accepted abort whose step then resolves does not dequeue the rest of the run; WR-03
   `RunStateMonitor.snapshot()` `structuredClone` can throw on a non-cloneable `pause.detail`;
   WR-04 `complete()` has no `_hasItem` guard, so the Clear All race logs "Item N not found";
-  IN-01 `tip_reuse` select has no default value. Advisory; none violates a Phase 2 must-have.
+  IN-01 `tip_reuse` select has no default value. Advisory; violates a Phase 2 must-have.
 - [Phase 2]: WR-05 (`d400c42`) supersedes D-08: the "head will move" note is now per-action
   (`runControlMovesHead`), hidden for the F.A.S.T. soft Pause.
 - [Phase 3]: `03-REVIEW-DISPOSITION.md` has 4 open advisories after the 03-07 re-review: WR-01 the
@@ -270,7 +274,7 @@ None. (The F.A.S.T. plate-list todo shipped in Phase 7, PLT-01..09.)
   whitespace-sensitive. The earlier WR-01/WR-02 `fixed` rows (5191ffe) were dropped by id reuse.
   The G-03-3 live fit retest was waived by the user (marked pass).
 
-- [Phase 8]: `08-REVIEW-DISPOSITION.md` has 11 open advisories, none breaking a success criterion: WR-01
+- [Phase 8]: `08-REVIEW-DISPOSITION.md` has 11 open advisories, breaking a success criterion: WR-01
   non-canonical `lane`/`laneBarrier` values silently ignored; WR-04 `ErrorBanner` declared in render
   remounts the failure list; WR-05 after `clearError()` the first failure's text appears nowhere; WR-07
   the editor says "one at a time" while the lane-status read is loading/failed; IN-01..IN-07. Decide
@@ -278,6 +282,7 @@ None. (The F.A.S.T. plate-list todo shipped in Phase 7, PLT-01..09.)
 - [Phase 8 UAT]: the Gantt chart's default Minutes View makes overlapping lane bars thin slivers; the
   per-lane timestamps on run cards are clearer. Backups `controller/data/{app,queue}.db.bak-pre-uat08`
   were left from the simulated-rig UAT.
+- 09-04 preconditions: STACK failure latch cleared and arm idle (operator-confirmed live), real workcell reselected (currently test), plates on nest-1/nest-2/nest-3 confirmed at the GO gate
 
 ### Quick Tasks Completed
 
@@ -298,8 +303,8 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-17T04:17:42.474Z
-Stopped at: Completed 09-02-PLAN.md
+Last session: 2026-11-17T05:15:57.881Z
+Stopped at: Completed 09-03-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
