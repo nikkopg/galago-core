@@ -1,0 +1,333 @@
+{
+  "capturedAtUtc": "2026-11-17T05:19:17Z",
+  "getAll": {
+    "result": {
+      "data": {
+        "json": [
+          {
+            "commandInfo": {
+              "advancedParameters": {
+                "runAsynchronously": false,
+                "skipExecutionVariable": {
+                  "value": null,
+                  "variable": null
+                }
+              },
+              "command": "transfer",
+              "label": "",
+              "params": {
+                "dest_deck": 3,
+                "dest_plate_id": 1,
+                "dest_start_col": 1,
+                "dest_start_row": "A",
+                "num_cols": 1,
+                "num_rows": 8,
+                "source_deck": 1,
+                "source_plate_id": 1,
+                "source_start_col": 1,
+                "source_start_row": "A",
+                "tip_reuse": "reuse",
+                "volume": 5
+              },
+              "toolId": "FA100056",
+              "toolType": "fast",
+              "tool_info": {
+                "type": "fast"
+              }
+            },
+            "completedAt": "2026-11-16T08:29:00.933Z",
+            "createdAt": "2026-11-16T08:27:59.289Z",
+            "queueId": 27,
+            "runId": "15941cf7dc81e7000",
+            "startedAt": "2026-11-16T08:28:00.789Z",
+            "status": "COMPLETED"
+          },
+          {
+            "commandInfo": {
+              "advancedParameters": {
+                "runAsynchronously": false,
+                "skipExecutionVariable": {
+                  "value": null,
+                  "variable": null
+                }
+              },
+              "command": "transfer",
+              "label": "",
+              "params": {
+                "destination_deck": "tray1",
+                "destination_device": "fa100056",
+                "destination_nest": "5",
+                "destination_transfer_profile": "Default",
+                "labware_profile": "96",
+                "robot": "stack2-6",
+                "source_deck": "deck1",
+                "source_device": "nest-1",
+                "source_nest": "A1",
+                "source_transfer_profile": "Default",
+                "step_key": "",
+                "timeout_s": 300
+              },
+              "toolId": "STACK2-6",
+              "toolType": "stack",
+              "tool_info": {
+                "type": "stack"
+              }
+            },
+            "completedAt": "2026-11-16T11:22:30.065Z",
+            "createdAt": "2026-11-16T11:21:42.675Z",
+            "queueId": 28,
+            "runId": "15946c7e0981e7000",
+            "startedAt": "2026-11-16T11:21:55.400Z",
+            "status": "COMPLETED"
+          },
+          {
+            "commandInfo": {
+              "advancedParameters": {
+                "runAsynchronously": false,
+                "skipExecutionVariable": {
+                  "value": null,
+                  "variable": null
+                }
+              },
+              "command": "transfer",
+              "label": "",
+              "params": {
+                "destination_deck": "tray1",
+                "destination_device": "fa100056",
+                "destination_nest": "6",
+                "destination_transfer_profile": "Default",
+                "labware_profile": "96",
+                "robot": "stack2-6",
+                "source_deck": "deck`",
+                "source_device": "nest-2",
+                "source_nest": "A1",
+                "source_transfer_profile": "Default",
+                "step_key": "",
+                "timeout_s": 300
+              },
+              "toolId": "STACK2-6",
+              "toolType": "stack",
+              "tool_info": {
+                "type": "stack"
+              }
+            },
+            "completedAt": "2026-11-16T11:23:00.714Z",
+            "createdAt": "2026-11-16T11:21:42.675Z",
+            "queueId": 29,
+            "runId": "15946c7e0981e7000",
+            "startedAt": "2026-11-16T11:22:31.565Z",
+            "status": "COMPLETED"
+          },
+          {
+            "commandInfo": {
+              "advancedParameters": {
+                "runAsynchronously": false,
+                "skipExecutionVariable": {
+                  "value": null,
+                  "variable": null
+                }
+              },
+              "command": "transfer",
+              "label": "",
+              "params": {
+                "dest_deck": 6,
+                "dest_plate_id": 1,
+                "dest_start_col": 1,
+                "dest_start_row": "A",
+                "num_cols": 1,
+                "num_rows": 8,
+                "source_deck": 5,
+                "source_plate_id": 1,
+                "source_start_col": 1,
+                "source_start_row": "A",
+                "tip_reuse": "reuse",
+                "volume": 10
+              },
+              "toolId": "FA100056",
+              "toolType": "fast",
+              "tool_info": {
+                "type": "fast"
+              }
+            },
+            "completedAt": "2026-11-16T11:23:51.229Z",
+            "createdAt": "2026-11-16T11:21:42.675Z",
+            "queueId": 30,
+            "runId": "15946c7e0981e7000",
+            "startedAt": "2026-11-16T11:23:02.215Z",
+            "status": "COMPLETED"
+          },
+          {
+            "commandInfo": {
+              "advancedParameters": {
+                "runAsynchronously": false,
+                "skipExecutionVariable": {
+                  "value": null,
+                  "variable": null
+                }
+              },
+              "command": "transfer",
+              "label": "",
+              "params": {
+                "destination_deck": "deck`",
+                "destination_device": "nest-2",
+                "destination_nest": "A1",
+                "destination_transfer_profile": "Default",
+                "labware_profile": "96",
+                "robot": "stack2-6",
+                "source_deck": "tray1",
+                "source_device": "fa100056",
+                "source_nest": "5",
+                "source_transfer_profile": "Default",
+                "step_key": "",
+                "timeout_s": 300
+              },
+              "toolId": "STACK2-6",
+              "toolType": "stack",
+              "tool_info": {
+                "type": "stack"
+              }
+            },
+            "completedAt": "2026-11-16T11:24:21.981Z",
+            "createdAt": "2026-11-16T11:21:42.675Z",
+            "queueId": 31,
+            "runId": "15946c7e0981e7000",
+            "startedAt": "2026-11-16T11:23:52.731Z",
+            "status": "COMPLETED"
+          },
+          {
+            "commandInfo": {
+              "advancedParameters": {
+                "runAsynchronously": false,
+                "skipExecutionVariable": {
+                  "value": null,
+                  "variable": null
+                }
+              },
+              "command": "transfer",
+              "label": "",
+              "params": {
+                "destination_deck": "deck1",
+                "destination_device": "nest-1",
+                "destination_nest": "A1",
+                "destination_transfer_profile": "Default",
+                "labware_profile": "96",
+                "robot": "stack2-6",
+                "source_deck": "tray1",
+                "source_device": "fa100056",
+                "source_nest": "6",
+                "source_transfer_profile": "Default",
+                "step_key": "",
+                "timeout_s": 300
+              },
+              "toolId": "STACK2-6",
+              "toolType": "stack",
+              "tool_info": {
+                "type": "stack"
+              }
+            },
+            "completedAt": "2026-11-16T11:24:57.940Z",
+            "createdAt": "2026-11-16T11:21:42.675Z",
+            "queueId": 32,
+            "runId": "15946c7e0981e7000",
+            "startedAt": "2026-11-16T11:24:23.483Z",
+            "status": "COMPLETED"
+          }
+        ],
+        "meta": {
+          "values": {
+            "0.completedAt": [
+              "Date"
+            ],
+            "0.createdAt": [
+              "Date"
+            ],
+            "0.startedAt": [
+              "Date"
+            ],
+            "1.completedAt": [
+              "Date"
+            ],
+            "1.createdAt": [
+              "Date"
+            ],
+            "1.startedAt": [
+              "Date"
+            ],
+            "2.completedAt": [
+              "Date"
+            ],
+            "2.createdAt": [
+              "Date"
+            ],
+            "2.startedAt": [
+              "Date"
+            ],
+            "3.completedAt": [
+              "Date"
+            ],
+            "3.createdAt": [
+              "Date"
+            ],
+            "3.startedAt": [
+              "Date"
+            ],
+            "4.completedAt": [
+              "Date"
+            ],
+            "4.createdAt": [
+              "Date"
+            ],
+            "4.startedAt": [
+              "Date"
+            ],
+            "5.completedAt": [
+              "Date"
+            ],
+            "5.createdAt": [
+              "Date"
+            ],
+            "5.startedAt": [
+              "Date"
+            ]
+          }
+        }
+      }
+    }
+  },
+  "getAllRuns": {
+    "result": {
+      "data": {
+        "json": [
+          {
+            "commands_count": 1,
+            "id": "15941cf7dc81e7000",
+            "run_type": "test",
+            "status": "CREATED"
+          },
+          {
+            "commands_count": 5,
+            "id": "15946c7e0981e7000",
+            "run_type": "test",
+            "status": "CREATED"
+          }
+        ]
+      }
+    }
+  },
+  "laneStatus": {
+    "result": {
+      "data": {
+        "json": {
+          "failures": [],
+          "haltReason": null,
+          "halted": false,
+          "hasLaneRows": false,
+          "laneMode": false,
+          "overflow": 0,
+          "queueBusy": false,
+          "runningLanes": []
+        }
+      }
+    }
+  }
+}

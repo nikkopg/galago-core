@@ -204,7 +204,43 @@ between nest-1 and nest-3 on 2026-11-17 ended `failed` (see the nest-3 testing n
 
 ## Deploy (D-13), runbook row 3a-11
 
-_Pending (09-04)._
+### Pre-deploy record (09-04 Task 1, 2026-11-17, Claude, reads and offline tests only)
+
+| Item | Result |
+|------|--------|
+| D-09 gate: `npx vitest run` | 50 files, 1415 tests passed |
+| `npx tsc --noEmit` | clean (exit 0) |
+| `prettier --check` on `laneOneSend`, `staticScan`, `liveLanesProtocol` tests | all matched files use Prettier code style |
+| 20x loop of `lanes` / `laneHalt` / `laneOneSend` / `liveLanesProtocol` | `ENGINE_LOOP_OK` (20 of 20 runs green) |
+| `.dockerignore` | committed unchanged by explicit path as `63d61e4` (`chore(09): track the .dockerignore the galago-web build relies on`); the commit touches only `.dockerignore`; contents: `controller/node_modules`, `controller/.next`, `.git` |
+| Build HEAD | `63d61e4e8a4b75b6a3b280acdaeb1b283b080782` |
+| `git status --porcelain -- controller` | empty |
+| `git diff --quiet d09a047 HEAD -- controller ':!controller/test'` | exit 0 (no production change since Phase 8) |
+| Root `.env` | absent (`test -e`, content never read) |
+| Pre-deploy baseline and snapshot | `evidence/20261117T051917Z-pre-deploy.baseline.txt`, `evidence/20261117T051917Z-pre-deploy.queue.json`. No run RUNNING (`/api/runs` count 0), `laneStatus` `laneMode:false`, `halted:false`, `queueBusy:false`. Listener PIDs: 8081 `6872`, 11010 `7490`, 40012 `7491`, 40001 `2320808`. `STACK2-6.log` 12 Transfer lines, ledger sha256 `5de43c84...670b`, 9 records: identical to the 05:06:37Z reference baseline, so no real move since the operator's nest testing |
+
+### STOP: the production galago-web container and image do not exist on this host
+
+Both pre-flight forms (05:18:40Z and 05:18:41Z) ended `BLOCKED`, exit 1, with one `missing:` line:
+`Command_Transfer under /app/gen-interfaces in container galago-web`. Cause, read only:
+
+- `docker ps -a` lists exactly one galago container: `galago-web-dev` (image `galago-core-galago-web-dev`, id
+  `a331fa4d812a`, started 2026-11-16T22:51:51Z, from `docker-compose.dev.yml`). There is no container named
+  `galago-web`.
+- `docker images` lists no `galago-core-galago-web` image at all, so neither `:latest` nor a
+  `rollback-pre-lanes` anchor can be created or compared, and the "running image equals `:latest`" check
+  (Task 1 step 6, Task 3 step 1) has nothing to compare.
+- The dev container serves :3010 with the working tree bind-mounted (`./controller` to `/app`),
+  `NODE_ENV=development`, `GALAGO_PARALLEL_LANES` empty. Its store is `controller/data/app.db` on the host
+  (bind mount). The production compose file uses the named volume `galago-core_sqlite_data` instead, whose
+  contents were not inspected.
+- The same pre-flight with `GAL07_WEB_CONTAINER=galago-web-dev` (read only) ends `PREFLIGHT OK`, exit 0, so the
+  dev container already carries the Command_Transfer bundle and the rest of the pre-flight is healthy.
+
+A production `docker compose up -d --build` would therefore not be a rebuild but a first production start
+on port 3010, which the dev container holds, against a different store. That is outside what D-13 describes,
+so nothing was tagged, built, started or stopped and no GO was requested. Returned to the user (CONTEXT
+domain note: a defect found at deploy stops the work).
 
 ## Freeze drill (LIV-02), row 3a-12
 
@@ -247,3 +283,5 @@ All files are under `evidence/`, named `<UTC stamp>-<label>.<kind>`.
 | `20261117T045034Z-spare-check.txt` | operator replies to the spare-nest check (list_devices, two estimates, reach) | 09-03 |
 | `20261117T045034Z-post-spare-check.baseline.txt` | baseline taken at 04:50:34Z; showed the operator nest-test delta | 09-03 |
 | `20261117T050637Z-post-operator-nest-test.baseline.txt` | new reference baseline for later GO gates | 09-03 |
+| `20261117T051917Z-pre-deploy.baseline.txt` | pre-deploy baseline (same Transfer count and ledger sha as the reference) | 09-04 |
+| `20261117T051917Z-pre-deploy.queue.json` | pre-deploy queue snapshot | 09-04 |
