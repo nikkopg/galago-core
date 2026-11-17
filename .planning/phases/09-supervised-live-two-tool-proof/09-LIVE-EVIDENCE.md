@@ -29,7 +29,9 @@ in this file or under `evidence/` (runbook credential rule).
 | Image IDs (running, rollback anchor, new) | dev image `a331fa4d812a...` before and after (no build, no anchor); container `18b8638fc1c8` to `855c334135eb` (09-04, Deploy section) | Deploy section |
 | galago-core HEAD at each event | deploy: `486cf09` (09-04); drill: `2de6b0b` at the pre-drill-go baseline (09-06); event 1: _pending_; event 2: _pending_ | |
 | galago-tools SHA re-verified at each baseline | pre-spare-check: `d53da53` (above); others: _pending_ | |
-| Runbook SHA (galago-tools) after rows 3a-11..3a-15 | _pending (09-08, 09-12)_ | |
+| Runbook rows 3a-11 / 3a-12 commit (galago-tools, branch `feat/stack-tool`) | `034867ca8aec9cb5ed83140306ebd89bf61b9ae7` (`034867c`), `docs(gal-07): findings 3a-11 lanes-on deploy and 3a-12 lanes drill (galago-core Phase 9)`; `git show --name-only` lists only `docs/runbooks/gal-07-live-handoff.md` (5 insertions, 1 deletion); `TestRunbookContent` 5 tests OK before and after; "Reply: literal go" count 3; no credential or Bearer value in the rows (09-08) | `git -C ~/data/nikko/galago-tools show --stat HEAD` |
+| galago-core `vendor/galago-tools` pin after that commit | unchanged: `git diff --quiet HEAD -- vendor/galago-tools` exit 0 and `git submodule status vendor/galago-tools` still `d53da5384f9f...` (`v2-4-gd53da53`). No re-pin (D-17). The commit is docs only, so the deployed galago-tools code is unchanged and no galago-tools redeploy happened (D-07). The galago-tools working tree's other changes (deletions under `.planning/phases/04-*`, `.planning/state.json`, untracked `tools/fast-mcp-locks/`) are the user's and were not staged | 09-08 Task 2 |
+| Runbook SHA (galago-tools) after rows 3a-13..3a-15 | _pending (09-12)_ | |
 
 ## D-05 overlap rule
 
@@ -202,7 +204,7 @@ between nest-1 and nest-3 on 2026-11-17 ended `failed` (see the nest-3 testing n
    nest-1, plate 2 on nest-2, third plate on nest-3 (event 2 and event 1 alike), confirmed by the operator
    at the GO gate (no `get_labware_presence` read exists yet).
 
-## Deploy (D-13), runbook row 3a-11
+## Deploy (D-13), runbook row 3a-11 (recorded in galago-tools `034867c`, 09-08)
 
 ### Pre-deploy record (09-04 Task 1, 2026-11-17, Claude, reads and offline tests only)
 
@@ -353,7 +355,7 @@ touched.
 Status: DEPLOYED (decision B). `galago-web-dev` runs with lanes on. Not covered by the original D-13 wording and
 recorded as such: no production container, no `rollback-pre-lanes` image anchor.
 
-## Freeze drill (LIV-02), row 3a-12
+## Freeze drill (LIV-02), row 3a-12 (recorded in galago-tools `034867c`, 09-08)
 
 ### Rig (09-05, D-10), 2026-11-17
 
