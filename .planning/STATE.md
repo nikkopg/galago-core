@@ -5,17 +5,17 @@ milestone_name: Tool-inferred dropdowns + per-tool concurrency lanes
 current_phase: 09
 current_phase_name: Supervised Live Two-Tool Proof
 status: executing
-stopped_at: Completed 09-01-PLAN.md
-last_updated: "2026-11-17T04:13:06.710Z"
+stopped_at: Completed 09-02-PLAN.md
+last_updated: "2026-11-17T04:17:42.545Z"
 last_activity: 2026-11-17
 last_activity_desc: Phase 09 execution started
-state_head: 27e142350d2b66e39e8bc5bf6ecef1587276223d
+state_head: 529508285a4b54c62a17fdb0afee97b2a9702c3f
 progress:
   total_phases: 4
   completed_phases: 3
   total_plans: 37
-  completed_plans: 26
-  percent: 70
+  completed_plans: 27
+  percent: 73
 ---
 
 # Project State
@@ -31,11 +31,11 @@ decides every recovery action; the web app never acts on its own or pre-selects 
 ## Current Position
 
 Phase: 09 (Supervised Live Two-Tool Proof) — EXECUTING
-Plan: 2 of 12
+Plan: 3 of 12
 Status: Ready to execute
 Last activity: 2026-11-17 — Phase 09 execution started
 
-Progress: [███████░░░] 70% (3 of 4 v1.2 phases)
+Progress: [███████░░░] 73% (3 of 4 v1.2 phases)
 
 ## Performance Metrics
 
@@ -117,6 +117,7 @@ Progress: [███████░░░] 70% (3 of 4 v1.2 phases)
 | Phase 08 P09 | 10min | 3 tasks | 7 files |
 | Phase 08 P10 | 8 min | 2 tasks | 3 files |
 | Phase 09 P01 | 7 min | 3 tasks | 5 files |
+| Phase 09 P02 | 6 min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -219,6 +220,8 @@ Recent decisions affecting current work:
 - [Phase 08]: 08-10: drawer lane controls fed by optional protocolCommands prop; run-page drawer passes none (read-only, no flags)
 - [Phase 08]: 08-10: script preview falls back to legacy list when lane summary has no groups; sentences still shown via laneWarnings
 - [Phase 09]: Store protocol 15 unreadable (NOT_FOUND on :3010); 09-01 event/drill protocols authored from GAL-02 template plus runbook rows 2a-2/3a-2; 09-03 must confirm cycle parameters and the operator-typed spare pair
+- [Phase 09]: 09-02: IN-01 recorded as skipped (accepted and pinned by dispatch-span test), not deferred — Disposition legend has no accepted value; deferred would imply a later fix
+- [Phase 09]: 09-02: D-09 test proven able to fail via enqueue-while-halted refusal removal; a claimEligible-only weakening is masked by layered guards — Seven claim/picker/halt mutations pass; only the _startLanes enqueue refusal removal fails case 2
 
 ### Pending Todos
 
@@ -295,8 +298,8 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-17T04:13:06.637Z
-Stopped at: Completed 09-01-PLAN.md
+Last session: 2026-11-17T04:17:42.474Z
+Stopped at: Completed 09-02-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
