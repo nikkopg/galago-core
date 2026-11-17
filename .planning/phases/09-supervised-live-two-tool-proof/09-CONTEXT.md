@@ -161,6 +161,10 @@ change, any change to the tool servers' own discipline, upstream PRs.
   Freeze lanes, or any recovery control, after their typed GO. Claude never drives the queue or a tool
   while motion is possible. A live failure is handled by the operator per runbook D-11 (inspect, then
   acknowledge). There is no re-send, no restart and no state or ledger deletion.
+  **Amendment (2026-11-17, narrow, on user request):** Claude may perform the uat-sim sim-rig setup
+  (workcell, SIM tools, Simulate, Configure) on user request 2026-11-17; no motion is possible on sim
+  tools. D-18 is otherwise unchanged: only the operator presses Start/Freeze/recovery, and Claude never
+  drives a real tool. (Trigger: the user replied "Can you set it up for me" to the Task 2 operator steps.)
 - **D-19:** **LIV-03 records:** PROJECT.md (move "Per-toolId concurrency lanes proven live" to
   Validated, with the evidence pointer and the queue's single-flight wording updated for lanes), the lanes
   todo's resolution note (then move it to `todos/completed/`), and the runbook's parallel cycle (after
