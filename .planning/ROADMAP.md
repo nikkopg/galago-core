@@ -176,7 +176,7 @@ resolution is recorded.
   2. A simulated-failure drill freezes both lanes, with no automated motion.
   3. PROJECT.md, the lanes todo and (after the live run passes) the galago-tools runbook record the resolution.
 
-**Plans**: 8/12 plans executed
+**Plans**: 9/12 plans executed
 Plans:
 **Wave 1** *(code gate, fakes only)*
 - [x] 09-01-PLAN.md — Tracer: event-1, event-2 and sim-drill lanes protocols, proven offline through the real script executor, validateLanes and the queue with fake tools
@@ -201,7 +201,7 @@ Plans:
 - [x] 09-08-PLAN.md — galago-tools runbook findings rows 3a-11 (deploy) and 3a-12 (drill)
 
 **Wave 8** *(needs the D-02 pair-confirmed verdict)*
-- [ ] 09-09-PLAN.md — Live event 1: preparation, typed GO, operator run (STACK estimate overlaps the F.A.S.T. leg)
+- [x] 09-09-PLAN.md — Live event 1: preparation, typed GO, operator run (STACK estimate overlaps the F.A.S.T. leg)
 
 **Wave 9**
 - [ ] 09-10-PLAN.md — Event 1 D-05 verdict, third plate staged on spare A
@@ -223,7 +223,7 @@ Plans:
 | 6. STACK Dropdowns | 5/5 | Complete    | 2026-11-06 |
 | 7. F.A.S.T. Plate Dropdowns | 10/10 | Complete    | 2026-11-16 |
 | 8. Concurrency Lanes | 10/10 | Complete    | 2026-11-17 |
-| 9. Supervised Live Two-Tool Proof | 8/12 | In Progress | - |
+| 9. Supervised Live Two-Tool Proof | 9/12 | In Progress | - |
 
 ## Backlog
 
