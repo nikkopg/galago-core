@@ -355,6 +355,55 @@ recorded as such: no production container, no `rollback-pre-lanes` image anchor.
 
 ## Freeze drill (LIV-02), row 3a-12
 
+### Rig (09-05, D-10), 2026-11-17
+
+The drill runs on the deployed lanes-on build (`galago-web-dev`, decision B), inside an isolated `uat-sim`
+workcell, against two simulated tool servers on host ports 40091 and 40092. The real STACK2-6 (:40012) and
+FA100056 (:40001) stay connected and idle. Claude sends nothing to any tool; only the sim servers are started.
+
+Launch commands (RESEARCH A1: the same module form as the real servers' own command lines, other ports; run by
+`tools/phase9-ctl.sh start-sim stack|fast`, which refuses a port that already listens):
+
+| Sim | Command | cwd | Port | Log |
+|-----|---------|-----|------|-----|
+| STACK | `~/data/nikko/galago-tools/.venv/bin/python3 -m tools.stack.server --port=40091` under `setsid -f nohup`, stdin `/dev/null` | `~/data/nikko/galago-tools` | 40091 | `~/.local/state/galago-phase9/sim-stack-20261117T083904Z.log` |
+| F.A.S.T. | `~/data/nikko/galago-tools/.venv/bin/python3 -m tools.fast.server --port=40092` under `setsid -f nohup`, stdin `/dev/null` | `~/data/nikko/galago-tools` | 40092 | `~/.local/state/galago-phase9/sim-fast-20261117T083905Z.log` |
+
+Sim PIDs (current, from `ss -ltnp`): SIM-STACK `23042` on 40091, SIM-FAST `23184` on 40092. Neither equals a real
+listener PID (8081 `6872`, 11010 `7490`, 40012 `7491`, 40001 `2320808`). The PID files are
+`~/.local/state/galago-phase9/sim-stack.pid` and `sim-fast.pid`. Stop only with
+`phase9-ctl.sh stop-sim stack|fast` (kills one PID, never by name, 09-07).
+
+Launch history, stated plainly: the first launch (SIM-STACK pid `17911`, SIM-FAST pid `20917`, 08:36 to 08:38Z)
+was stopped and relaunched (pids above, 08:39Z) after a defect in `phase9-ctl.sh start-sim` was found and fixed
+(see 09-05-SUMMARY, Rule 1): the old form left a waiting parent shell that kept the caller's stdout pipe open,
+so `PID=$(phase9-ctl.sh start-sim ...)` hung until the harness timeout. The fix is `setsid -f`. Both stops used
+`stop-sim`, which refused nothing and signalled only the two sim PIDs. The sim servers had not been configured
+yet, so nothing was lost.
+
+The sim servers start unconfigured and are made simulated only by the operator's Configure with Simulate on
+(base server `Configure` returns SUCCESS before `_configure` when `simulated` is set; in simulated mode STACK
+`_dispatchCommand` never opens the manager connection, lock or ledger).
+
+Baselines (all by `phase9-ctl.sh baseline`, reads only):
+
+| Baseline | File | Result |
+|----------|------|--------|
+| pre-drill | `evidence/20261117T083601Z-pre-drill.baseline.txt`, `.queue.json`, `.tracefiles.txt` | `laneMode:true`, `halted:false`, `queueBusy:false`; listeners 8081 `6872`, 11010 `7490`, 40012 `7491`, 40001 `2320808`, 40091 and 40092 empty; trace folder `1794670020`, files `FA100056.log`, `STACK2-6.log`, `Tool Box.log`, `web_server.log`; `STACK2-6.log` 12 "Running command Transfer" (52 "Running command"); `FA100056.log` 1 Transfer (4 "Running command"); ledger sha256 `5de43c84...670b`, 9 records. Identical to the post-deploy baseline except label, time and HEAD |
+| post-sim-launch (first launch) | `evidence/20261117T083845Z-post-sim-launch.baseline.txt`, `.tracefiles.txt` | Only diff vs pre-drill: label, time, and 40091 `17911` / 40092 `20917` now listen. Real PIDs, trace folder, file list, counts and ledger sha unchanged. Superseded by the relaunch below |
+| post-sim-relaunch | `evidence/20261117T083912Z-post-sim-relaunch.baseline.txt`, `.tracefiles.txt` | Only diff vs pre-drill: label, time, and 40091 `23042` / 40092 `23184` listen. Real PIDs unchanged, trace folder `1794670020` unchanged, file list identical (`diff` empty), `STACK2-6.log` 12 Transfer, `FA100056.log` 1 Transfer, ledger sha and 9 records unchanged. A hand-launched server wrote only to its own sim log |
+
+`phase9-ctl.sh check-guards`: `refusals verified for 8 real-listener/sim-port pairs`, `GUARDS OK`.
+
+Selected workcell as found (for the switch back): `test` (workcellId 1, location `test`), the only workcell in the
+store; it holds `STACK2-6` (id 5, `host.docker.internal:40012`, manager 10.150.1.125:5005) and `FA100056` (id 6,
+`host.docker.internal:40001`, host 10.150.1.125:5003). The real tools live in `test`; there is no separate
+"real" workcell. `uat-sim` does not exist yet (RESEARCH A2 confirmed): the operator creates it in the rig step.
+While `uat-sim` is selected, `/api/tools` hides STACK2-6 and FA100056 (`tool.getAll` is workcell-scoped), so
+pre-flight check 6 blocks; 09-07 selects `test` again before event 1.
+
+Rig configuration by the operator (D-18) and Claude's read-back: _pending (Task 2 checkpoint)._
+
 ### Scenario 1
 
 _Pending (09-05 to 09-07)._
@@ -397,3 +446,6 @@ All files are under `evidence/`, named `<UTC stamp>-<label>.<kind>`.
 | `20261117T051917Z-pre-deploy.baseline.txt` | pre-deploy baseline (same Transfer count and ledger sha as the reference) | 09-04 |
 | `20261117T051917Z-pre-deploy.queue.json` | pre-deploy queue snapshot | 09-04 |
 | `20261117T083332Z-post-deploy.baseline.txt` | post-deploy baseline (same PIDs, Transfer count and ledger sha as pre-deploy; laneMode true) | 09-04 |
+| `20261117T083601Z-pre-drill.baseline.txt`, `.queue.json`, `.tracefiles.txt` | pre-drill baseline, queue snapshot and trace file names | 09-05 |
+| `20261117T083845Z-post-sim-launch.baseline.txt`, `.tracefiles.txt` | baseline after the first sim launch (superseded by the relaunch) | 09-05 |
+| `20261117T083912Z-post-sim-relaunch.baseline.txt`, `.tracefiles.txt` | baseline after the sim relaunch with the fixed `start-sim`; real tools untouched | 09-05 |
