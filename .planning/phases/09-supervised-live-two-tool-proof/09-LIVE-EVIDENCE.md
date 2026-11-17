@@ -860,6 +860,111 @@ Orchestrator read at 10:45:03Z: `laneStatus` `laneMode:true`, `halted:false`, `h
 
 Capture status: the post-run capture is complete and every count matches the expected deltas; all four STACK keys are done/ran and every row is COMPLETED. Whether the overlap met the D-05 rule, and the event-1 verdict, are judged in 09-10, not here.
 
+### Event-1 analysis against D-05 (09-10 Task 1), 2026-11-17
+
+Judged by Claude from the copied files only (`evidence/20261117T104534Z-e1-after.queue.json`, `...-e1.STACK2-6.log`,
+`...-e1.FA100056.log`, `...-e1.ledger.json`, the pre-e1 and e1-after baselines). Claude sent nothing to any tool (D-18). The
+operator reported "event 1 done" at 10:45:03Z with no failure.
+
+**1. Per-lane rows** (run `1596ecfad681e7000`, batch label LIV01-E1, queueId order inside each lane, raw ms are epoch ms from
+`startedAt` / `completedAt`; the lane is the row's `advancedParameters.lane`, absent meaning the primary lane; no two rows
+share a timestamp, so nothing needed re-ordering; q63 started and completed 1 ms apart). All 7 rows `COMPLETED`.
+
+Primary lane (STACK2-6 and Tool Box note):
+
+| queueId | Command | step_key suffix | Status | startedAt (raw ms) | startedAt (ISO UTC) | completedAt (raw ms) | completedAt (ISO UTC) |
+|---------|---------|-----------------|--------|--------------------|---------------------|----------------------|-----------------------|
+| 63 | Tool Box note (key base) | none | COMPLETED | 1794912073401 | 2026-11-17T10:41:13.401Z | 1794912073402 | 2026-11-17T10:41:13.402Z |
+| 64 | STACK transfer nest-1 to fa100056 tray1/5 | `-in1` | COMPLETED | 1794912074903 | 2026-11-17T10:41:14.903Z | 1794912105053 | 2026-11-17T10:41:45.053Z |
+| 65 | STACK transfer nest-2 to fa100056 tray1/6 | `-in2` | COMPLETED | 1794912106555 | 2026-11-17T10:41:46.555Z | 1794912135121 | 2026-11-17T10:42:15.121Z |
+| 67 | STACK `get_transfer_estimate` nest-3 to nest-1 | none (read) | COMPLETED | 1794912136623 | 2026-11-17T10:42:16.623Z | 1794912136789 | 2026-11-17T10:42:16.789Z |
+| 68 | STACK transfer tray1/5 to nest-1 (`laneBarrier`) | `-out1` | COMPLETED | 1794912208820 | 2026-11-17T10:43:28.820Z | 1794912238179 | 2026-11-17T10:43:58.179Z |
+| 69 | STACK transfer tray1/6 to nest-2 | `-out2` | COMPLETED | 1794912239679 | 2026-11-17T10:43:59.679Z | 1794912268922 | 2026-11-17T10:44:28.922Z |
+
+Lane `fast` (FA100056):
+
+| queueId | Command | step_key suffix | Status | startedAt (raw ms) | startedAt (ISO UTC) | completedAt (raw ms) | completedAt (ISO UTC) |
+|---------|---------|-----------------|--------|--------------------|---------------------|----------------------|-----------------------|
+| 66 | F.A.S.T. transfer, `lane: fast`, `laneBarrier` | none (F.A.S.T. has no step_key) | COMPLETED | 1794912136425 | 2026-11-17T10:42:16.425Z | 1794912208134 | 2026-11-17T10:43:28.134Z |
+
+(Queue order across lanes is by queueId: 66 sits before 67 only by enqueue order; the lanes claim independently.)
+
+**2. D-05 containment clauses** (`So`, `Eo` = row 67; `Sf`, `Ef` = row 66; tolerance 1500 ms; all numbers raw ms):
+
+- `So` = 1794912136623, `Eo` = 1794912136789 (the estimate window is 166 ms).
+- `Sf` = 1794912136425, `Ef` = 1794912208134 (the F.A.S.T. window is 71709 ms).
+
+| Clause | Computation | Result |
+|--------|-------------|--------|
+| `So >= Sf - 1500` | 1794912136623 >= 1794912134925 (margin 1698 ms; in fact `So - Sf` = +198 ms, the estimate started after the F.A.S.T. step, so the tolerance was not needed) | **holds** |
+| `Eo <= Ef` | 1794912136789 <= 1794912208134 (the estimate finished 71345 ms before the F.A.S.T. step) | **holds** |
+| `min(Eo, Ef) - max(So, Sf) > 0` | min = 1794912136789 (`Eo`), max = 1794912136623 (`So`), difference = 166 ms, strictly positive | **holds** (not a touch: 166 ms, neither `Eo = Sf` nor `So = Ef`) |
+
+The estimate window lies wholly inside the F.A.S.T. window `[Sf, Ef]`. The 166 ms intersection is short because a real-mode
+`get_transfer_estimate` is one manager request (flagged in the plan); containment, not duration, is the test.
+
+**3. Tool logs** (log lines are local UTC+7, converted to UTC; the log lines' own times; the F.A.S.T. HTTP `Date` header
+is NOT used, it reads `Sat, 31 Oct 2026` on the instrument clock; the web UI's `GET /status` polls are not counted as run
+progress):
+
+| Log line | Local | UTC |
+|----------|-------|-----|
+| `FA100056.log` "Running command Transfer" (line 656 of the excerpt) | 2026-11-17 17:42:16 | 10:42:16 |
+| `STACK2-6.log` "Running command GetTransferEstimate" (line 921) | 2026-11-17 17:42:16 | 10:42:16 |
+| F.A.S.T. row `completedAt` (row 66) | | 10:43:28.134 |
+| `STACK2-6.log` "Running command Transfer" lines | 17:41:14, 17:41:46, 17:43:28, 17:43:59 | 10:41:14, 10:41:46, 10:43:28, 10:43:59 |
+
+- Both lines sit inside the F.A.S.T. row window `[10:42:16.425, 10:43:28.134]` and about 71 s before the F.A.S.T. completion, so
+  "before the F.A.S.T. row's completedAt" holds. Both tool logs show their attempt in the same window.
+- Resolution caveat, stated plainly (not a failed clause): the tool-log timestamps have 1 s resolution, and the F.A.S.T. Transfer
+  line and the estimate line fall in the same second, 10:42:16. "The estimate line lies after the F.A.S.T. Transfer line" is
+  therefore satisfied only as "not before, same second"; the log cannot order them inside that second. The strict order comes from
+  the rows' raw ms: F.A.S.T. started at .425, the estimate at .623 (+198 ms). The equal log seconds are recorded as they are and
+  are consistent with the rows (a line time is the row start truncated to the second).
+- Counts, "Running command" counts only (pre-e1 baseline to e1-after baseline, `diff`): `STACK2-6.log` "Running command
+  Transfer" 14 to 18 (+4, as expected) with exactly one "Running command GetTransferEstimate"; `FA100056.log` "Running command
+  Transfer" 1 to 2 (+1, as expected). "Running command" totals: `STACK2-6.log` 60 to 68 (+8: 4 Transfer, 1 GetTransferEstimate,
+  3 GO-gate reads), `FA100056.log` 4 to 5. Total line counts were not used (`FA100056.log` grew 176801 to 178208, UI polling).
+- No ERROR, WARNING, refusal, latch or retry line in either excerpt (the three read lines at the top of `STACK2-6.log` are the
+  GO-gate `GetFailureLatch` x2 and `GetRobotStates` x1).
+
+**4. Ledger** (`evidence/20261117T104544Z-e1.ledger.json`, one JSON object, exactly 4 records, no other key):
+
+| Key (base `LIV01-E1-2026-11-17T10:40:52.652Z-5f3509d4`) | state | result.kind | createdAt | updatedAt |
+|-----|-------|-------------|-----------|-----------|
+| `...-in1` | done | ran | 2026-11-17T10:41:15.089547+00:00 | 2026-11-17T10:41:45.002270+00:00 |
+| `...-in2` | done | ran | 2026-11-17T10:41:46.722968+00:00 | 2026-11-17T10:42:15.070251+00:00 |
+| `...-out1` | done | ran | 2026-11-17T10:43:29.010530+00:00 | 2026-11-17T10:43:58.119260+00:00 |
+| `...-out2` | done | ran | 2026-11-17T10:43:59.882732+00:00 | 2026-11-17T10:44:28.871321+00:00 |
+
+The ledger record count went from 11 (pre-e1) to 15 (e1-after), +4; the `diff` of the two baselines shows exactly these four record
+lines added and no other, and the sha256 changed `061f52b4...bd1c` to `ec2dd2781064c5753ea5e7c1ec1e33643127d25c94654b6bf34f345a1be46d1d`.
+The estimate wrote no ledger record. The operator's readiness round-trip records came before pre-e1 and are not counted. Per-key one-shot
+is claimed for these four explicit keys only (D-08); auto-mint: on (not exercised), all four keys explicit (D-07).
+
+**5. Run completion and code state:** every one of the 7 rows of the run is `COMPLETED`; `laneStatus` in the e1-after snapshot reads
+`laneMode:true`, `halted:false`, `haltReason:null`, `failures:[]`, `runningLanes:[]`, `queueBusy:false`. The stored run record
+`1596ecfad681e7000` reads `CREATED` as read, which is the known lanes-mode finding (09-07, above); it is recorded as read and is not a failed
+clause. `git status --porcelain -- controller` was empty (`galago_core_controller_dirty_lines=0` in the e1-after baseline; re-read empty at
+analysis time), so no hot-reload edit touched the bind-mounted dev server (D-13 amended). Listener PIDs 8081 `6872`, 11010 `7490`, 40012 `7491`,
+40001 `2320808` and the trace folder `1794670020` equal the pre-e1 baseline.
+
+**6. Operator observation:** the third plate stayed on nest-3. Expected: event 1's overlap step is a read-only estimate, so no arm motion
+and no plate move happens for it; the moving overlap is event 2.
+
+| D-05 element | Result |
+|--------------|--------|
+| Row containment (three clauses) | holds, with numbers above |
+| Adjacency (touch is not an overlap) | not a touch: 166 ms strictly positive intersection |
+| Both logs in one wall-clock window, +4 / +1 "Running command Transfer" | holds (same-second resolution caveat above) |
+| Four ledger records, done / ran, explicit keys, no other record | holds |
+| Rows COMPLETED, `laneStatus` halted false | holds (stored run `CREATED` recorded as read) |
+
+Event 1 verdict: PASS
+
+Event 1 meets D-05 from the raw rows, logs and ledger. Event 2 may be prepared (09-10 Task 2: operator readiness by eye and tool-page reads).
+This verdict covers the estimate overlap only; the moving overlap and the event-2 ledger clause (five records) are judged in 09-11 and 09-12.
+
 ## Live event 2, row 3a-14
 
 _Pending (09-11). D-02 decided (amended, above)._
