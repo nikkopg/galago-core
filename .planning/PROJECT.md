@@ -135,10 +135,17 @@ operator-decides-recovery guarantee.
   out-of-range int32 values are kept, flagged and refused before any gRPC send — Phase 7
   (verification passed after gap closure 07-09/07-10, UAT 4/4 live against the F.A.S.T.,
   security 49/49 closed, 2026-11-16)
+- ✓ LAN-01..09, LUI-01..06 — v1.2: per-toolId concurrency lanes behind `GALAGO_PARALLEL_LANES=1`
+  (default off, flag-off behaviour byte-identical to a golden fixture): `advancedParameters.lane` /
+  `laneBarrier` tags, per-lane Start guard, lane-halt (any failure freezes every lane, nothing
+  aborted, Start re-runs the failed step), confirmed Freeze lanes, Lanes panel and per-lane run
+  rows, failures-by-lane banner list, step-drawer lane controls and per-lane preview for visual and
+  script protocols — Phase 8 (verification passed after review fixes WR-02/03/06, UAT 8/8 on a
+  simulated two-tool rig, 2026-11-17)
 
 ### Active
 
-- [ ] Per-toolId concurrency lanes for live two-tool runs — v1.2
+- [ ] Per-toolId concurrency lanes proven live on two tools (supervised run) — v1.2, Phase 9
 
 (Detailed REQ-IDs in `.planning/REQUIREMENTS.md`.)
 
@@ -229,6 +236,10 @@ operator-decides-recovery guarantee.
 | v1.2 int32 send guard: `Tool#executeCommand` refuses any Transfer int32 field that is not an exact int32, after `{{variable}}` substitution and before gRPC; producers keep out-of-range digits as text (CR-01) | The ts-proto encoder silently wraps modulo 2^32 (4294967297 → plate 1); a refusal is safe, a wrapped value moves the robot | ✓ Phase 7 (07-09) |
 | v1.2 well picker: drag logic is the pure `sourcePointerStep` reducer, the React shell only forwards events (WR-01) | Real pointer capture can't run under node vitest; the reducer carries 17 sequence tests and the shell passed a real-browser UAT | ✓ Phase 7 (07-10, UAT 2026-11-16) |
 | Dev compose maps `host.docker.internal:host-gateway`; tool records point at `host.docker.internal:<launcher port>` | On Linux Docker has no host alias, so the containerised controller could not reach host tool servers (found in Phase 7 UAT, `0ddaaf0`) | ✓ Phase 7 UAT |
+| v1.2 lanes: one default-off server flag (`GALAGO_PARALLEL_LANES`); flag off must stay byte-identical to the sequential queue, pinned by a golden fixture | Lanes change dispatch order on real instruments; the off path is the safety net | ✓ Phase 8 |
+| v1.2 lanes: any failure on any lane freezes every lane without aborting running steps; only a Start resumes and it re-runs the failed step | The operator decides every recovery action; nothing moves on its own after a failure | ✓ Phase 8 (UAT 1-2 on a simulated rig) |
+| v1.2 lanes: the first step on a secondary lane must be a barrier, and Tool Box steps are always primary | Keeps a lane from starting before the setup it depends on; Tool Box built-ins pause the whole queue | ✓ Phase 8 |
+| Phase 8 UAT ran against simulated STACK/F.A.S.T. tool servers in an isolated workcell (host ports 40091/40092, inside the container's 40000-40099 firewall window) | Real instruments must not move during UAT; the live two-tool proof is Phase 9 | ✓ Phase 8 UAT, 2026-11-17 |
 
 ## Evolution
 
@@ -248,4 +259,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-11-16 after Phase 7*
+*Last updated: 2026-11-17 after Phase 8*

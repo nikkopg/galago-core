@@ -46,7 +46,7 @@ galago-tools gate without blocking Phases 8-9.
   instrument-reported lists, on one shared dropdown layer (DRP-01..09, STK-01..08).
 - [x] **Phase 7: F.A.S.T. Plate Dropdowns** - Transfer plate, deck and tip-reuse fields are dropdowns and the (completed 2026-11-16)
   well block is drag-selected on a plate grid; plate parts gated on galago-tools shipping `get_plates` (PLT-01..09).
-- [ ] **Phase 8: Concurrency Lanes** - Behind a default-off flag, one run drives two tool servers at once,
+- [x] **Phase 8: Concurrency Lanes** - Behind a default-off flag, one run drives two tool servers at once, (completed 2026-11-17)
   with lane authoring, per-lane run page and failure freeze (LAN-01..09, LUI-01..06).
 - [ ] **Phase 9: Supervised Live Two-Tool Proof** - A supervised run shows STACK overlapping the F.A.S.T.
   transfer and a drill shows the freeze (LIV-01..03).
@@ -138,7 +138,7 @@ without aborting anything. Waves: lane engine first, then protocol surface and r
   2. Any failure, a primary-lane modal or the operator's run-page freeze control stops new dispatch on every lane, and control, Stop and recovery still work on any lane.
   3. The operator can author lane-tagged protocols, is refused invalid setups, and sees per-lane steps, outcome and failures in the preview, Start confirmation and run page.
 
-**Plans**: 10/10 plans executed
+**Plans**: 10/10 plans complete
 Plans:
 **Wave 1** *(golden first: committed before any production edit)*
 - [x] 08-01-PLAN.md — Golden transcript of today's queue (S0-S3) captured at the unmodified commit (LAN-01, D-09)
@@ -187,7 +187,7 @@ resolution is recorded.
 |-------|----------------|--------|-----------|
 | 6. STACK Dropdowns | 5/5 | Complete    | 2026-11-06 |
 | 7. F.A.S.T. Plate Dropdowns | 10/10 | Complete    | 2026-11-16 |
-| 8. Concurrency Lanes | 10/10 | In Progress | - |
+| 8. Concurrency Lanes | 10/10 | Complete    | 2026-11-17 |
 | 9. Supervised Live Two-Tool Proof | 0/TBD | Not started | - |
 
 ## Backlog

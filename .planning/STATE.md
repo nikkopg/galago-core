@@ -2,45 +2,45 @@
 gsd_state_version: "1.0"
 milestone: v1.2
 milestone_name: Tool-inferred dropdowns + per-tool concurrency lanes
-current_phase: 8
-current_phase_name: Concurrency Lanes
-status: verifying
-stopped_at: Completed 08-10-PLAN.md
-last_updated: "2026-11-16T14:35:21.507Z"
-last_activity: 2026-11-16
-last_activity_desc: Phase 8 execution started
-state_head: 849e6e3a0ba00e504c65da37599d7701e7aba7bd
+current_phase: 9
+current_phase_name: Supervised Live Two-Tool Proof
+status: planning
+stopped_at: Phase 8 complete, ready to plan Phase 9
+last_updated: "2026-11-17T01:24:50.407Z"
+last_activity: 2026-11-17
+last_activity_desc: Phase 8 complete, transitioned to Phase 9
+state_head: 487a1ae859d6eef1710425d3a1cefdb12d231f62
 progress:
   total_phases: 4
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 25
   completed_plans: 25
-  percent: 50
+  percent: 75
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-11-16)
+See: .planning/PROJECT.md (updated 2026-11-17)
 
 **Core value:** While an instrument step runs, the operator sees what the instrument is doing and
 decides every recovery action; the web app never acts on its own or pre-selects a physical decision.
-**Current focus:** Phase 8 — Concurrency Lanes
+**Current focus:** Phase 9 — Supervised Live Two-Tool Proof
 
 ## Current Position
 
-Phase: 8 (Concurrency Lanes) — EXECUTING
-Plan: 10 of 10
-Status: Phase complete — ready for verification
-Last activity: 2026-11-16 — Phase 8 execution started
+Phase: 9 — Supervised Live Two-Tool Proof
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-11-17 — Phase 8 complete, transitioned to Phase 9
 
-Progress: [█████░░░░░] 50% (2 of 4 v1.2 phases)
+Progress: [████████░░] 75% (3 of 4 v1.2 phases)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 44
+- Total plans completed: 54
 - Average duration: -
 - Total execution time: 0 hours
 
@@ -55,6 +55,7 @@ Progress: [█████░░░░░] 50% (2 of 4 v1.2 phases)
 | 05 | 4 | - | - |
 | 06 | 5 | - | - |
 | 07 | 10 | - | - |
+| 08 | 10 | - | - |
 
 **Recent Trend:**
 - Last 5 plans: none yet
@@ -264,6 +265,15 @@ None. (The F.A.S.T. plate-list todo shipped in Phase 7, PLT-01..09.)
   whitespace-sensitive. The earlier WR-01/WR-02 `fixed` rows (5191ffe) were dropped by id reuse.
   The G-03-3 live fit retest was waived by the user (marked pass).
 
+- [Phase 8]: `08-REVIEW-DISPOSITION.md` has 11 open advisories, none breaking a success criterion: WR-01
+  non-canonical `lane`/`laneBarrier` values silently ignored; WR-04 `ErrorBanner` declared in render
+  remounts the failure list; WR-05 after `clearError()` the first failure's text appears nowhere; WR-07
+  the editor says "one at a time" while the lane-status read is loading/failed; IN-01..IN-07. Decide
+  fix-or-accept on WR-01, WR-05 and IN-01 before the Phase 9 live run.
+- [Phase 8 UAT]: the Gantt chart's default Minutes View makes overlapping lane bars thin slivers; the
+  per-lane timestamps on run cards are clearer. Backups `controller/data/{app,queue}.db.bak-pre-uat08`
+  were left from the simulated-rig UAT.
+
 ### Quick Tasks Completed
 
 | # | Description | Date | Commit | Directory |
@@ -283,8 +293,8 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-16T14:35:21.445Z
-Stopped at: Completed 08-10-PLAN.md
+Last session: 2026-11-17T06:40:00Z
+Stopped at: Phase 8 complete, ready to plan Phase 9
 Resume file: None
 
 ## Operator Next Steps
