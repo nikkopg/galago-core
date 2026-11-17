@@ -599,7 +599,67 @@ baseline exists for scenario 2. The sim logs and the real tools' unchanged "Runn
 
 ### Scenario 3
 
-_Pending._
+**Verdict: PASS** (D-11 scenario 3, LIV-02 part 3 of 3). The operator's Freeze lanes, pressed while SIM-FAST and `d-x1` both ran,
+halted both lanes with `haltReason` freeze; both running rows finished COMPLETED and none was ABORTED; `d-out1` stayed CREATED
+through the freeze, including the 17 s after the fast step finished; the operator's single Start re-armed and finished the
+run. Judged by Claude from the three operator-taken snapshots and the sim server logs (read only). The operator reported
+"scenario 2 and 3 done, workcell switched back" at about 2026-11-17T09:58Z with no deviations. Claude did not queue, start,
+stop, freeze or switch anything (D-18).
+
+Run: `1596d7f33081e7000` (protocol 8, uat-sim), batch label DRILL-S3, queueIds 58 to 62. Times are the raw snapshot values, UTC
+(HH:MM:SS.mmm). The exact moment of the Freeze press was not recorded; the at-freeze snapshot (09:56:15Z) already shows the latch.
+
+| queueId | Row | Lane | Start | End | Final status |
+|---------|-----|------|-------|-----|--------------|
+| 58 | Tool Box note | primary | 09:55:02.928 | 09:55:02.928 | COMPLETED |
+| 59 | SIM-STACK `d-in1` | primary | 09:55:04.429 | 09:55:39.459 | COMPLETED |
+| 60 | SIM-FAST transfer (`laneBarrier`) | fast | 09:55:40.440 | 09:57:00.499 (80.1 s) | COMPLETED (never ABORTED) |
+| 61 | SIM-STACK `d-x1` | primary | 09:55:40.960 | 09:56:15.998 | COMPLETED (never ABORTED) |
+| 62 | SIM-STACK `d-out1` (`laneBarrier`) | primary | 09:57:17.455 | 09:57:52.459 | COMPLETED |
+
+Timeline: run created 09:54:56.226; `d-x1` started 0.520 s after the SIM-FAST step (overlap inside the 1500 ms tolerance);
+operator Freeze lanes; at-freeze snapshot 09:56:15Z (both rows STARTED); `d-x1` COMPLETED 09:56:15.998; SIM-FAST COMPLETED
+09:57:00.499; frozen snapshot 09:57:09Z (both done, `d-out1` CREATED, 8.5 s after the fast step ended and 53 s after the primary
+lane went idle); operator Start, `d-out1` started 09:57:17.455; done snapshot 09:57:53Z.
+
+Snapshots (`evidence/`), each judged against the plan's criteria:
+
+| Snapshot | Facts read from it | Criterion |
+|----------|--------------------|-----------|
+| `20261117T095615Z-drill-s3-at-freeze.queue.json` (09:56:15Z) | q60 SIM-FAST STARTED and q61 `d-x1` STARTED (`runningLanes` lists both: primary 61, fast 60); q62 `d-out1` CREATED; q58, q59 COMPLETED; `laneStatus` `halted:true`, `haltReason:"freeze"`, `failures:[]` | met |
+| `20261117T095709Z-drill-s3-frozen.queue.json` (09:57:09Z) | q60 and q61 COMPLETED, no ABORTED row and no `abortedAt`; q62 `d-out1` CREATED; `halted:true`, `haltReason:"freeze"`, `failures:[]`, `runningLanes:[]` | met |
+| `20261117T095753Z-drill-s3-done.queue.json` (09:57:53Z) | q58 to q62 all COMPLETED; `halted:false`, `haltReason:null`, `failures:[]`, `runningLanes:[]`; `queueBusy:true` only because the snapshot came 1.0 s after the last row completed (09:57:52.459); a later read shows `queueBusy:false` | met |
+
+One send per queueId, from the sim server logs (read only): SIM-STACK logged "Running command Transfer" at 16:55:04 (`d-in1`),
+16:55:40 (`d-x1`) and 16:57:17 (`d-out1`), each SUCCESS; SIM-FAST (`sim-fast-20261117T095139Z.log`) logged one Transfer at
+16:55:40, SUCCESS 16:57:00. Four sends for four transfer queueIds, no retry. No Transfer line on either sim server between
+16:55:40 (the two rows already running) and the operator's Start at 16:57:17: nothing started while frozen, including the
+primary lane's idle minute. The freeze aborted nothing, let both running rows
+finish on their own, and did not auto-resume.
+
+Switch back to the real workcell (D-11 step 6, T-09-28), read by Claude after the operator's report (09:58:19Z and again later):
+
+| Check | Result |
+|-------|--------|
+| `GET /api/settings/workcell` | `{"value":"test"}`, the real workcell recorded in 09-05 (workcellId 1) |
+| `GET /api/tools` | exactly `STACK2-6` (`host.docker.internal:40012`, workcellId 1) and `FA100056` (`host.docker.internal:40001`, workcellId 1) |
+| `laneStatus` | `laneMode:true`, `halted:false`, `haltReason:null`, `failures:[]`, `runningLanes:[]`, `queueBusy:false` |
+| `commandQueue.getAll` | 21 rows, all COMPLETED: no CREATED or STARTED row |
+| `GET /api/runs` | 3 runs, the three drill runs, all stored status `CREATED`; no `RUNNING` run |
+
+Baseline after both scenarios, before teardown: `evidence/20261117T095938Z-post-drill-s2-and-s3-before-teardown.baseline.txt`
+(09:59:38Z) against `20261117T085943Z-pre-drill-go.baseline.txt`. Equal: real listener PIDs 8081 `6872`, 11010 `7490`, 40012
+`7491`, 40001 `2320808`; trace folder `1794670020`; `STACK2-6.log` 4508 lines, 12 "Running command Transfer" (52 "Running
+command"); `FA100056.log` 1 Transfer (4 "Running command"); ledger sha256 `5de43c84...670b`, 9 records;
+`galago_core_controller_dirty_lines=0`. Different, all explained: label, time, HEAD; the sim listeners (40091 `23042` to
+`101131`, 40092 `23184` to `121058`, the operator's restarts in scenarios 1 and 2); `selected_workcell` `uat-sim` to `test`.
+One more difference needs an honest explanation: `FA100056.log` grew from 171341 to 172478 lines. All 1137 new lines (from
+16:58:10 local, 09:58:10Z, the moment of the switch back to `test`) are the real FA100056 server's periodic
+`GET http://10.150.1.125:5003/status` polls (130 requests, `HTTP/1.1 200 OK`, one every 5 s, with their httpcore debug lines).
+There is no POST, no "Running command", no Configure and no ExecuteCommand among them. It is a read of the instrument's
+status, which the web app issues while a UI session is polling the tool (inferred cause: the operator's tool list after the
+switch back; Claude did not open one). The file also grew from 145744 to 171341 lines between the pre-deploy and post-deploy
+baselines in earlier operator sessions, and stood still (171341) from 08:33Z to 09:44Z. It is not a command to the tool. The V-10 criteria (PIDs, "Running command" counts, trace folder, ledger sha256) are unchanged.
 
 ## Live event 1, row 3a-13
 
