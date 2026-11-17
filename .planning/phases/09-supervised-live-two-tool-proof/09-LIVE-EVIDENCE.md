@@ -459,7 +459,13 @@ for scenario 1 is a new run (batch label `DRILL-S1`); the Start confirmation mus
 
 ### Drill GO (D-14)
 
-_Pending: the operator's literal typed reply and its UTC time are recorded here after the GO gate._
+| Item | Value |
+|------|-------|
+| Operator's reply (verbatim) | `go` |
+| UTC time | 2026-11-17T09:24:03Z |
+| How recorded | The reply was typed in the orchestrator conversation, not in a UI; the UTC time is the orchestrator-recorded time of that message |
+| Gate | 09-06 Task 2, `checkpoint:decision`, `gate="blocking-human"`; options were `go` and `stop`; the literal word `go` was typed |
+| State at the gate | uat-sim selected with only SIM-STACK and SIM-FAST (Simulate on); drill protocol id 8 imported; pre-GO baseline and snapshot (above) show `halted:false` and no CREATED or STARTED row; real listener PIDs unchanged |
 
 ### Scenario 1
 
