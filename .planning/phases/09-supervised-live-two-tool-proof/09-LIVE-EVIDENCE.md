@@ -402,7 +402,40 @@ store; it holds `STACK2-6` (id 5, `host.docker.internal:40012`, manager 10.150.1
 While `uat-sim` is selected, `/api/tools` hides STACK2-6 and FA100056 (`tool.getAll` is workcell-scoped), so
 pre-flight check 6 blocks; 09-07 selects `test` again before event 1.
 
-Rig configuration by the operator (D-18) and Claude's read-back: _pending (Task 2 checkpoint)._
+Rig configuration (09-05 Task 2), 2026-11-17 ~08:56 to 08:57Z. **Performed by Claude at the user's request**
+(the user replied "Can you set it up for me" to the operator steps). This is the narrow D-18 amendment recorded in
+09-CONTEXT.md; the operator still owns Start, Freeze and every recovery control, and Claude never drove a real
+tool. No motion is possible on the sim tools. The `/api/*` calls went to `http://localhost:3010` (production
+`galago-web-dev`); the tRPC call used `/api/trpc/tool.configure`. Hosts are the documentation-range placeholders.
+
+| Step | Call | Result |
+|------|------|--------|
+| 1. Create workcell | `POST /api/workcells` `{"name":"uat-sim","location":"sim",...}` | workcell id `3` (the real workcell `test` is id 1, untouched) |
+| 2. Select it | `POST /api/settings/workcell` `{"value":"uat-sim"}` then `GET /api/settings/workcell` | `{"value":"uat-sim"}`; `GET /api/tools` now `[]`, so the next adds could only land in uat-sim |
+| 3. Add SIM-STACK | `POST /api/tools` type `stack`, ip `host.docker.internal`, port `40091`, config `{"simulated":true,"toolId":"SIM-STACK","stack":{"host":"192.0.2.1","port":5005,"transfer_timeout_s":300,"ledger_dir":"/tmp/uat-sim-ledger"}}` | tool id `9`, workcellId `3` |
+| 4. Add SIM-FAST | `POST /api/tools` type `fast`, ip `host.docker.internal`, port `40092`, config `{"simulated":true,"toolId":"SIM-FAST","fast":{"host":"192.0.2.2","port":5003,"expected_tray_id":90,"run_timeout_s":0}}` | tool id `10`, workcellId `3` |
+| 5. Simulate + Configure | per tool: `POST /api/trpc/tool.configure` `{"json":{"toolId":NAME,"config":{"toolId":NAME,"simulated":true,"<type>":{...}}}}`, one call each | HTTP 200 both; `tool.status` then reports `SIMULATED` for SIM-STACK and SIM-FAST |
+
+Simulate-before-Configure, stated plainly: there is no separate Simulate setter in the API. The UI Simulate switch
+itself issues `tool.configure` with `simulated:true` (`ToolConfigEditor.saveConfig`), and the tool record also stores
+`simulated:true` (so Connect All, which builds its payload from the stored config, also sends `simulated:true`).
+The one Configure per tool therefore carried `simulated:true`; base server `Configure` then returns SUCCESS before
+`_configure`, so nothing was dialed to 192.0.2.1 / 192.0.2.2 and no non-simulated Configure was ever sent. Before each
+Configure, Claude re-read the tool record and asserted: selected workcell `uat-sim` (id 3), tool list exactly
+SIM-STACK + SIM-FAST, the tool's name, type, address `host.docker.internal`, port (40091 stack / 40092 fast), instrument
+host (192.0.2.1 / 192.0.2.2), `simulated:true`, no `10.150.1.125`, no port 40001 or 40012. All assertions passed.
+
+Read-back (D-18 verification):
+
+| Check | Result |
+|-------|--------|
+| `GET /api/settings/workcell` | `{"value":"uat-sim"}` |
+| `GET /api/tools` | exactly `SIM-STACK` (`host.docker.internal:40091`, workcellId 3) and `SIM-FAST` (`host.docker.internal:40092`, workcellId 3); no `10.150.1.125` anywhere; no port 40001 or 40012 |
+| `tool.status` | both `SIMULATED` (SIM-FAST `run_state` idle) |
+| Baseline `evidence/20261117T085710Z-post-rig-config.baseline.txt`, `.tracefiles.txt` | vs pre-drill: only label, time, HEAD, the sim listeners (40091 `23042`, 40092 `23184`, unchanged since launch) and `selected_workcell` `test` to `uat-sim` differ. Real PIDs 8081 `6872`, 11010 `7490`, 40012 `7491`, 40001 `2320808` unchanged; trace folder `1794670020` and file list identical; `STACK2-6.log` 12 Transfer (52 "Running command"); `FA100056.log` 1 Transfer (4 "Running command"); ledger sha256 `5de43c84...670b`, 9 records; `laneStatus` laneMode true, halted false, queueBusy false |
+
+`uat-sim` is left selected. Nothing was imported, queued or started. 09-07 switches back to `test` (workcellId 1)
+before event 1; while `uat-sim` is selected pre-flight check 6 blocks, as expected.
 
 ### Scenario 1
 
@@ -449,3 +482,4 @@ All files are under `evidence/`, named `<UTC stamp>-<label>.<kind>`.
 | `20261117T083601Z-pre-drill.baseline.txt`, `.queue.json`, `.tracefiles.txt` | pre-drill baseline, queue snapshot and trace file names | 09-05 |
 | `20261117T083845Z-post-sim-launch.baseline.txt`, `.tracefiles.txt` | baseline after the first sim launch (superseded by the relaunch) | 09-05 |
 | `20261117T083912Z-post-sim-relaunch.baseline.txt`, `.tracefiles.txt` | baseline after the sim relaunch with the fixed `start-sim`; real tools untouched | 09-05 |
+| `20261117T085710Z-post-rig-config.baseline.txt`, `.tracefiles.txt` | baseline after uat-sim and the two sim tools were configured; selected workcell uat-sim, real tools untouched | 09-05 |
