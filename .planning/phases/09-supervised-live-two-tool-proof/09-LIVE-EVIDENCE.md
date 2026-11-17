@@ -965,6 +965,42 @@ Event 1 verdict: PASS
 Event 1 meets D-05 from the raw rows, logs and ledger. Event 2 may be prepared (09-10 Task 2: operator readiness by eye and tool-page reads).
 This verdict covers the estimate overlap only; the moving overlap and the event-2 ledger clause (five records) are judged in 09-11 and 09-12.
 
+### Event-2 operator readiness and baseline comparison (09-10 Task 2), 2026-11-17
+
+Operator reply at 10:51:44Z (relayed by the orchestrator, verbatim in `evidence/20261117T105220Z-e2-readiness.txt`): the three tool-page replies
+`GetFailureLatch` -> `latched:false`, `GetRobotStates` -> `stack2-6` `idle`, `GetLabwarePresence` (robot `stack2-6`) -> `hasLabware:false`,
+then the phrase "third plate ready". Claude sent nothing to any tool (D-18); the operator ran no Transfer.
+
+**Honest limits of the by-eye steps.** The operator did not describe steps 1 and 2 in words (plate 1 on nest-1, plate 2 on nest-2, F.A.S.T. tray1
+slots 5 and 6 empty, third plate on nest-3). "third plate ready" is their confirmation of those two steps by one phrase, not a described
+observation. Earlier, at 10:45Z, the operator said the third plate stayed on nest-3 during event 1, which agrees. Nothing but the operator's
+word backs the nest positions (`GetLabwarePresence` reads the gripper only).
+
+**Baseline comparison** (`evidence/20261117T105220Z-post-e2-readiness.baseline.txt` against `evidence/20261117T104535Z-e1-after.baseline.txt`;
+`diff` shows only the label, time, `galago_core_head` and three log counters):
+
+| Value | e1-after | post-e2-readiness | Result |
+|-------|----------|-------------------|--------|
+| `STACK2-6.log` "Running command Transfer" | 18 | 18 | equal (no Transfer) |
+| `FA100056.log` "Running command Transfer" | 2 | 2 | equal |
+| ledger sha256 | `ec2dd2781064c5753ea5e7c1ec1e33643127d25c94654b6bf34f345a1be46d1d` | same | equal (no ledger write); record count 15 |
+| `galago_core_controller_dirty_lines` | 0 | 0 | equal |
+| `galago_tools_tools_dirty_lines` | 1 | 1 | equal; the line is `?? tools/fast-mcp-locks/` (runtime directory) |
+| listener PIDs 8081 / 11010 / 40012 / 40001 | 6872 / 7490 / 7491 / 2320808 | same | equal |
+| trace folder | 1794670020 | 1794670020 | equal |
+| `STACK2-6.log` "Running command" (all) | 68 | 73 | +5, all non-Transfer reads (see below) |
+| `STACK2-6.log` lines / `FA100056.log` lines | 7313 / 178208 | 7359 / 179099 | grew; not compared (UI polling) |
+| `FA100056.log` "Running command" (all) | 5 | 5 | equal |
+
+The five new `STACK2-6.log` "Running command" lines (local UTC+7, 17:50 to 17:51 = 10:50Z to 10:51Z, just before the 10:51:44Z reply) are
+`GetFailureLatch` 17:50:34, `GetFailureLatch` 17:50:39, `GetRobotStates` 17:50:56, `GetRobotStates` 17:51:21 and `GetLabwarePresence` 17:51:25.
+That is five reads, not the three the instructions name: the operator read the latch and the robot state twice each (a re-read). No POST, PUT or
+DELETE line, no ERROR, WARNING, refusal or retry line in the appended `STACK2-6.log` text; no new "Running command" line in `FA100056.log`. The
+log reads corroborate the operator's pasted reads; the pasted values themselves (latch false, idle, gripper empty) are the operator's.
+
+**Stop conditions checked:** latched true: no (false). stack2-6 not idle: no (idle). hasLabware true: no (false). Any compared value different:
+no. The readiness step passes; nothing moved and nothing was written since event 1. The nest-3 / nest-1 round trip and the GO are 09-11.
+
 ## Live event 2, row 3a-14
 
 _Pending (09-11). D-02 decided (amended, above)._
@@ -1017,3 +1053,5 @@ All files are under `evidence/`, named `<UTC stamp>-<label>.<kind>`.
 | `20261117T104535Z-e1-after.baseline.txt` | event-1 post-run baseline (Transfers 14 to 18 and 1 to 2, ledger 11 to 15) | 09-09 |
 | `20261117T104535Z-e1.STACK2-6.log`, `20261117T104535Z-e1.FA100056.log` | tool-log lines appended since the pre-e1 baseline (redacted; no TRUNCATED-OR-RESTARTED) | 09-09 |
 | `20261117T104544Z-e1.ledger.json` | the 4 ledger records of key base `LIV01-E1-2026-11-17T10:40:52.652Z-5f3509d4` | 09-09 |
+| `20261117T105220Z-e2-readiness.txt` | event-2 operator readiness reply (latched false, idle, hasLabware false, "third plate ready"; steps 1 and 2 not described in words) | 09-10 |
+| `20261117T105220Z-post-e2-readiness.baseline.txt` | baseline after the readiness reads (Transfers 18 and 2, ledger sha and PIDs equal e1-after) | 09-10 |

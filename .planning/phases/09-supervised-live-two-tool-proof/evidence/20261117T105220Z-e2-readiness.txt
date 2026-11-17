@@ -1,0 +1,17 @@
+09-10 Task 2 operator readiness record (event 2 start positions)
+Saved by Claude 2026-11-17T10:52:20Z. No credential appears in this file.
+
+OPERATOR REPLY (as relayed by the orchestrator, verbatim) at 2026-11-17T10:51:44Z:
+{"reason":null,"latched":false,"guid":null,"kind":"latchStatus","resultKind":null,"explanation":null}
+{"robots":[{"state":"idle","robotName":"stack2-6"}],"kind":"robotStates"}
+{"hasLabware":false,"kind":"labwarePresence","robotName":"stack2-6"}
+
+third plate ready
+
+NOT DESCRIBED by the operator in words: steps 1 and 2 (plate 1 on nest-1, plate 2 on nest-2, F.A.S.T. tray1
+slots 5 and 6 empty, third plate on nest-3). "third plate ready" is the operator's confirmation; the by-eye
+positions are therefore a confirmation by the one phrase, not a described observation. Earlier (10:45Z) the
+operator said the third plate stayed on nest-3 during event 1.
+
+PASTED by the operator (steps 3 and 4): latched false (GetFailureLatch), stack2-6 idle (GetRobotStates),
+hasLabware false (GetLabwarePresence, robot stack2-6). No Transfer was run (step 5).
