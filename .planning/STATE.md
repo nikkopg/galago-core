@@ -5,16 +5,16 @@ milestone_name: Tool-inferred dropdowns + per-tool concurrency lanes
 current_phase: 09
 current_phase_name: Supervised Live Two-Tool Proof
 status: executing
-stopped_at: Completed 09-06-PLAN.md
-last_updated: "2026-11-17T09:45:58.487Z"
+stopped_at: Completed 09-07-PLAN.md
+last_updated: "2026-11-17T10:03:56.206Z"
 last_activity: 2026-11-17
 last_activity_desc: Phase 09 execution started
-state_head: 1965cf1c77c823efff639efefec78d2ab61018da
+state_head: 8531b50cfb86788276b026d059c2363fc86ce877
 progress:
   total_phases: 4
   completed_phases: 3
   total_plans: 37
-  completed_plans: 31
+  completed_plans: 32
   percent: 75
 ---
 
@@ -31,7 +31,7 @@ decides every recovery action; the web app never acts on its own or pre-selects 
 ## Current Position
 
 Phase: 09 (Supervised Live Two-Tool Proof) — EXECUTING
-Plan: 7 of 12
+Plan: 8 of 12
 Status: Ready to execute
 Last activity: 2026-11-17 — Phase 09 execution started
 
@@ -122,6 +122,7 @@ Progress: [████████░░] 75% (3 of 4 v1.2 phases)
 | Phase 09 P04 | multi-session | 3 tasks | 6 files |
 | Phase 09 P05 | 61 min | 2 tasks | 12 files |
 | Phase 09 P06 | 90min | 3 tasks | 7 files |
+| Phase 09 P07 | 6 min | 3 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -233,6 +234,7 @@ Recent decisions affecting current work:
 - [Phase 09]: 09-05: D-18 narrowly amended on user request 2026-11-17: Claude may perform the uat-sim sim-rig setup (workcell, SIM tools, Simulate, Configure); only the operator presses Start/Freeze/recovery
 - [Phase 09]: 09-05: Simulate ON and Configure are one tool.configure call with simulated:true (UI switch behavior); tool records also store simulated:true and placeholder hosts 192.0.2.1/192.0.2.2
 - [Phase 09]: 09-06: drill scenario 1 judged PASS on the lanes-on build (halt on stack failure while fast runs, fast row completes, d-out1 held, only operator Start retries d-x1); LIV-02 stays open for scenarios 2 and 3 (09-07)
+- [Phase 09]: LIV-02 verdict PASS: all D-11 clauses hold in scenarios 1-3, V-10 and V-11 hold (09-07) — Snapshots, sim logs and unchanged real-tool PIDs/command counts/ledger sha; FA100056.log line growth is read-only status polling
 
 ### Pending Todos
 
@@ -310,8 +312,8 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-17T09:45:54.039Z
-Stopped at: Completed 09-06-PLAN.md
+Last session: 2026-11-17T10:03:56.133Z
+Stopped at: Completed 09-07-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
