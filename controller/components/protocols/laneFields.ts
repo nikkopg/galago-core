@@ -27,7 +27,30 @@ export const LANE_BARRIER_HELP =
   "Runs only after every earlier step on every lane has finished. Use it before a step that needs the plates in place.";
 export const LANE_INERT_NOTE =
   "Lanes take effect only when parallel lanes are enabled on the server.";
+export const LANE_INERT_SERIAL_NOTE = `${LANE_INERT_NOTE} This protocol runs its steps one at a time.`;
 const BARRIER_SUFFIX = " — waits for all earlier steps";
+
+// What the editor knows about the server's lane mode. Only a successful laneStatus read
+// counts: while the read is loading or has failed the mode is "unknown", and the editor must
+// not claim either that steps overlap or that they run one at a time (review WR-07).
+export type LaneUiState = "active" | "off" | "unknown";
+
+export function laneUiState(query: {
+  isSuccess: boolean;
+  data?: { laneMode?: boolean } | null;
+}): LaneUiState {
+  if (!query.isSuccess) return "unknown";
+  return query.data?.laneMode === true ? "active" : "off";
+}
+
+// The inert note shows only when the server is known to have lanes off, and the client-side
+// validateLanes refusals are hidden then too: the server applies them only in lane mode, so
+// showing them would present refusals it will never enforce.
+export function laneSummaryView(state: LaneUiState): { note: string | null; showWarnings: boolean } {
+  return state === "off"
+    ? { note: LANE_INERT_SERIAL_NOTE, showWarnings: false }
+    : { note: null, showWarnings: true };
+}
 
 // D-18: only tool steps get Lane and barrier controls; a Tool Box step shows none.
 export function isToolStep(info: LaneCommandInfo | undefined): boolean {

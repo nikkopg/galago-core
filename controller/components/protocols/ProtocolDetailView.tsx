@@ -44,7 +44,7 @@ import { ConfirmationModal } from "../ui/ConfirmationModal";
 import { SaveIcon } from "@/components/ui/Icons";
 import { CommandDetailsDrawer } from "./CommandDetailsDrawer";
 import CommandImage from "@/components/tools/CommandImage";
-import { LANE_INERT_NOTE, buildLaneSummary, laneWarningText } from "./laneFields";
+import { buildLaneSummary, laneSummaryView, laneUiState, laneWarningText } from "./laneFields";
 import { useLaneStatus } from "@/hooks/useLaneStatus";
 import type { LaneSummary } from "./laneFields";
 import { successToast, errorToast, warningToast } from "../ui/Toast";
@@ -307,10 +307,11 @@ export const ProtocolDetailView: React.FC<{ id: number }> = ({ id }) => {
     };
   }, []);
 
-  // Review WR-03: lane tags are inert unless the server confirms parallel lanes are on,
-  // so the lane summary says so instead of implying the steps will overlap.
+  // Review WR-03 and WR-07: the lane summary says lanes are inert only when the server has
+  // confirmed they are off. While the read is loading or failed the mode is unknown and the
+  // summary makes no claim either way.
   const laneStatusQuery = useLaneStatus();
-  const lanesActive = laneStatusQuery.isSuccess && laneStatusQuery.data?.laneMode === true;
+  const laneView = laneSummaryView(laneUiState(laneStatusQuery));
   const inertNoteColor = useColorModeValue("gray.600", "whiteAlpha.700");
 
   if (isLoading) {
@@ -775,13 +776,13 @@ export const ProtocolDetailView: React.FC<{ id: number }> = ({ id }) => {
             <Text fontSize="sm" fontWeight="bold">
               Lane summary
             </Text>
-            {!lanesActive && (
+            {laneView.note !== null && (
               <Text fontSize="sm" color={inertNoteColor}>
-                {LANE_INERT_NOTE} This protocol runs its steps one at a time.
+                {laneView.note}
               </Text>
             )}
             <LaneGroups summary={visualSummary} spacing={6} />
-            <LaneWarningsAlert warnings={visualSummary.warnings} />
+            {laneView.showWarnings && <LaneWarningsAlert warnings={visualSummary.warnings} />}
           </VStack>
         )}
       </VStack>

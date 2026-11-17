@@ -37,6 +37,9 @@ import {
   laneFlag,
   LANE_BARRIER_HELP,
   LANE_INERT_NOTE,
+  LANE_INERT_SERIAL_NOTE,
+  laneUiState,
+  laneSummaryView,
   buildLaneSummary,
   laneWarningText,
 } from "@/components/protocols/laneFields";
@@ -609,10 +612,32 @@ describe("lane text follows the server lane mode (review WR-03)", () => {
     );
   });
 
+  it("laneUiState is unknown until a laneStatus read has succeeded (review WR-07)", () => {
+    expect(laneUiState({ isSuccess: false })).toBe("unknown");
+    expect(laneUiState({ isSuccess: false, data: { laneMode: false } })).toBe("unknown");
+    expect(laneUiState({ isSuccess: true, data: { laneMode: true } })).toBe("active");
+    expect(laneUiState({ isSuccess: true, data: { laneMode: false } })).toBe("off");
+    expect(laneUiState({ isSuccess: true, data: undefined })).toBe("off");
+  });
+
+  it("makes no claim about serial execution while the mode is unknown (review WR-07)", () => {
+    expect(laneSummaryView("unknown").note).toBeNull();
+    expect(laneSummaryView("active").note).toBeNull();
+    const off = laneSummaryView("off");
+    expect(off.note).toBe(LANE_INERT_SERIAL_NOTE);
+    expect(off.note).toContain("runs its steps one at a time");
+  });
+
+  it("hides client-side lane refusals only when the server is confirmed off (review WR-07)", () => {
+    expect(laneSummaryView("off").showWarnings).toBe(false);
+    expect(laneSummaryView("active").showWarnings).toBe(true);
+    expect(laneSummaryView("unknown").showWarnings).toBe(true);
+  });
+
   it("the editor names the inert lanes and the queue passes its lane mode to the audit line", () => {
     const view = source("components/protocols/ProtocolDetailView.tsx");
     expect(view).toContain("useLaneStatus()");
-    expect(view).toContain("{!lanesActive && (");
+    expect(view).toContain("laneSummaryView(laneUiState(laneStatusQuery))");
     const queue = source("server/command_queue.ts");
     expect(queue).toContain(
       "describeQueueStart(this.commands.queuedRowsSync(), source, this._laneMode)",
