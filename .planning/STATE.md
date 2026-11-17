@@ -4,17 +4,17 @@ milestone: v1.2
 milestone_name: Tool-inferred dropdowns + per-tool concurrency lanes
 current_phase: 09
 current_phase_name: Supervised Live Two-Tool Proof
-status: executing
-stopped_at: Completed 09-11-PLAN.md
-last_updated: "2026-11-17T11:16:14.016Z"
+status: verifying
+stopped_at: Completed 09-12-PLAN.md
+last_updated: "2026-11-17T11:21:26.530Z"
 last_activity: 2026-11-17
 last_activity_desc: Phase 09 execution started
-state_head: 3d2c6180be32f734a57c58410600a2bdfe33540d
+state_head: 8d55efee94132fa1f8362776cd10b28ac343fabf
 progress:
   total_phases: 4
   completed_phases: 3
   total_plans: 37
-  completed_plans: 36
+  completed_plans: 37
   percent: 75
 ---
 
@@ -32,7 +32,7 @@ decides every recovery action; the web app never acts on its own or pre-selects 
 
 Phase: 09 (Supervised Live Two-Tool Proof) — EXECUTING
 Plan: 12 of 12
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-11-17 — Phase 09 execution started
 
 Progress: [████████░░] 75% (3 of 4 v1.2 phases)
@@ -127,6 +127,7 @@ Progress: [████████░░] 75% (3 of 4 v1.2 phases)
 | Phase 09 P09 | 25 min | 3 tasks | 6 files |
 | Phase 09 P10 | 22 min | 2 tasks | 4 files |
 | Phase 09 P11 | 75 min | 3 tasks | 5 files |
+| Phase 09 P12 | 25 min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -243,6 +244,7 @@ Recent decisions affecting current work:
 - [Phase 09]: 09-09: event 1 ran under typed go at 10:37:49Z; all 7 rows COMPLETED, STACK Transfers 14->18 plus 1 GetTransferEstimate, FA100056 1->2, ledger 11->15 all done/ran; D-05 verdict deferred to 09-10
 - [Phase 09]: 09-10: event 1 verdict PASS (166 ms strictly positive intersection); event-2 readiness recorded (latched false, idle, hasLabware false), baseline unchanged since event 1; by-eye nest positions rest on the operator's one phrase
 - [Phase 09]: 09-11: event 2 captured, all expected deltas matched; D-05 and LIV-01 judgment deferred to 09-12
+- [Phase 09]: Phase 9 live proof: event 2 and LIV-01 PASS under the amended D-05 (third-plate transfer nest-3 to nest-1 inside the F.A.S.T. row, five ledger records, no return leg); stored run status CREATED in lanes mode stays a follow-up — Clause-by-clause numbers from raw rows, logs and ledger in 09-LIVE-EVIDENCE.md
 
 ### Pending Todos
 
@@ -320,8 +322,8 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-17T11:16:13.936Z
-Stopped at: Completed 09-11-PLAN.md
+Last session: 2026-11-17T11:21:22.295Z
+Stopped at: Completed 09-12-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

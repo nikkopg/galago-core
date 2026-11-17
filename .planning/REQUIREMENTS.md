@@ -133,12 +133,12 @@ on its own, and never preselects a physical decision for the operator.
 
 ### Live proof (LIV)
 
-- [ ] **LIV-01**: A supervised live two-tool run shows a STACK step overlapping the F.A.S.T.
+- [x] **LIV-01**: A supervised live two-tool run shows a STACK step overlapping the F.A.S.T.
   transfer, with per-lane evidence rows. Explicit step keys are used, and the galago-tools SHA and
   auto-mint status are recorded. The STACK step itself is decided in Phase 9's discussion.
 - [x] **LIV-02**: Lane-halt and freeze-lanes are shown in a drill that freezes both lanes, using a
   fake or simulated failure. No automated motion.
-- [ ] **LIV-03**: PROJECT.md and the lanes todo record the resolution. The galago-tools operator
+- [x] **LIV-03**: PROJECT.md and the lanes todo record the resolution. The galago-tools operator
   runbook gains the parallel cycle only after LIV-01.
 
 ## Future Requirements
@@ -214,9 +214,9 @@ the protocol surface and run page, as waves inside one phase.
 | LUI-04 | Phase 8 | Complete |
 | LUI-05 | Phase 8 | Complete |
 | LUI-06 | Phase 8 | Complete |
-| LIV-01 | Phase 9 | Pending |
+| LIV-01 | Phase 9 | Complete |
 | LIV-02 | Phase 9 | Complete |
-| LIV-03 | Phase 9 | Pending |
+| LIV-03 | Phase 9 | Complete |
 
 **Coverage:**
 - v1.2 requirements: 44 total
