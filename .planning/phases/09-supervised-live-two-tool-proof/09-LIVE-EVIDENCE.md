@@ -745,7 +745,73 @@ actions are inferred from snapshots and sim logs, not logged by Claude; (3) the 
 
 ## Live event 1, row 3a-13
 
-_Pending (09-09, 09-10). D-02 decided (amended, above)._
+D-02 decided (amended, above). Event 1 under the amended D-02: overlap source `nest-3/deck1/A1`, overlap destination
+`nest-1/deck1/A1`, out1 destination `nest-1/deck1/A1`.
+
+### Operator readiness and pre-GO record (09-09 Task 1), 2026-11-17
+
+Precondition: this file records "pair confirmed under AMENDED D-02" and the LIV-02 verdict reads PASS. Met.
+
+**Operator readiness (reply "ready" at 2026-11-17T10:31:28Z).** The operator confirmed the Task 1 steps (latch, idle and gripper
+reads, plate 1 lifted off nest-1, the nest-3 -> nest-1 -> nest-3 round trip, plates restored) with the one word "ready". The
+operator did NOT paste the tool-page replies for steps 1, 2, 4 and 5, and did NOT answer whether anything was re-taught or moved
+since 10:02Z. Both gaps are recorded, not waived: the evidence below is from Claude's read-only look at the local trace log and
+ledger, and the re-teach question is asked again at the GO (checklist item 2). The record is
+`evidence/20261117T103338Z-e1-readiness.txt`.
+
+| Item | Evidence (local files, read-only) |
+|------|------------------------------------|
+| `GetFailureLatch` | `STACK2-6.log` 10:27:51Z "Running command GetFailureLatch"; reply body not logged, so `latched:false` is NOT proven by a log. Re-read by the operator at the GO |
+| `GetRobotStates` | 10:27:59Z, GET robot-state 200 OK; body not logged, `idle` not proven by a log. Re-read at the GO |
+| `GetLabwarePresence` (robot stack2-6) | 10:28:04Z, GET labware/presence 200 OK, `Content-Length: 20`, the length of `{"hasLabware":false}` (a true reply is 19). Weak evidence, not a pasted reply |
+| Round-trip Transfer 1, nest-3 -> nest-1 | 10:29:45Z; ledger `20261117T102945344089-51bbd341` done / ran, task completed, elapsed 00:00:29, guid `d020ab4c-b025-44d2-a760-71eef286a73b` |
+| Round-trip Transfer 2, nest-1 -> nest-3 | 10:30:31Z; ledger `20261117T103031099718-33d54943` done / ran, task completed, elapsed 00:00:29, guid `efee3463-e37d-4722-8537-c29348784022` |
+| Errors | no ERROR, WARNING, refusal, failure, latch or retry line in the lines appended since 10:02Z; no Transfer line or ledger record after the second Transfer; `FA100056.log` still 1 "Running command Transfer" (4 "Running command") |
+
+Round-trip verdict: both Transfers are done/ran, in the expected order and directions, and nothing else moved. This answers the
+09-03 risk input (3 of 5 operator nest-3 / nest-1 moves failed on 2026-11-17 04:40-05:03Z) for the 10:29-10:31Z moves only. It
+does not prove the latch, idle and gripper reads themselves, so they are re-read at the GO.
+
+**Claude prep (reads plus one protocol import; every CTL call with stdin `/dev/null`).**
+
+| Item | Result |
+|------|--------|
+| Pre-flight form 1 (`GAL07_WEB_CONTAINER=galago-web-dev`) | last line `PREFLIGHT OK`, exit 0, 10:32:40Z |
+| Pre-flight form 2 (+ `GAL07_REQUIRE_STACK_ENV=1`) | last line `PREFLIGHT OK`, exit 0, 10:32:41Z; owner lock at 10.150.1.125:5005 held by galago pid 7491 |
+| `docker exec galago-web-dev printenv GALAGO_PARALLEL_LANES` | `1` |
+| `laneStatus` | `laneMode:true`, `halted:false`, `haltReason:null`, `failures:[]`, `runningLanes:[]`, `queueBusy:false` |
+| Selected workcell | `test` (id 1); `GET /api/tools` lists STACK2-6 (id 5) and FA100056 (id 6), both `workcellId` 1 |
+| Queue | `getAll` 21 rows, all COMPLETED: no CREATED or STARTED row. `GET /api/runs` shows 3 runs, all stored `CREATED`, none `RUNNING` (stored CREATED is expected, see the lanes-mode finding above) |
+| Baseline | `evidence/20261117T103254Z-pre-e1.baseline.txt` (10:32:54Z); snapshot `evidence/20261117T103255Z-pre-e1.queue.json` |
+| Listener PIDs | 8081 `6872`, 11010 `7490`, 40012 `7491`, 40001 `2320808`: equal to the reference; trace folder `1794670020`: equal |
+| `galago_core_controller_dirty_lines` | 0; `git status --porcelain -- controller` empty |
+| galago-core HEAD | `9201bd30825cb73b2b950c9a452c2ce68f14a192` |
+| galago-tools HEAD | `034867ca8aec9cb5ed83140306ebd89bf61b9ae7`; the only change since `d53da53` is `docs/runbooks/gal-07-live-handoff.md` (docs-only), so the tool code is unchanged since `d53da53`; the `0604348` ancestor exit is 0; the only `tools/` status line is the untracked `tools/fast-mcp-locks/` runtime directory |
+| Auto-mint | auto-mint: on (not exercised) (D-07) |
+| `STACK2-6.log` "Running command Transfer" | 14 (reference 12: the two round-trip Transfers); "Running command" 60 (reference 52: +8, see the readiness table); 5468 lines |
+| `FA100056.log` "Running command Transfer" | 1 (4 "Running command"); total 176801 lines (reference 173347, status polling only) |
+| Ledger | sha256 `061f52b4f309ad2e1a03c64e995bc4101eb75574a3df3e0277d0c60589d2bd1c`, 11 records (reference 9 + the two round-trip records, both done / ran) |
+| Baseline vs reference (`diff`) | only label, time, galago-core and galago-tools HEAD, the log counts above, `FA100056.log` line count, ledger sha256 and the two new ledger records differ: every difference is accounted for by the operator's readiness moves |
+| Protocol import | `POST /api/trpc/protocol.import` `{"json":{"workcellId":1,"protocol":<the .protocol object of protocols/09-live-lanes-event1.protocol.json>}}`, HTTP 200 at about 10:34Z; reply `evidence/20261117T103400Z-e1-import.json`: protocol id `9`, name "LIV-01 event 1: STACK estimate overlaps the F.A.S.T. liquid leg (lanes)", `workcellId` 1, mode `script`, 44 parameters. `GET /api/trpc/protocol.getAll` now lists ids 4 (test, workcell 1), 8 (drill, workcell 3) and 9 (event 1, workcell 1) |
+| `E1_PRE_OK` automated check | printed |
+
+Event-1 run-form values (amended D-02): `batch_label` LIV01-E1; `spare_a_device` nest-3, `spare_a_deck` deck1, `spare_a_nest` A1
+(overlap source); `spare_b_device` nest-1, `spare_b_deck` deck1, `spare_b_nest` A1 (overlap destination); `out1_dest_device`
+nest-1, `out1_dest_deck` deck1, `out1_dest_nest` A1 (plate 1's home); every other field at its default (`plate2_deck`'s default is
+the literal deck` with a backtick).
+
+Expected event-1 traffic (RESEARCH Finding 7), from the pre-e1 baseline: `STACK2-6.log` +4 "Running command Transfer" (14 -> 18)
+plus one "Running command GetTransferEstimate"; `FA100056.log` +1 "Running command Transfer" (1 -> 2); four new ledger records, each
+done / ran (11 -> 15); the estimate writes no ledger record. The operator's GO-gate reads add other "Running command" lines; they
+move nothing.
+
+### Event-1 GO (09-09 Task 2)
+
+_Pending: the operator's typed go, its UTC time and the checklist answers (09-09 Task 2)._
+
+### Event-1 run and raw capture (09-09 Task 3)
+
+_Pending (09-09 Task 3)._
 
 ## Live event 2, row 3a-14
 
@@ -792,3 +858,6 @@ All files are under `evidence/`, named `<UTC stamp>-<label>.<kind>`.
 | `20261117T095938Z-post-drill-s2-and-s3-before-teardown.baseline.txt` | baseline after scenarios 2 and 3, workcell back on test, sims still up | 09-07 |
 | `20261117T100156Z-post-drill.baseline.txt`, `.tracefiles.txt`; `20261117T100157Z-post-drill.queue.json` | teardown baseline, trace file names and queue snapshot (sims stopped, real tools unchanged, clean queue) | 09-07 |
 | `20261117T100221Z-post-drill-final.baseline.txt` | baseline after both pre-flight forms; only the FA100056.log status-poll line count moved | 09-07 |
+| `20261117T103338Z-e1-readiness.txt` | event-1 operator readiness record ("ready" only; log and ledger evidence for the round trip; missing paste and re-teach answer noted) | 09-09 |
+| `20261117T103254Z-pre-e1.baseline.txt`, `20261117T103255Z-pre-e1.queue.json` | pre-e1 baseline (taken after the round trip) and queue snapshot | 09-09 |
+| `20261117T103400Z-e1-import.json` | protocol.import reply (event-1 protocol id 9 in workcell test, id 1) | 09-09 |

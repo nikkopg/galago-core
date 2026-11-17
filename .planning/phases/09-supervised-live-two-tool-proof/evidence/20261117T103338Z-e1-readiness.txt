@@ -1,0 +1,36 @@
+09-09 Task 1 operator readiness record (event 1)
+Saved by Claude 2026-11-17T10:33:38Z. No credential appears in this file.
+
+OPERATOR REPLY (as relayed by the orchestrator, verbatim): "ready" at 2026-11-17T10:31:28Z
+NOT PASTED by the operator: the tool-page replies of steps 1 (GetFailureLatch), 2 (GetRobotStates,
+GetLabwarePresence), 4 and 5 (the two Transfers).
+NOT ANSWERED: whether anything was re-taught or moved on the tool page since 2026-11-17 10:02Z.
+(The question is asked again in the Task 2 GO checklist, item 2.)
+
+EVIDENCE USED IN PLACE OF THE PASTED REPLIES (Claude, read-only, local files; log times are UTC+7, shown
+here in UTC)
+
+STACK2-6.log (trace folder 1794670020), lines appended after the 10:02:21Z reference (4508 -> 5468 lines):
+  10:27:51Z  Running command GetFailureLatch   (local call, no HTTP request, reply body not logged)
+  10:27:59Z  Running command GetRobotStates    (GET .../api/v3/info/robot-state 200 OK; body not logged)
+  10:28:04Z  Running command GetLabwarePresence (GET .../api/v2/robot/stack2-6/labware/presence 200 OK;
+             Content-Length 20, which matches {"hasLabware":false}; a true reply would be 19. Weak evidence)
+  10:29:11Z  Running command ListLabwareProfiles / ListDevices / ListTransferProfiles (tool-page load, reads)
+  10:29:45Z  Running command Transfer  -> POST /api/v2/transfer 200 OK, guid d020ab4c-b025-44d2-a760-71eef286a73b
+  10:30:31Z  Running command Transfer  -> POST /api/v2/transfer 200 OK, guid efee3463-e37d-4722-8537-c29348784022
+  No ERROR, WARNING, refus*, fail*, latch or retry line in the appended text. No Transfer line after 10:30:31Z.
+  "Running command" 52 -> 60 (+8: 3 reads, 3 list reads, 2 Transfers); "Running command Transfer" 12 -> 14.
+FA100056.log: "Running command" 4 and "Running command Transfer" 1, unchanged.
+
+Ledger (~/.local/state/galago-tools/stack/stack-ledger.json), 9 -> 11 records, both new records auto-minted keys:
+  20261117T102945344089-51bbd341  state done, result.kind ran, task state completed (rawState completed),
+    elapsed 00:00:29, nest-3/deck1/A1 -> nest-1/deck1/A1, robot stack2-6, labware profile 96, Default profiles,
+    createdAt 2026-11-17T10:29:45.513392+00:00, updatedAt 2026-11-17T10:30:15.776929+00:00
+  20261117T103031099718-33d54943  state done, result.kind ran, task state completed (rawState completed),
+    elapsed 00:00:29, nest-1/deck1/A1 -> nest-3/deck1/A1, robot stack2-6, labware profile 96, Default profiles,
+    createdAt 2026-11-17T10:30:31.289663+00:00, updatedAt 2026-11-17T10:31:01.303984+00:00
+  ledger sha256 061f52b4f309ad2e1a03c64e995bc4101eb75574a3df3e0277d0c60589d2bd1c
+
+Verdict on the round trip: both Transfers (nest-3 -> nest-1, then nest-1 -> nest-3) ran and are done/ran; no
+failed, refused or extra Transfer. The latch / idle / gripper-empty values themselves are NOT proven by a
+pasted reply; the operator re-reads them at the GO (Task 2 checklist item 1).
